@@ -7,6 +7,7 @@ export * from "./Loader";
 export * from "./Modal";
 export * from "./Select";
 export * from "./Dropdown";
+export * from "./Floating";
 export * from "./Accordeon";
 export * from "./AutoFillSelector";
 export * from "./InputFile";

@@ -249,6 +249,26 @@ class ChatsStore {
                     : null,
             createdAt: String(dialog.createdAt),
             updatedAt: String(dialog.updatedAt),
+            ...(dialog.tokenUsage
+                ? {
+                      tokenUsage: {
+                          promptTokens: Math.max(
+                              0,
+                              Math.floor(dialog.tokenUsage.promptTokens || 0),
+                          ),
+                          completionTokens: Math.max(
+                              0,
+                              Math.floor(
+                                  dialog.tokenUsage.completionTokens || 0,
+                              ),
+                          ),
+                          totalTokens: Math.max(
+                              0,
+                              Math.floor(dialog.tokenUsage.totalTokens || 0),
+                          ),
+                      },
+                  }
+                : {}),
             messages: dialog.messages.map((message) => ({
                 id: String(message.id),
                 author: message.author,
@@ -317,6 +337,7 @@ class ChatsStore {
                 minute: "2-digit",
             }),
             updatedAt: dialog.updatedAt,
+            ...(dialog.tokenUsage ? { tokenUsage: dialog.tokenUsage } : {}),
         };
 
         const next = [

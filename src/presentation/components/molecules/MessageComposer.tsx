@@ -5,12 +5,13 @@ import { useToasts } from "../../../hooks";
 import { useChatParams } from "../../../hooks/useChatParams";
 import { useScenario, useScenarioConvert } from "../../../hooks/agents";
 import { useFileUpload } from "../../../hooks/files";
+import { chatsStore } from "../../../stores/chatsStore";
 import type {
     UploadedFileData,
     VoiceTranscriptionEvent,
 } from "../../../types/ElectronApi";
 import { encodeScenarioLaunchPayload } from "../../../utils/scenario/scenarioLaunchEnvelope";
-import { Button, Dropdown, InputBig, Modal } from "../atoms";
+import { Button, Dropdown, Floating, InputBig, Modal } from "../atoms";
 import { RequiredToolsPickForm } from "../organisms/forms";
 
 const MISTRAL_SAMPLE_RATE = 16000;
@@ -195,8 +196,13 @@ export const MessageComposer = observer(function MessageComposer({
 }: MessageComposerProps) {
     const toasts = useToasts();
     const { userProfile } = useChatParams();
-    const { mistralVoiceRecModel, mistralToken, voiceRecognitionDriver } =
-        userProfile;
+    const {
+        chatDriver,
+        ollamaModel,
+        mistralVoiceRecModel,
+        mistralToken,
+        voiceRecognitionDriver,
+    } = userProfile;
     const { scenarios, switchScenario } = useScenario();
     const { scenarioToFlow } = useScenarioConvert();
 
@@ -211,6 +217,7 @@ export const MessageComposer = observer(function MessageComposer({
         [],
     );
     const [isVoiceListening, setIsVoiceListening] = useState(false);
+    const [isVoiceChatMode, setIsVoiceChatMode] = useState(false);
     const [voiceTranscriptPreview, setVoiceTranscriptPreview] = useState("");
     const [voiceEqualizerBars, setVoiceEqualizerBars] = useState<number[]>(() =>
         new Array<number>(VOICE_EQUALIZER_BARS_COUNT).fill(6),
@@ -223,7 +230,44 @@ export const MessageComposer = observer(function MessageComposer({
     const resolveVoiceDoneRef = useRef<(() => void) | null>(null);
     const rejectVoiceDoneRef = useRef<((error: Error) => void) | null>(null);
     const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isVoiceChatModeRef = useRef(false);
+    const isStreamingRef = useRef(isStreaming);
+    const voiceChatLoopTokenRef = useRef(0);
+    const isVoiceChatLoopRunningRef = useRef(false);
+    const streamingWaitersRef = useRef<Array<() => void>>([]);
+    const voiceChatStopWaitersRef = useRef<Array<() => void>>([]);
     const { isUploading, pickFiles } = useFileUpload();
+
+    const dialogTokenUsage = chatsStore.activeDialog?.tokenUsage;
+    const dialogMessagesCount = chatsStore.activeDialog?.messages.length ?? 0;
+    const totalTokens = dialogTokenUsage?.totalTokens ?? 0;
+    const promptTokens = dialogTokenUsage?.promptTokens ?? 0;
+    const completionTokens = dialogTokenUsage?.completionTokens ?? 0;
+    const toPercent = (value: number) => {
+        if (totalTokens <= 0) {
+            return 0;
+        }
+
+        return Math.max(0, (value / totalTokens) * 100);
+    };
+
+    const promptPercent = toPercent(promptTokens);
+    const completionPercent = toPercent(completionTokens);
+
+    useEffect(() => {
+        isVoiceChatModeRef.current = isVoiceChatMode;
+    }, [isVoiceChatMode]);
+
+    useEffect(() => {
+        isStreamingRef.current = isStreaming;
+
+        if (!isStreaming && streamingWaitersRef.current.length > 0) {
+            const waiters = streamingWaitersRef.current;
+            streamingWaitersRef.current = [];
+            voiceChatStopWaitersRef.current = [];
+            waiters.forEach((resolve) => resolve());
+        }
+    }, [isStreaming]);
 
     const formatFileSize = (bytes: number) => {
         if (bytes < 1024) {
@@ -423,6 +467,7 @@ export const MessageComposer = observer(function MessageComposer({
         setIsVoiceListening(true);
 
         let transcriptText = "";
+        let hasVoiceError = false;
         let capture: PcmRealtimeCapture | null = null;
         let pushAudioPromise: Promise<void> | null = null;
         let stopEqualizerAnimation: (() => void) | null = null;
@@ -516,6 +561,7 @@ export const MessageComposer = observer(function MessageComposer({
             await pushAudioPromise;
             await voiceApi.stopRealtimeTranscription(sessionId);
         } catch (error) {
+            hasVoiceError = true;
             toasts.danger({
                 title: "Ошибка голосового ввода",
                 description:
@@ -561,9 +607,9 @@ export const MessageComposer = observer(function MessageComposer({
 
         const trimmedTranscript = transcriptText.trim();
 
-        if (!trimmedTranscript) {
+        if (!trimmedTranscript || hasVoiceError) {
             setVoiceTranscriptPreview("");
-            return;
+            return false;
         }
 
         onMessageSend(trimmedTranscript);
@@ -573,6 +619,7 @@ export const MessageComposer = observer(function MessageComposer({
         requestAnimationFrame(() => {
             areaRef.current?.focus();
         });
+        return true;
     }, [
         isStreaming,
         mistralVoiceRecModel,
@@ -582,14 +629,101 @@ export const MessageComposer = observer(function MessageComposer({
         voiceRecognitionDriver,
     ]);
 
+    const waitForVoiceChatContinue = useCallback(async () => {
+        if (!isStreamingRef.current || !isVoiceChatModeRef.current) {
+            return;
+        }
+
+        await new Promise<void>((resolve) => {
+            const done = () => resolve();
+            streamingWaitersRef.current.push(done);
+            voiceChatStopWaitersRef.current.push(done);
+        });
+    }, []);
+
+    const stopVoiceChatMode = useCallback(() => {
+        isVoiceChatModeRef.current = false;
+        isVoiceChatLoopRunningRef.current = false;
+        setIsVoiceChatMode(false);
+
+        const stopWaiters = [
+            ...voiceChatStopWaitersRef.current,
+            ...streamingWaitersRef.current,
+        ];
+        voiceChatStopWaitersRef.current = [];
+        streamingWaitersRef.current = [];
+        stopWaiters.forEach((resolve) => resolve());
+    }, []);
+
+    const toggleVoiceChatMode = useCallback(() => {
+        if (isVoiceChatModeRef.current) {
+            stopVoiceChatMode();
+
+            if (isVoiceListening) {
+                void stopVoiceListening();
+            }
+
+            return;
+        }
+
+        if (isVoiceChatLoopRunningRef.current) {
+            return;
+        }
+
+        const nextToken = voiceChatLoopTokenRef.current + 1;
+        voiceChatLoopTokenRef.current = nextToken;
+        isVoiceChatLoopRunningRef.current = true;
+        isVoiceChatModeRef.current = true;
+        setIsVoiceChatMode(true);
+
+        void (async () => {
+            try {
+                while (isVoiceChatModeRef.current) {
+                    await waitForVoiceChatContinue();
+
+                    if (!isVoiceChatModeRef.current) {
+                        break;
+                    }
+
+                    const hasSentMessage = await startVoiceListening();
+
+                    if (!hasSentMessage) {
+                        stopVoiceChatMode();
+                        break;
+                    }
+                }
+            } finally {
+                const activeToken = voiceChatLoopTokenRef.current;
+
+                if (activeToken === nextToken) {
+                    isVoiceChatLoopRunningRef.current = false;
+                    stopVoiceChatMode();
+                }
+            }
+        })();
+    }, [
+        isVoiceListening,
+        startVoiceListening,
+        stopVoiceChatMode,
+        stopVoiceListening,
+        waitForVoiceChatContinue,
+    ]);
+
     const toggleVoiceListening = useCallback(() => {
         if (isVoiceListening) {
+            stopVoiceChatMode();
             void stopVoiceListening();
             return;
         }
 
+        stopVoiceChatMode();
         void startVoiceListening();
-    }, [isVoiceListening, startVoiceListening, stopVoiceListening]);
+    }, [
+        isVoiceListening,
+        startVoiceListening,
+        stopVoiceChatMode,
+        stopVoiceListening,
+    ]);
 
     const startScenario = useCallback(
         async (scenarioId: string) => {
@@ -690,7 +824,7 @@ export const MessageComposer = observer(function MessageComposer({
                         </div>
                     ) : null}
 
-                    <div className="rounded-2xl bg-main-900/55 px-3 py-2">
+                    <div className="relative rounded-2xl bg-main-900/55 px-3 py-2">
                         <InputBig
                             ref={areaRef}
                             value={msgContent}
@@ -777,9 +911,147 @@ export const MessageComposer = observer(function MessageComposer({
                                         )}
                                     />
                                 </div>
+
+                                <Floating
+                                    anchor="top-left"
+                                    className="z-20"
+                                    panelClassName="w-72 shadow-lg"
+                                    content={
+                                        <>
+                                            <p className="text-xs font-semibold text-main-200">
+                                                Информация о чате
+                                            </p>
+
+                                            <div className="mt-2 space-y-2 text-xs text-main-400">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span>Всего токенов</span>
+                                                    <span className="text-main-200">
+                                                        {totalTokens.toLocaleString(
+                                                            "ru-RU",
+                                                        )}
+                                                    </span>
+                                                </div>
+
+                                                <div className="rounded-lg border border-main-700/70 bg-main-900/60 p-2">
+                                                    <div className="mb-1 flex items-center justify-between gap-2">
+                                                        <span className="text-main-300">
+                                                            Входные токены
+                                                        </span>
+                                                        <span className="text-main-200">
+                                                            {promptPercent.toFixed(
+                                                                1,
+                                                            )}
+                                                            %
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span>Промпт</span>
+                                                        <span className="text-main-300">
+                                                            {promptTokens.toLocaleString(
+                                                                "ru-RU",
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="rounded-lg border border-main-700/70 bg-main-900/60 p-2">
+                                                    <div className="mb-1 flex items-center justify-between gap-2">
+                                                        <span className="text-main-300">
+                                                            Выходные токены
+                                                        </span>
+                                                        <span className="text-main-200">
+                                                            {completionPercent.toFixed(
+                                                                1,
+                                                            )}
+                                                            %
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span>Ответ</span>
+                                                        <span className="text-main-300">
+                                                            {completionTokens.toLocaleString(
+                                                                "ru-RU",
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span>
+                                                        Сообщений в диалоге
+                                                    </span>
+                                                    <span className="text-main-300">
+                                                        {dialogMessagesCount}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span>Модель</span>
+                                                    <span className="truncate text-main-300">
+                                                        {chatDriver === "ollama"
+                                                            ? ollamaModel ||
+                                                              "ollama"
+                                                            : "не выбрана"}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span>Поток</span>
+                                                    <span
+                                                        className={
+                                                            isStreaming
+                                                                ? "text-amber-300"
+                                                                : "text-lime-300"
+                                                        }
+                                                    >
+                                                        {isStreaming
+                                                            ? "генерация"
+                                                            : "ожидание"}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </>
+                                    }
+                                >
+                                    <button
+                                        type="button"
+                                        className="flex h-9 w-9 items-center justify-center rounded-full border border-main-600/70 bg-main-900/90 text-main-400 transition-colors hover:text-main-200"
+                                        aria-label="Показать информацию о диалоге"
+                                    >
+                                        <Icon
+                                            icon="mdi:information-outline"
+                                            width={14}
+                                        />
+                                    </button>
+                                </Floating>
                             </div>
 
                             <div className="flex items-center gap-2">
+                                <Button
+                                    onClick={toggleVoiceChatMode}
+                                    label={
+                                        isVoiceListening && isVoiceChatMode
+                                            ? "Stop voice chat mode"
+                                            : "Start voice chat mode"
+                                    }
+                                    className="h-9 w-9 p-0"
+                                    variant={
+                                        isVoiceListening && isVoiceChatMode
+                                            ? "secondary"
+                                            : "primary"
+                                    }
+                                    disabled={
+                                        isStreaming ||
+                                        !mistralVoiceRecModel.trim()
+                                    }
+                                >
+                                    <Icon
+                                        icon={
+                                            isVoiceListening && isVoiceChatMode
+                                                ? "mdi:headset"
+                                                : "mdi:headset-off"
+                                        }
+                                    />
+                                </Button>
+
                                 <Button
                                     onClick={toggleVoiceListening}
                                     label={

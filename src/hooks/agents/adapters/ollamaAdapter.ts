@@ -24,6 +24,7 @@ export const createOllamaAdapter = ({
             onToolCall,
             onToolResult,
             onThinkingChunk,
+            onUsage,
             signal,
             onChunk,
         }) => {
@@ -31,6 +32,11 @@ export const createOllamaAdapter = ({
             let toolCallsUsed = 0;
             let shouldContinue = true;
             let callSequence = 0;
+            let finalResponseUsage: {
+                promptTokens: number;
+                completionTokens: number;
+                totalTokens: number;
+            } | null = null;
 
             while (shouldContinue) {
                 let roundContent = "";
@@ -43,6 +49,11 @@ export const createOllamaAdapter = ({
                         arguments: Record<string, unknown>;
                     };
                 }[] = [];
+                let roundUsage: {
+                    promptTokens: number;
+                    completionTokens: number;
+                    totalTokens: number;
+                } | null = null;
 
                 await streamChatOllama({
                     model,
@@ -72,10 +83,33 @@ export const createOllamaAdapter = ({
                             onThinkingChunk?.("", true);
                             onChunk("", true);
                         }
+
+                        if (chunk.done) {
+                            const promptTokens = Math.max(
+                                0,
+                                Number(chunk.prompt_eval_count ?? 0),
+                            );
+                            const completionTokens = Math.max(
+                                0,
+                                Number(chunk.eval_count ?? 0),
+                            );
+                            const totalTokens = promptTokens + completionTokens;
+
+                            if (totalTokens > 0) {
+                                roundUsage = {
+                                    promptTokens,
+                                    completionTokens,
+                                    totalTokens,
+                                };
+                            }
+                        }
                     },
                 });
 
                 if (roundToolCalls.length === 0) {
+                    if (roundUsage) {
+                        finalResponseUsage = roundUsage;
+                    }
                     shouldContinue = false;
                     continue;
                 }
@@ -129,6 +163,10 @@ export const createOllamaAdapter = ({
 
                     toolCallsUsed += 1;
                 }
+            }
+
+            if (finalResponseUsage) {
+                onUsage?.(finalResponseUsage);
             }
         },
     };

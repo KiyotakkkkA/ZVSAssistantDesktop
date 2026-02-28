@@ -19,6 +19,12 @@ export type ToolTrace = {
     isAdmin?: boolean;
 };
 
+export type TokenUsage = {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+};
+
 export type ChatMessage = {
     id: string;
     author: MessageRole;
@@ -34,6 +40,7 @@ export type ChatDialog = {
     id: string;
     title: string;
     messages: ChatMessage[];
+    tokenUsage?: TokenUsage;
     forProjectId: string | null;
     createdAt: string;
     updatedAt: string;
@@ -45,6 +52,7 @@ export type ChatDialogListItem = {
     preview: string;
     time: string;
     updatedAt: string;
+    tokenUsage?: TokenUsage;
 };
 
 export type DeleteDialogResult = {
@@ -105,6 +113,8 @@ export interface OllamaChatChunk {
     };
     done: boolean;
     error?: string;
+    prompt_eval_count?: number;
+    eval_count?: number;
 }
 
 export interface OllamaChatResponse {

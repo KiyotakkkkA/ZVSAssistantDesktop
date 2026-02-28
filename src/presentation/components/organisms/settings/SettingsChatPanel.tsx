@@ -102,11 +102,19 @@ export const SettingsChatPanel = () => {
 
                 <div className="mt-4 space-y-4">
                     <div className="flex items-center justify-between gap-4">
-                        <div>
-                            <p className="text-sm font-medium text-main-200">
-                                Использовать для распознавания голоса
-                            </p>
-                            <p className="text-xs text-main-400">Mistral</p>
+                        <div className="flex gap-2 items-center">
+                            <Icon
+                                icon="mdi:microphone"
+                                width={28}
+                                height={28}
+                                className={`text-main-300 rounded-md p-0.5 ${voiceRecognitionDriver === "mistral" ? "bg-lime-700/80" : "bg-main-700/80"}`}
+                            />
+                            <div>
+                                <p className="text-sm font-medium text-main-200">
+                                    Использовать для распознавания голоса
+                                </p>
+                                <p className="text-xs text-main-400">Mistral</p>
+                            </div>
                         </div>
 
                         <InputCheckbox
@@ -185,11 +193,19 @@ export const SettingsChatPanel = () => {
 
                 <div className="mt-4 space-y-4">
                     <div className="flex items-center justify-between gap-4">
-                        <div>
-                            <p className="text-sm font-medium text-main-200">
-                                Использовать для общения
-                            </p>
-                            <p className="text-xs text-main-400">Ollama</p>
+                        <div className="flex gap-2 items-center">
+                            <Icon
+                                icon="mdi:chat-processing"
+                                width={28}
+                                height={28}
+                                className={`text-main-300 rounded-md p-0.5 ${chatDriver === "ollama" ? "bg-lime-700/80" : "bg-main-700/80"}`}
+                            />
+                            <div>
+                                <p className="text-sm font-medium text-main-200">
+                                    Использовать для общения
+                                </p>
+                                <p className="text-xs text-main-400">Ollama</p>
+                            </div>
                         </div>
 
                         <InputCheckbox
@@ -203,11 +219,19 @@ export const SettingsChatPanel = () => {
                     </div>
 
                     <div className="flex items-center justify-between gap-4">
-                        <div>
-                            <p className="text-sm font-medium text-main-200">
-                                Использовать для создания эмбеддингов
-                            </p>
-                            <p className="text-xs text-main-400">Ollama</p>
+                        <div className="flex gap-2 items-center">
+                            <Icon
+                                icon="mdi:numbers"
+                                width={28}
+                                height={28}
+                                className={`text-main-300 rounded-md p-0.5 ${embeddingDriver === "ollama" ? "bg-lime-700/80" : "bg-main-700/80"}`}
+                            />
+                            <div>
+                                <p className="text-sm font-medium text-main-200">
+                                    Использовать для создания эмбеддингов
+                                </p>
+                                <p className="text-xs text-main-400">Ollama</p>
+                            </div>
                         </div>
 
                         <InputCheckbox

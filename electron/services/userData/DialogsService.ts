@@ -6,6 +6,7 @@ import type {
     ChatDialogListItem,
     ChatMessage,
     DeleteDialogResult,
+    TokenUsage,
 } from "../../../src/types/Chat";
 import type { ActiveDialogContextUpdater } from "../../../src/types/UserData";
 
@@ -257,6 +258,7 @@ export class DialogsService {
                     ? dialog.title
                     : "Новый диалог",
             messages: normalizedMessages,
+            tokenUsage: this.normalizeTokenUsage(dialog.tokenUsage),
             forProjectId: this.normalizeForProjectId(dialog.forProjectId),
             createdAt:
                 typeof dialog.createdAt === "string" && dialog.createdAt
@@ -296,6 +298,7 @@ export class DialogsService {
                         ? parsed.title
                         : "Новый диалог",
                 messages: normalizedMessages,
+                tokenUsage: this.normalizeTokenUsage(parsed.tokenUsage),
                 forProjectId: this.normalizeForProjectId(parsed.forProjectId),
                 createdAt:
                     typeof parsed.createdAt === "string" && parsed.createdAt
@@ -398,6 +401,35 @@ export class DialogsService {
         };
     }
 
+    private normalizeTokenUsage(value: unknown): TokenUsage {
+        const raw =
+            value && typeof value === "object"
+                ? (value as Partial<TokenUsage>)
+                : {};
+
+        const promptTokens =
+            typeof raw.promptTokens === "number" &&
+            Number.isFinite(raw.promptTokens)
+                ? Math.max(0, Math.floor(raw.promptTokens))
+                : 0;
+        const completionTokens =
+            typeof raw.completionTokens === "number" &&
+            Number.isFinite(raw.completionTokens)
+                ? Math.max(0, Math.floor(raw.completionTokens))
+                : 0;
+        const totalTokens =
+            typeof raw.totalTokens === "number" &&
+            Number.isFinite(raw.totalTokens)
+                ? Math.max(0, Math.floor(raw.totalTokens))
+                : promptTokens + completionTokens;
+
+        return {
+            promptTokens,
+            completionTokens,
+            totalTokens,
+        };
+    }
+
     private isScenarioLaunchMessage(message: ChatMessage | undefined): boolean {
         return (
             message?.author === "system" &&
@@ -423,6 +455,7 @@ export class DialogsService {
                 minute: "2-digit",
             }),
             updatedAt: dialog.updatedAt,
+            tokenUsage: this.normalizeTokenUsage(dialog.tokenUsage),
         };
     }
 }

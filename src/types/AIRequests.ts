@@ -1,5 +1,6 @@
 import type { ChatMessage, OllamaResponseFormat } from "./Chat";
 import type { OllamaToolDefinition } from "./Chat";
+import type { TokenUsage } from "./Chat";
 
 export type ChatAdapterRequest = {
     history: ChatMessage[];
@@ -23,6 +24,7 @@ export type ChatAdapterRequest = {
         result: unknown;
     }) => void;
     onThinkingChunk?: (chunkText: string, done: boolean) => void;
+    onUsage?: (usage: TokenUsage) => void;
     signal?: AbortSignal;
     onChunk: (chunkText: string, done: boolean) => void;
 };

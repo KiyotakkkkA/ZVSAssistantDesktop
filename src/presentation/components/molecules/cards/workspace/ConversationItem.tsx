@@ -7,6 +7,9 @@ type ConversationItemProps = {
     title: string;
     preview: string;
     time: string;
+    tokenUsage?: {
+        totalTokens: number;
+    };
     active?: boolean;
     onSelect: (dialogId: string) => void;
     onRename: (dialogId: string) => void;
@@ -22,12 +25,18 @@ export function ConversationItem({
     title,
     preview,
     time,
+    tokenUsage,
     active = false,
     onSelect,
     onRename,
     onDelete,
     canDelete,
 }: ConversationItemProps) {
+    const totalTokens =
+        typeof tokenUsage?.totalTokens === "number"
+            ? Math.max(0, Math.floor(tokenUsage.totalTokens))
+            : 0;
+
     return (
         <WorkspaceListItem
             id={id}
@@ -37,6 +46,9 @@ export function ConversationItem({
             onSelect={onSelect}
             actions={
                 <div className="flex items-center gap-2">
+                    <span className="text-xs text-main-500">
+                        {totalTokens.toLocaleString("ru-RU")} tok
+                    </span>
                     <span className="text-xs text-main-400">{time}</span>
                     <Button
                         variant=""

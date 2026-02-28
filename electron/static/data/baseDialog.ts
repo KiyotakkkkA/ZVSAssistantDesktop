@@ -17,6 +17,11 @@ export const createBaseDialog = (
         id: createDialogId(),
         title: "Новый диалог",
         messages: [],
+        tokenUsage: {
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+        },
         forProjectId,
         createdAt: now,
         updatedAt: now,

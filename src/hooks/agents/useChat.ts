@@ -5,6 +5,7 @@ import { useToasts } from "../useToasts";
 import { useUserProfile } from "../useUserProfile";
 import type { ChatDriver } from "../../types/App";
 import type { AssistantStage, ChatDialog, ChatMessage } from "../../types/Chat";
+import type { TokenUsage } from "../../types/Chat";
 import { createOllamaAdapter } from "./adapters/ollamaAdapter";
 import type { ChatProviderAdapter } from "../../types/AIRequests";
 import { chatsStore } from "../../stores/chatsStore";
@@ -59,6 +60,7 @@ export function useChat() {
     const activeDialogRef = useRef<ChatDialog | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
     const cancellationRequestedRef = useRef(false);
+    const isSendInFlightRef = useRef(false);
 
     const providers = useMemo<
         Partial<Record<Exclude<ChatDriver, "">, ChatProviderAdapter>>
@@ -118,228 +120,314 @@ export function useChat() {
 
     const sendMessageMutation = useMutation({
         mutationFn: async (rawContent: string) => {
-            const isHiddenQa = rawContent.startsWith("__qa_hidden__");
-            const content = isHiddenQa
-                ? rawContent.slice("__qa_hidden__".length).trim()
-                : rawContent.trim();
-            const scenarioLaunchPayload = parseScenarioLaunchPayload(content);
-            const scenarioFormatHint = getScenarioFormatHint(
-                scenarioLaunchPayload?.scenarioFlow,
-            );
-            const scenarioRuntimeEnvText = scenarioLaunchPayload
-                ? buildScenarioRuntimeEnvText(
-                      projectsStore.activeProject?.directoryPath,
-                  )
-                : "";
-            const userVisibleContent =
-                scenarioLaunchPayload?.displayMessage || content;
-
-            if (!userVisibleContent) {
+            if (isSendInFlightRef.current) {
                 return;
             }
 
-            if (!chatDriver) {
-                toasts.danger({
-                    title: "Провайдер не выбран",
-                    description:
-                        "Выберите провайдер в настройках чата перед отправкой сообщения.",
-                });
-                return;
-            }
+            isSendInFlightRef.current = true;
 
-            const adapter = providers[chatDriver as Exclude<ChatDriver, "">];
-            if (!adapter) {
-                toasts.danger({
-                    title: "Провайдер не поддерживается",
-                    description:
-                        "Для выбранного провайдера ещё не подключён адаптер.",
-                });
-                return;
-            }
-
-            const userMessage: ChatMessage = {
-                id: createMessageId(),
-                author: "user",
-                content: userVisibleContent,
-                timestamp: getTimeStamp(),
-                ...(isHiddenQa ? { hidden: true } : {}),
-            };
-
-            const currentDialog = ensureDialog();
-
-            const requestBaseHistory = [...messagesRef.current];
-            const isFirstDialogMessage = requestBaseHistory.length === 0;
-            const activeProject = projectsStore.activeProject;
-            const shouldAttachProjectPrompt =
-                activeProject?.dialogId === currentDialog.id;
-            const activeProjectId =
-                shouldAttachProjectPrompt && activeProject?.id
-                    ? activeProject.id
-                    : "";
-
-            let hasConnectedVectorStorage = false;
-            if (activeProjectId) {
-                const vectorStoragesApi = window.appApi?.vectorStorages;
-
-                if (vectorStoragesApi) {
-                    const vectorStorages =
-                        await vectorStoragesApi.getVectorStorages();
-                    hasConnectedVectorStorage = vectorStorages.some(
-                        (vectorStorage) =>
-                            vectorStorage.usedByProjects.some(
-                                (projectRef) =>
-                                    projectRef.id === activeProjectId,
-                            ),
-                    );
-                }
-            }
-
-            const requestTools = hasConnectedVectorStorage
-                ? toolsStore.toolDefinitions
-                : toolsStore.getToolDefinitions(["vector_store_search_tool"]);
-            const allowedToolNames = new Set(
-                requestTools.map((tool) => tool.function.name),
-            );
-            const requiredToolsInstruction =
-                toolsStore.requiredPromptInstruction;
-
-            const initialSystemMessages: ChatMessage[] = isFirstDialogMessage
-                ? [
-                      {
-                          id: createMessageId(),
-                          author: "system",
-                          content: getSystemPrompt(userProfile.assistantName),
-                          timestamp: getTimeStamp(),
-                      },
-                      {
-                          id: createMessageId(),
-                          author: "system",
-                          content: getUserPrompt(
-                              userProfile.userName,
-                              userProfile.userPrompt,
-                              userProfile.userLanguage,
-                          ),
-                          timestamp: getTimeStamp(),
-                      },
-                      ...(shouldAttachProjectPrompt
-                          ? [
-                                {
-                                    id: createMessageId(),
-                                    author: "system" as const,
-                                    content: getProjectPrompt(
-                                        activeProject.name,
-                                        activeProject.description,
-                                        activeProject.directoryPath,
-                                    ),
-                                    timestamp: getTimeStamp(),
-                                },
-                            ]
-                          : []),
-                  ]
-                : [];
-
-            const historyForStorage = [
-                ...initialSystemMessages,
-                ...requestBaseHistory,
-                ...(scenarioLaunchPayload
-                    ? [
-                          {
-                              id: createMessageId(),
-                              author: "system" as const,
-                              content: [
-                                  `SCENARIO_LAUNCH: ${scenarioLaunchPayload.scenarioName}`,
-                                  scenarioLaunchPayload.scenarioFlow,
-                                  scenarioRuntimeEnvText,
-                                  "Instruction: execute scenario flow strictly by graph links. If data is missing, ask one clear question via qa_tool or plain assistant question.",
-                              ].join("\n\n"),
-                              timestamp: getTimeStamp(),
-                          },
-                      ]
-                    : []),
-                userMessage,
-            ];
-            const requestConstraintMessages: ChatMessage[] = [
-                ...(requiredToolsInstruction
-                    ? [
-                          {
-                              id: createMessageId(),
-                              author: "system" as const,
-                              content: requiredToolsInstruction,
-                              timestamp: getTimeStamp(),
-                          },
-                      ]
-                    : []),
-                ...(hasConnectedVectorStorage
-                    ? [
-                          {
-                              id: createMessageId(),
-                              author: "system" as const,
-                              content:
-                                  "PROJECT_VECTOR_SEARCH_POLICY: In this project chat you must always use vector_store_search_tool before producing a final answer when the task can depend on project documents or project facts.",
-                              timestamp: getTimeStamp(),
-                          },
-                      ]
-                    : []),
-            ];
-
-            const historyForRequest = [
-                ...historyForStorage,
-                ...requestConstraintMessages,
-            ];
-            const chunkQueueManager = createChatChunkQueueManager({
-                answeringAt: userMessage.id,
-                updateMessages,
-            });
-
-            const setStreamStage = (stage: AssistantStage) => {
-                setActiveStage((previous) =>
-                    previous === stage ? previous : stage,
+            try {
+                const isHiddenQa = rawContent.startsWith("__qa_hidden__");
+                const content = isHiddenQa
+                    ? rawContent.slice("__qa_hidden__".length).trim()
+                    : rawContent.trim();
+                const scenarioLaunchPayload =
+                    parseScenarioLaunchPayload(content);
+                const scenarioFormatHint = getScenarioFormatHint(
+                    scenarioLaunchPayload?.scenarioFlow,
                 );
-            };
+                const scenarioRuntimeEnvText = scenarioLaunchPayload
+                    ? buildScenarioRuntimeEnvText(
+                          projectsStore.activeProject?.directoryPath,
+                      )
+                    : "";
+                const userVisibleContent =
+                    scenarioLaunchPayload?.displayMessage || content;
 
-            commitMessages(historyForStorage);
-            setIsStreaming(true);
-            setIsAwaitingFirstChunk(true);
-            setActiveResponseToId(userMessage.id);
-            setActiveStage("thinking");
-            cancellationRequestedRef.current = false;
-            const abortController = new AbortController();
-            abortControllerRef.current = abortController;
-            const toolTraceMessageIds = new Map<string, string>();
-            const isCurrentAnswerMessage = (message: ChatMessage) =>
-                message.author === "assistant" &&
-                message.assistantStage === "answering" &&
-                message.answeringAt === userMessage.id;
-
-            let hasFirstChunk = false;
-            const markFirstActivity = () => {
-                if (hasFirstChunk) {
+                if (!userVisibleContent) {
                     return;
                 }
 
-                hasFirstChunk = true;
-                setIsAwaitingFirstChunk(false);
-            };
+                if (!chatDriver) {
+                    toasts.danger({
+                        title: "Провайдер не выбран",
+                        description:
+                            "Выберите провайдер в настройках чата перед отправкой сообщения.",
+                    });
+                    return;
+                }
 
-            try {
-                await adapter.send({
-                    history: historyForRequest,
-                    tools: requestTools,
-                    ...(scenarioFormatHint
-                        ? { format: scenarioFormatHint }
-                        : {}),
-                    maxToolCalls:
-                        userProfile.maxToolCallsPerResponse > 0
-                            ? userProfile.maxToolCallsPerResponse
-                            : 1,
-                    executeTool: async (toolName, args, meta) => {
-                        if (!allowedToolNames.has(toolName)) {
-                            throw new Error(
-                                `Tool ${toolName} недоступен в текущем чате`,
+                const adapter =
+                    providers[chatDriver as Exclude<ChatDriver, "">];
+                if (!adapter) {
+                    toasts.danger({
+                        title: "Провайдер не поддерживается",
+                        description:
+                            "Для выбранного провайдера ещё не подключён адаптер.",
+                    });
+                    return;
+                }
+
+                const userMessage: ChatMessage = {
+                    id: createMessageId(),
+                    author: "user",
+                    content: userVisibleContent,
+                    timestamp: getTimeStamp(),
+                    ...(isHiddenQa ? { hidden: true } : {}),
+                };
+
+                const currentDialog = ensureDialog();
+
+                const requestBaseHistory = [...messagesRef.current];
+                const isFirstDialogMessage = requestBaseHistory.length === 0;
+                const activeProject = projectsStore.activeProject;
+                const shouldAttachProjectPrompt =
+                    activeProject?.dialogId === currentDialog.id;
+                const activeProjectId =
+                    shouldAttachProjectPrompt && activeProject?.id
+                        ? activeProject.id
+                        : "";
+
+                let hasConnectedVectorStorage = false;
+                if (activeProjectId) {
+                    const vectorStoragesApi = window.appApi?.vectorStorages;
+
+                    if (vectorStoragesApi) {
+                        const vectorStorages =
+                            await vectorStoragesApi.getVectorStorages();
+                        hasConnectedVectorStorage = vectorStorages.some(
+                            (vectorStorage) =>
+                                vectorStorage.usedByProjects.some(
+                                    (projectRef) =>
+                                        projectRef.id === activeProjectId,
+                                ),
+                        );
+                    }
+                }
+
+                const requestTools = hasConnectedVectorStorage
+                    ? toolsStore.toolDefinitions
+                    : toolsStore.getToolDefinitions([
+                          "vector_store_search_tool",
+                      ]);
+                const allowedToolNames = new Set(
+                    requestTools.map((tool) => tool.function.name),
+                );
+                const requiredToolsInstruction =
+                    toolsStore.requiredPromptInstruction;
+
+                const initialSystemMessages: ChatMessage[] =
+                    isFirstDialogMessage
+                        ? [
+                              {
+                                  id: createMessageId(),
+                                  author: "system",
+                                  content: getSystemPrompt(
+                                      userProfile.assistantName,
+                                  ),
+                                  timestamp: getTimeStamp(),
+                              },
+                              {
+                                  id: createMessageId(),
+                                  author: "system",
+                                  content: getUserPrompt(
+                                      userProfile.userName,
+                                      userProfile.userPrompt,
+                                      userProfile.userLanguage,
+                                  ),
+                                  timestamp: getTimeStamp(),
+                              },
+                              ...(shouldAttachProjectPrompt
+                                  ? [
+                                        {
+                                            id: createMessageId(),
+                                            author: "system" as const,
+                                            content: getProjectPrompt(
+                                                activeProject.name,
+                                                activeProject.description,
+                                                activeProject.directoryPath,
+                                            ),
+                                            timestamp: getTimeStamp(),
+                                        },
+                                    ]
+                                  : []),
+                          ]
+                        : [];
+
+                const historyForStorage = [
+                    ...initialSystemMessages,
+                    ...requestBaseHistory,
+                    ...(scenarioLaunchPayload
+                        ? [
+                              {
+                                  id: createMessageId(),
+                                  author: "system" as const,
+                                  content: [
+                                      `SCENARIO_LAUNCH: ${scenarioLaunchPayload.scenarioName}`,
+                                      scenarioLaunchPayload.scenarioFlow,
+                                      scenarioRuntimeEnvText,
+                                      "Instruction: execute scenario flow strictly by graph links. If data is missing, ask one clear question via qa_tool or plain assistant question.",
+                                  ].join("\n\n"),
+                                  timestamp: getTimeStamp(),
+                              },
+                          ]
+                        : []),
+                    userMessage,
+                ];
+                const requestConstraintMessages: ChatMessage[] = [
+                    ...(requiredToolsInstruction
+                        ? [
+                              {
+                                  id: createMessageId(),
+                                  author: "system" as const,
+                                  content: requiredToolsInstruction,
+                                  timestamp: getTimeStamp(),
+                              },
+                          ]
+                        : []),
+                    ...(hasConnectedVectorStorage
+                        ? [
+                              {
+                                  id: createMessageId(),
+                                  author: "system" as const,
+                                  content:
+                                      "PROJECT_VECTOR_SEARCH_POLICY: In this project chat you must always use vector_store_search_tool before producing a final answer when the task can depend on project documents or project facts.",
+                                  timestamp: getTimeStamp(),
+                              },
+                          ]
+                        : []),
+                ];
+
+                const historyForRequest = [
+                    ...historyForStorage,
+                    ...requestConstraintMessages,
+                ];
+                const chunkQueueManager = createChatChunkQueueManager({
+                    answeringAt: userMessage.id,
+                    updateMessages,
+                });
+
+                const setStreamStage = (stage: AssistantStage) => {
+                    setActiveStage((previous) =>
+                        previous === stage ? previous : stage,
+                    );
+                };
+
+                commitMessages(historyForStorage);
+                setIsStreaming(true);
+                setIsAwaitingFirstChunk(true);
+                setActiveResponseToId(userMessage.id);
+                setActiveStage("thinking");
+                cancellationRequestedRef.current = false;
+                const abortController = new AbortController();
+                abortControllerRef.current = abortController;
+                const toolTraceMessageIds = new Map<string, string>();
+                const isCurrentAnswerMessage = (message: ChatMessage) =>
+                    message.author === "assistant" &&
+                    message.assistantStage === "answering" &&
+                    message.answeringAt === userMessage.id;
+
+                let hasFirstChunk = false;
+                let responseUsage: TokenUsage = {
+                    promptTokens: 0,
+                    completionTokens: 0,
+                    totalTokens: 0,
+                };
+                const markFirstActivity = () => {
+                    if (hasFirstChunk) {
+                        return;
+                    }
+
+                    hasFirstChunk = true;
+                    setIsAwaitingFirstChunk(false);
+                };
+
+                try {
+                    await adapter.send({
+                        history: historyForRequest,
+                        tools: requestTools,
+                        ...(scenarioFormatHint
+                            ? { format: scenarioFormatHint }
+                            : {}),
+                        maxToolCalls:
+                            userProfile.maxToolCallsPerResponse > 0
+                                ? userProfile.maxToolCallsPerResponse
+                                : 1,
+                        executeTool: async (toolName, args, meta) => {
+                            if (!allowedToolNames.has(toolName)) {
+                                throw new Error(
+                                    `Tool ${toolName} недоступен в текущем чате`,
+                                );
+                            }
+
+                            if (toolName !== "command_exec") {
+                                return await toolsStore.executeTool(
+                                    toolName,
+                                    args,
+                                    {
+                                        ollamaToken: ollamaToken,
+                                        telegramId: userProfile.telegramId,
+                                        telegramBotToken:
+                                            userProfile.telegramBotToken,
+                                        scenarioRuntimeEnv: {
+                                            current_date:
+                                                new Date().toISOString(),
+                                            project_directory:
+                                                projectsStore.activeProject
+                                                    ?.directoryPath ?? "",
+                                        },
+                                    },
+                                );
+                            }
+
+                            const messageId = toolTraceMessageIds.get(
+                                meta.callId,
                             );
-                        }
+                            const { command, cwd, isAdmin } =
+                                getCommandRequestMeta(args);
 
-                        if (toolName !== "command_exec") {
+                            if (!messageId) {
+                                return {
+                                    status: "cancelled",
+                                    command,
+                                    cwd,
+                                    isAdmin,
+                                    reason: "Не найдена карточка подтверждения",
+                                };
+                            }
+
+                            const approved =
+                                await commandExecApprovalService.waitForDecision(
+                                    messageId,
+                                );
+
+                            updateMessages((prev) =>
+                                prev.map((message) =>
+                                    message.id === messageId &&
+                                    message.toolTrace
+                                        ? {
+                                              ...message,
+                                              toolTrace: {
+                                                  ...message.toolTrace,
+                                                  status: approved
+                                                      ? "accepted"
+                                                      : "cancelled",
+                                              },
+                                          }
+                                        : message,
+                                ),
+                            );
+
+                            if (!approved) {
+                                return {
+                                    status: "cancelled",
+                                    command,
+                                    cwd,
+                                    isAdmin,
+                                    reason: "Пользователь отклонил выполнение",
+                                };
+                            }
+
                             return await toolsStore.executeTool(
                                 toolName,
                                 args,
@@ -356,248 +444,231 @@ export function useChat() {
                                     },
                                 },
                             );
-                        }
+                        },
+                        onToolCall: ({ callId, toolName, args }) => {
+                            chunkQueueManager.flushImmediate();
+                            const toolStage = resolveToolStage(toolName);
+                            setStreamStage(toolStage);
+                            markFirstActivity();
+                            const messageId = createMessageId();
+                            toolTraceMessageIds.set(callId, messageId);
+                            const commandMeta =
+                                toolName === "command_exec"
+                                    ? getCommandRequestMeta(args)
+                                    : null;
 
-                        const messageId = toolTraceMessageIds.get(meta.callId);
-                        const { command, cwd, isAdmin } =
-                            getCommandRequestMeta(args);
-
-                        if (!messageId) {
-                            return {
-                                status: "cancelled",
-                                command,
-                                cwd,
-                                isAdmin,
-                                reason: "Не найдена карточка подтверждения",
-                            };
-                        }
-
-                        const approved =
-                            await commandExecApprovalService.waitForDecision(
-                                messageId,
-                            );
-
-                        updateMessages((prev) =>
-                            prev.map((message) =>
-                                message.id === messageId && message.toolTrace
-                                    ? {
-                                          ...message,
-                                          toolTrace: {
-                                              ...message.toolTrace,
-                                              status: approved
-                                                  ? "accepted"
-                                                  : "cancelled",
-                                          },
-                                      }
-                                    : message,
-                            ),
-                        );
-
-                        if (!approved) {
-                            return {
-                                status: "cancelled",
-                                command,
-                                cwd,
-                                isAdmin,
-                                reason: "Пользователь отклонил выполнение",
-                            };
-                        }
-
-                        return await toolsStore.executeTool(toolName, args, {
-                            ollamaToken: ollamaToken,
-                            telegramId: userProfile.telegramId,
-                            telegramBotToken: userProfile.telegramBotToken,
-                            scenarioRuntimeEnv: {
-                                current_date: new Date().toISOString(),
-                                project_directory:
-                                    projectsStore.activeProject
-                                        ?.directoryPath ?? "",
-                            },
-                        });
-                    },
-                    onToolCall: ({ callId, toolName, args }) => {
-                        chunkQueueManager.flushImmediate();
-                        const toolStage = resolveToolStage(toolName);
-                        setStreamStage(toolStage);
-                        markFirstActivity();
-                        const messageId = createMessageId();
-                        toolTraceMessageIds.set(callId, messageId);
-                        const commandMeta =
-                            toolName === "command_exec"
-                                ? getCommandRequestMeta(args)
-                                : null;
-
-                        updateMessages((prev) => [
-                            ...prev,
-                            {
-                                id: messageId,
-                                author: "assistant",
-                                assistantStage: toolStage,
-                                answeringAt: userMessage.id,
-                                toolTrace: {
-                                    callId,
-                                    toolName,
-                                    args,
-                                    result: null,
-                                    ...(toolName === "command_exec"
-                                        ? {
-                                              status: "pending" as const,
-                                              command: commandMeta?.command,
-                                              cwd: commandMeta?.cwd,
-                                              isAdmin: commandMeta?.isAdmin,
-                                          }
-                                        : {}),
-                                },
-                                content: "",
-                                timestamp: getTimeStamp(),
-                            },
-                        ]);
-                    },
-                    onToolResult: ({ callId, toolName, args, result }) => {
-                        chunkQueueManager.flushImmediate();
-                        const toolStage = resolveToolStage(toolName);
-                        setStreamStage(toolStage);
-                        const messageId = toolTraceMessageIds.get(callId);
-
-                        updateMessages((prev) => {
-                            if (!messageId) {
-                                return [
-                                    ...prev,
-                                    {
-                                        id: createMessageId(),
-                                        author: "assistant",
-                                        assistantStage: toolStage,
-                                        answeringAt: userMessage.id,
-                                        toolTrace: {
-                                            callId,
-                                            toolName,
-                                            args,
-                                            result,
-                                            status:
-                                                toolName === "command_exec"
-                                                    ? "cancelled"
-                                                    : "accepted",
-                                            ...(toolName === "command_exec"
-                                                ? getCommandRequestMeta(args)
-                                                : {}),
-                                        },
-                                        content: "",
-                                        timestamp: getTimeStamp(),
+                            updateMessages((prev) => [
+                                ...prev,
+                                {
+                                    id: messageId,
+                                    author: "assistant",
+                                    assistantStage: toolStage,
+                                    answeringAt: userMessage.id,
+                                    toolTrace: {
+                                        callId,
+                                        toolName,
+                                        args,
+                                        result: null,
+                                        ...(toolName === "command_exec"
+                                            ? {
+                                                  status: "pending" as const,
+                                                  command: commandMeta?.command,
+                                                  cwd: commandMeta?.cwd,
+                                                  isAdmin: commandMeta?.isAdmin,
+                                              }
+                                            : {}),
                                     },
-                                ];
+                                    content: "",
+                                    timestamp: getTimeStamp(),
+                                },
+                            ]);
+                        },
+                        onToolResult: ({ callId, toolName, args, result }) => {
+                            chunkQueueManager.flushImmediate();
+                            const toolStage = resolveToolStage(toolName);
+                            setStreamStage(toolStage);
+                            const messageId = toolTraceMessageIds.get(callId);
+
+                            updateMessages((prev) => {
+                                if (!messageId) {
+                                    return [
+                                        ...prev,
+                                        {
+                                            id: createMessageId(),
+                                            author: "assistant",
+                                            assistantStage: toolStage,
+                                            answeringAt: userMessage.id,
+                                            toolTrace: {
+                                                callId,
+                                                toolName,
+                                                args,
+                                                result,
+                                                status:
+                                                    toolName === "command_exec"
+                                                        ? "cancelled"
+                                                        : "accepted",
+                                                ...(toolName === "command_exec"
+                                                    ? getCommandRequestMeta(
+                                                          args,
+                                                      )
+                                                    : {}),
+                                            },
+                                            content: "",
+                                            timestamp: getTimeStamp(),
+                                        },
+                                    ];
+                                }
+
+                                return prev.map((message) =>
+                                    message.id === messageId
+                                        ? {
+                                              ...message,
+                                              assistantStage: toolStage,
+                                              toolTrace: {
+                                                  callId,
+                                                  toolName,
+                                                  args,
+                                                  result,
+                                                  status:
+                                                      message.toolTrace
+                                                          ?.status ||
+                                                      (toolName ===
+                                                      "command_exec"
+                                                          ? "cancelled"
+                                                          : "accepted"),
+                                                  ...(toolName ===
+                                                  "command_exec"
+                                                      ? getCommandRequestMeta(
+                                                            args,
+                                                        )
+                                                      : {}),
+                                              },
+                                              content: "",
+                                          }
+                                        : message,
+                                );
+                            });
+                        },
+                        onThinkingChunk: (chunkText) => {
+                            if (!chunkText) {
+                                return;
                             }
 
-                            return prev.map((message) =>
-                                message.id === messageId
-                                    ? {
-                                          ...message,
-                                          assistantStage: toolStage,
-                                          toolTrace: {
-                                              callId,
-                                              toolName,
-                                              args,
-                                              result,
-                                              status:
-                                                  message.toolTrace?.status ||
-                                                  (toolName === "command_exec"
-                                                      ? "cancelled"
-                                                      : "accepted"),
-                                              ...(toolName === "command_exec"
-                                                  ? getCommandRequestMeta(args)
-                                                  : {}),
-                                          },
-                                          content: "",
-                                      }
-                                    : message,
-                            );
-                        });
-                    },
-                    onThinkingChunk: (chunkText) => {
-                        if (!chunkText) {
-                            return;
-                        }
-
-                        setStreamStage("thinking");
-                        markFirstActivity();
-                        chunkQueueManager.enqueue("thinking", chunkText);
-                    },
-                    signal: abortController.signal,
-                    onChunk: (chunkText, done) => {
-                        if (!chunkText) {
-                            if (done) {
-                                setIsAwaitingFirstChunk(false);
+                            setStreamStage("thinking");
+                            markFirstActivity();
+                            chunkQueueManager.enqueue("thinking", chunkText);
+                        },
+                        signal: abortController.signal,
+                        onUsage: (usage) => {
+                            responseUsage = {
+                                promptTokens: Math.max(0, usage.promptTokens),
+                                completionTokens: Math.max(
+                                    0,
+                                    usage.completionTokens,
+                                ),
+                                totalTokens: Math.max(0, usage.totalTokens),
+                            };
+                        },
+                        onChunk: (chunkText, done) => {
+                            if (!chunkText) {
+                                if (done) {
+                                    setIsAwaitingFirstChunk(false);
+                                }
+                                return;
                             }
-                            return;
-                        }
 
-                        setStreamStage("answering");
-                        markFirstActivity();
+                            setStreamStage("answering");
+                            markFirstActivity();
 
-                        chunkQueueManager.enqueue("answering", chunkText);
-                    },
-                });
+                            chunkQueueManager.enqueue("answering", chunkText);
+                        },
+                    });
 
-                await chunkQueueManager.waitForDrain();
+                    await chunkQueueManager.waitForDrain();
 
-                const snapshot: ChatDialog = {
-                    ...currentDialog,
-                    messages: messagesRef.current,
-                    updatedAt: new Date().toISOString(),
-                };
-
-                const savedDialog = await chatsStore.saveSnapshot(snapshot);
-                activeDialogRef.current = savedDialog;
-                commitMessages(savedDialog.messages);
-            } catch (error) {
-                if (
-                    cancellationRequestedRef.current &&
-                    error instanceof Error &&
-                    error.name === "AbortError"
-                ) {
-                    chunkQueueManager.reset();
-                    commitMessages(requestBaseHistory);
-                    return;
-                }
-
-                await chunkQueueManager.waitForDrain();
-
-                const errorMessage =
-                    error instanceof Error
-                        ? error.message
-                        : "Не удалось получить ответ модели";
-
-                updateMessages((prev) => {
-                    const lastMessage = prev[prev.length - 1];
-
-                    if (!lastMessage || !isCurrentAnswerMessage(lastMessage)) {
-                        return [
-                            ...prev,
-                            {
-                                id: createMessageId(),
-                                author: "assistant",
-                                assistantStage: "answering",
-                                answeringAt: userMessage.id,
-                                content: `Ошибка: ${errorMessage}`,
-                                timestamp: getTimeStamp(),
-                            },
-                        ];
-                    }
-
-                    const updatedLastMessage: ChatMessage = {
-                        ...lastMessage,
-                        content: `Ошибка: ${errorMessage}`,
+                    const snapshot: ChatDialog = {
+                        ...currentDialog,
+                        messages: messagesRef.current,
+                        tokenUsage: {
+                            promptTokens:
+                                Math.max(
+                                    0,
+                                    currentDialog.tokenUsage?.promptTokens ?? 0,
+                                ) + responseUsage.promptTokens,
+                            completionTokens:
+                                Math.max(
+                                    0,
+                                    currentDialog.tokenUsage
+                                        ?.completionTokens ?? 0,
+                                ) + responseUsage.completionTokens,
+                            totalTokens:
+                                Math.max(
+                                    0,
+                                    currentDialog.tokenUsage?.totalTokens ?? 0,
+                                ) + responseUsage.totalTokens,
+                        },
+                        updatedAt: new Date().toISOString(),
                     };
 
-                    return [...prev.slice(0, -1), updatedLastMessage];
-                });
+                    const savedDialog = await chatsStore.saveSnapshot(snapshot);
+                    activeDialogRef.current = savedDialog;
+                    commitMessages(savedDialog.messages);
+                } catch (error) {
+                    if (
+                        cancellationRequestedRef.current &&
+                        error instanceof Error &&
+                        error.name === "AbortError"
+                    ) {
+                        chunkQueueManager.reset();
+                        commitMessages(requestBaseHistory);
+                        return;
+                    }
+
+                    await chunkQueueManager.waitForDrain();
+
+                    const errorMessage =
+                        error instanceof Error
+                            ? error.message
+                            : "Не удалось получить ответ модели";
+
+                    updateMessages((prev) => {
+                        const lastMessage = prev[prev.length - 1];
+
+                        if (
+                            !lastMessage ||
+                            !isCurrentAnswerMessage(lastMessage)
+                        ) {
+                            return [
+                                ...prev,
+                                {
+                                    id: createMessageId(),
+                                    author: "assistant",
+                                    assistantStage: "answering",
+                                    answeringAt: userMessage.id,
+                                    content: `Ошибка: ${errorMessage}`,
+                                    timestamp: getTimeStamp(),
+                                },
+                            ];
+                        }
+
+                        const updatedLastMessage: ChatMessage = {
+                            ...lastMessage,
+                            content: `Ошибка: ${errorMessage}`,
+                        };
+
+                        return [...prev.slice(0, -1), updatedLastMessage];
+                    });
+                } finally {
+                    chunkQueueManager.reset();
+                    abortControllerRef.current = null;
+                    cancellationRequestedRef.current = false;
+                    setIsAwaitingFirstChunk(false);
+                    setIsStreaming(false);
+                    setActiveStage(null);
+                    setActiveResponseToId(null);
+                }
             } finally {
-                chunkQueueManager.reset();
-                abortControllerRef.current = null;
-                cancellationRequestedRef.current = false;
-                setIsAwaitingFirstChunk(false);
-                setIsStreaming(false);
-                setActiveStage(null);
-                setActiveResponseToId(null);
+                isSendInFlightRef.current = false;
             }
         },
     });

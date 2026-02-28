@@ -220,6 +220,11 @@ const createBaseDialog = (forProjectId = null) => {
     id: createDialogId(),
     title: "Новый диалог",
     messages: [],
+    tokenUsage: {
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0
+    },
     forProjectId,
     createdAt: now,
     updatedAt: now
@@ -592,6 +597,7 @@ class DialogsService {
       id: this.normalizeDialogId(dialog2.id),
       title: typeof dialog2.title === "string" && dialog2.title.trim() ? dialog2.title : "Новый диалог",
       messages: normalizedMessages,
+      tokenUsage: this.normalizeTokenUsage(dialog2.tokenUsage),
       forProjectId: this.normalizeForProjectId(dialog2.forProjectId),
       createdAt: typeof dialog2.createdAt === "string" && dialog2.createdAt ? dialog2.createdAt : (/* @__PURE__ */ new Date()).toISOString(),
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
@@ -617,6 +623,7 @@ class DialogsService {
         id: this.normalizeDialogId(parsed.id),
         title: typeof parsed.title === "string" && parsed.title.trim() ? parsed.title : "Новый диалог",
         messages: normalizedMessages,
+        tokenUsage: this.normalizeTokenUsage(parsed.tokenUsage),
         forProjectId: this.normalizeForProjectId(parsed.forProjectId),
         createdAt: typeof parsed.createdAt === "string" && parsed.createdAt ? parsed.createdAt : (/* @__PURE__ */ new Date()).toISOString(),
         updatedAt: typeof parsed.updatedAt === "string" && parsed.updatedAt ? parsed.updatedAt : (/* @__PURE__ */ new Date()).toISOString()
@@ -663,6 +670,17 @@ class DialogsService {
       ...typeof message.hidden === "boolean" ? { hidden: message.hidden } : {}
     };
   }
+  normalizeTokenUsage(value) {
+    const raw = value && typeof value === "object" ? value : {};
+    const promptTokens = typeof raw.promptTokens === "number" && Number.isFinite(raw.promptTokens) ? Math.max(0, Math.floor(raw.promptTokens)) : 0;
+    const completionTokens = typeof raw.completionTokens === "number" && Number.isFinite(raw.completionTokens) ? Math.max(0, Math.floor(raw.completionTokens)) : 0;
+    const totalTokens = typeof raw.totalTokens === "number" && Number.isFinite(raw.totalTokens) ? Math.max(0, Math.floor(raw.totalTokens)) : promptTokens + completionTokens;
+    return {
+      promptTokens,
+      completionTokens,
+      totalTokens
+    };
+  }
   isScenarioLaunchMessage(message) {
     return message?.author === "system" && typeof message.content === "string" && message.content.startsWith("SCENARIO_LAUNCH:");
   }
@@ -676,7 +694,8 @@ class DialogsService {
         hour: "2-digit",
         minute: "2-digit"
       }),
-      updatedAt: dialog2.updatedAt
+      updatedAt: dialog2.updatedAt,
+      tokenUsage: this.normalizeTokenUsage(dialog2.tokenUsage)
     };
   }
 }
@@ -3297,8 +3316,8 @@ function parseHeaders(rawHeaders) {
   return headers;
 }
 Body.call(Request$1.prototype);
-function Response(bodyInit, options) {
-  if (!(this instanceof Response)) {
+function Response$1(bodyInit, options) {
+  if (!(this instanceof Response$1)) {
     throw new TypeError('Please use the "new" operator, this DOM object constructor cannot be called as a function.');
   }
   if (!options) {
@@ -3315,28 +3334,28 @@ function Response(bodyInit, options) {
   this.url = options.url || "";
   this._initBody(bodyInit);
 }
-Body.call(Response.prototype);
-Response.prototype.clone = function() {
-  return new Response(this._bodyInit, {
+Body.call(Response$1.prototype);
+Response$1.prototype.clone = function() {
+  return new Response$1(this._bodyInit, {
     status: this.status,
     statusText: this.statusText,
     headers: new Headers$1(this.headers),
     url: this.url
   });
 };
-Response.error = function() {
-  var response = new Response(null, { status: 200, statusText: "" });
+Response$1.error = function() {
+  var response = new Response$1(null, { status: 200, statusText: "" });
   response.ok = false;
   response.status = 0;
   response.type = "error";
   return response;
 };
 var redirectStatuses = [301, 302, 303, 307, 308];
-Response.redirect = function(url2, status) {
+Response$1.redirect = function(url2, status) {
   if (redirectStatuses.indexOf(status) === -1) {
     throw new RangeError("Invalid status code");
   }
-  return new Response(null, { status, headers: { location: url2 } });
+  return new Response$1(null, { status, headers: { location: url2 } });
 };
 var DOMException$1 = g.DOMException;
 try {
@@ -3374,7 +3393,7 @@ function fetch$1(input, init) {
       options.url = "responseURL" in xhr ? xhr.responseURL : options.headers.get("X-Request-URL");
       var body = "response" in xhr ? xhr.response : xhr.responseText;
       setTimeout(function() {
-        resolve2(new Response(body, options));
+        resolve2(new Response$1(body, options));
       }, 0);
     };
     xhr.onerror = function() {
@@ -3444,7 +3463,7 @@ if (!g.fetch) {
   g.fetch = fetch$1;
   g.Headers = Headers$1;
   g.Request = Request$1;
-  g.Response = Response;
+  g.Response = Response$1;
 }
 const defaultPort = "11434";
 const defaultHost = `http://127.0.0.1:${defaultPort}`;
@@ -3609,7 +3628,7 @@ const del = async (fetch2, host, data, options) => {
   await checkOk(response);
   return response;
 };
-const parseJSON = async function* (itr) {
+const parseJSON$1 = async function* (itr) {
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
   const reader2 = itr.getReader();
@@ -3723,7 +3742,7 @@ let Ollama$1 = class Ollama {
       if (!response2.body) {
         throw new Error("Missing body");
       }
-      const itr = parseJSON(response2.body);
+      const itr = parseJSON$1(response2.body);
       const abortableAsyncIterator = new AbortableAsyncIterator(
         abortController,
         itr,
@@ -3997,13 +4016,13 @@ class Ollama2 extends Ollama$1 {
   }
 }
 new Ollama2();
-let Config$1 = class Config {
+class Config {
   OLLAMA_BASE_URL = "https://ollama.com";
   MIREA_BASE_URL = "https://schedule-of.mirea.ru";
   MISTRAL_BASE_URL = "https://api.mistral.ai";
   TELEGRAM_BOT_BASE_URL = "https://api.telegram.org/bot";
-};
-const Config2 = new Config$1();
+}
+const Config$1 = new Config();
 const LOCAL_OLLAMA_HOST = "http://127.0.0.1:11434";
 class OllamaService {
   cachedHost = "";
@@ -4078,7 +4097,7 @@ class OllamaService {
   }
   async streamChat(payload, token) {
     const stream2 = await this.executeWithAuthFallback(
-      Config2.OLLAMA_BASE_URL.trim(),
+      Config$1.OLLAMA_BASE_URL.trim(),
       token,
       (client) => client.chat({
         model: payload.model,
@@ -4100,7 +4119,9 @@ class OllamaService {
           thinking: part.message.thinking,
           tool_calls: part.message.tool_calls
         },
-        done: part.done
+        done: part.done,
+        ...typeof part.prompt_eval_count === "number" ? { prompt_eval_count: part.prompt_eval_count } : {},
+        ...typeof part.eval_count === "number" ? { eval_count: part.eval_count } : {}
       });
     }
     return chunks;
@@ -10029,15 +10050,15 @@ function requireConnection() {
 }
 var transcription = {};
 var bufferUtil = { exports: {} };
-var constants$1;
+var constants$2;
 var hasRequiredConstants$1;
 function requireConstants$1() {
-  if (hasRequiredConstants$1) return constants$1;
+  if (hasRequiredConstants$1) return constants$2;
   hasRequiredConstants$1 = 1;
   const BINARY_TYPES = ["nodebuffer", "arraybuffer", "fragments"];
   const hasBlob = typeof Blob !== "undefined";
   if (hasBlob) BINARY_TYPES.push("blob");
-  constants$1 = {
+  constants$2 = {
     BINARY_TYPES,
     CLOSE_TIMEOUT: 3e4,
     EMPTY_BUFFER: Buffer.alloc(0),
@@ -10050,7 +10071,7 @@ function requireConstants$1() {
     NOOP: () => {
     }
   };
-  return constants$1;
+  return constants$2;
 }
 var bufferutil = { exports: {} };
 function commonjsRequire(path2) {
@@ -26996,10 +27017,10 @@ function requireZipObject() {
 var generate = {};
 var compressions = {};
 var flate = {};
-var common = {};
+var common$2 = {};
 var hasRequiredCommon;
 function requireCommon() {
-  if (hasRequiredCommon) return common;
+  if (hasRequiredCommon) return common$2;
   hasRequiredCommon = 1;
   (function(exports$1) {
     var TYPED_OK = typeof Uint8Array !== "undefined" && typeof Uint16Array !== "undefined" && typeof Int32Array !== "undefined";
@@ -27086,8 +27107,8 @@ function requireCommon() {
       }
     };
     exports$1.setTyped(TYPED_OK);
-  })(common);
-  return common;
+  })(common$2);
+  return common$2;
 }
 var deflate$1 = {};
 var deflate = {};
@@ -28322,7 +28343,7 @@ function requireDeflate$1() {
     }
     return BS_BLOCK_DONE;
   }
-  function Config3(good_length, max_lazy, nice_length, max_chain, func) {
+  function Config2(good_length, max_lazy, nice_length, max_chain, func) {
     this.good_length = good_length;
     this.max_lazy = max_lazy;
     this.nice_length = nice_length;
@@ -28332,25 +28353,25 @@ function requireDeflate$1() {
   var configuration_table;
   configuration_table = [
     /*      good lazy nice chain */
-    new Config3(0, 0, 0, 0, deflate_stored),
+    new Config2(0, 0, 0, 0, deflate_stored),
     /* 0 store only */
-    new Config3(4, 4, 8, 4, deflate_fast),
+    new Config2(4, 4, 8, 4, deflate_fast),
     /* 1 max speed, no lazy matches */
-    new Config3(4, 5, 16, 8, deflate_fast),
+    new Config2(4, 5, 16, 8, deflate_fast),
     /* 2 */
-    new Config3(4, 6, 32, 32, deflate_fast),
+    new Config2(4, 6, 32, 32, deflate_fast),
     /* 3 */
-    new Config3(4, 4, 16, 16, deflate_slow),
+    new Config2(4, 4, 16, 16, deflate_slow),
     /* 4 lazy matches */
-    new Config3(8, 16, 32, 32, deflate_slow),
+    new Config2(8, 16, 32, 32, deflate_slow),
     /* 5 */
-    new Config3(8, 16, 128, 128, deflate_slow),
+    new Config2(8, 16, 128, 128, deflate_slow),
     /* 6 */
-    new Config3(8, 32, 128, 256, deflate_slow),
+    new Config2(8, 32, 128, 256, deflate_slow),
     /* 7 */
-    new Config3(32, 128, 258, 1024, deflate_slow),
+    new Config2(32, 128, 258, 1024, deflate_slow),
     /* 8 */
-    new Config3(32, 258, 258, 4096, deflate_slow)
+    new Config2(32, 258, 258, 4096, deflate_slow)
     /* 9 max compression */
   ];
   function lm_init(s) {

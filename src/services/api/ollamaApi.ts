@@ -144,6 +144,12 @@ export const streamOllamaChat = async (
                 tool_calls: part.message?.tool_calls,
             },
             done: part.done,
+            ...(typeof part.prompt_eval_count === "number"
+                ? { prompt_eval_count: part.prompt_eval_count }
+                : {}),
+            ...(typeof part.eval_count === "number"
+                ? { eval_count: part.eval_count }
+                : {}),
         });
 
         await new Promise<void>((resolve) => {
