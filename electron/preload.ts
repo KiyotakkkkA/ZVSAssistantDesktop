@@ -192,6 +192,10 @@ const appApi: AppApi = {
         proxyHttpRequest: (payload) =>
             ipcRenderer.invoke("app:proxy-http-request", payload),
     },
+    extensions: {
+        getExtensionsState: () =>
+            ipcRenderer.invoke("app:get-extensions-state"),
+    },
     llm: {
         streamOllamaChat: (payload) =>
             ipcRenderer.invoke("app:ollama-stream-chat", payload),
@@ -207,6 +211,8 @@ const appApi: AppApi = {
             ),
         stopRealtimeTranscription: (sessionId) =>
             ipcRenderer.invoke("app:voice-transcription-stop", sessionId),
+        synthesizeSpeechWithPiper: (text: string) =>
+            ipcRenderer.invoke("app:voice-synthesize-with-piper", text),
         onRealtimeTranscriptionEvent: (listener) => {
             const handler = (_event: unknown, payload: unknown) => {
                 listener(payload as Parameters<typeof listener>[0]);

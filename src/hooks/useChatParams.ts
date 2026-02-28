@@ -16,6 +16,7 @@ type ChatSettingsFields = Pick<
     | "telegramId"
     | "telegramBotToken"
     | "assistantName"
+    | "useSpeechSynthesis"
     | "maxToolCallsPerResponse"
 >;
 

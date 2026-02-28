@@ -13,6 +13,7 @@ export const defaultProfile: UserProfile = {
     telegramBotToken: "",
     chatDriver: "ollama",
     assistantName: "Чарли",
+    useSpeechSynthesis: false,
     maxToolCallsPerResponse: 10,
     userName: "Пользователь",
     userPrompt: "",

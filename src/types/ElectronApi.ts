@@ -1,4 +1,10 @@
-import type { BootData, ThemeData, ThemeListItem, UserProfile } from "./App";
+import type {
+    AppExtensionInfo,
+    BootData,
+    ThemeData,
+    ThemeListItem,
+    UserProfile,
+} from "./App";
 import type {
     ChatDialog,
     ChatDialogListItem,
@@ -75,11 +81,13 @@ export type JobEventRecord = {
 export type CreateJobPayload = {
     name: string;
     description?: string;
-    kind?: "generic" | "vectorization";
+    kind?: "generic" | "vectorization" | "extension-install";
     vectorStorageId?: string;
     sourceDirectoryPath?: string;
     sourceFileIds?: string[];
     uploadedFiles?: UploadedFileData[];
+    extensionId?: string;
+    extensionReleaseZipUrl?: string;
     totalSteps?: number;
     stepDelayMs?: number;
 };
@@ -364,6 +372,10 @@ export type AppApiNetworkNamespace = {
     ) => Promise<ProxyHttpRequestResult>;
 };
 
+export type AppApiExtensionsNamespace = {
+    getExtensionsState: () => Promise<AppExtensionInfo[]>;
+};
+
 export type StreamOllamaChatPayload = {
     model: string;
     messages: OllamaMessage[];
@@ -409,6 +421,7 @@ export type AppApiVoiceNamespace = {
         chunk: Uint8Array,
     ) => Promise<void>;
     stopRealtimeTranscription: (sessionId: string) => Promise<void>;
+    synthesizeSpeechWithPiper: (text: string) => Promise<Uint8Array>;
     onRealtimeTranscriptionEvent: (
         listener: (event: VoiceTranscriptionEvent) => void,
     ) => () => void;
@@ -475,6 +488,7 @@ export type AppApi = {
     cache: AppApiCacheNamespace;
     jobs: AppApiJobsNamespace;
     network: AppApiNetworkNamespace;
+    extensions: AppApiExtensionsNamespace;
     llm: AppApiLlmNamespace;
     voice: AppApiVoiceNamespace;
     fs: AppApiFsNamespace;

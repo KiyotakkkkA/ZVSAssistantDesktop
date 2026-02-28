@@ -388,7 +388,7 @@ export class UserDataService {
         return this.fileStorageService.deleteFileById(fileId);
     }
 
-    getBootData(): BootData {
+    getBootData(): Omit<BootData, "extensions"> {
         const userProfile = this.userProfileService.getUserProfile();
         const preferredThemeData = this.themesService.resolveThemePalette(
             userProfile.themePreference,

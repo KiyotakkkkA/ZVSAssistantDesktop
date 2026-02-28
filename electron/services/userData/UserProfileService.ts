@@ -155,6 +155,9 @@ export class UserProfileService {
                 ...(typeof parsed.assistantName === "string"
                     ? { assistantName: parsed.assistantName }
                     : {}),
+                ...(typeof parsed.useSpeechSynthesis === "boolean"
+                    ? { useSpeechSynthesis: parsed.useSpeechSynthesis }
+                    : {}),
                 ...(typeof parsed.maxToolCallsPerResponse === "number" &&
                 Number.isFinite(parsed.maxToolCallsPerResponse)
                     ? {

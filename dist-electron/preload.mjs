@@ -129,6 +129,9 @@ const appApi = {
   network: {
     proxyHttpRequest: (payload) => electron.ipcRenderer.invoke("app:proxy-http-request", payload)
   },
+  extensions: {
+    getExtensionsState: () => electron.ipcRenderer.invoke("app:get-extensions-state")
+  },
   llm: {
     streamOllamaChat: (payload) => electron.ipcRenderer.invoke("app:ollama-stream-chat", payload)
   },
@@ -140,6 +143,7 @@ const appApi = {
       chunk
     ),
     stopRealtimeTranscription: (sessionId) => electron.ipcRenderer.invoke("app:voice-transcription-stop", sessionId),
+    synthesizeSpeechWithPiper: (text) => electron.ipcRenderer.invoke("app:voice-synthesize-with-piper", text),
     onRealtimeTranscriptionEvent: (listener) => {
       const handler = (_event, payload) => {
         listener(payload);

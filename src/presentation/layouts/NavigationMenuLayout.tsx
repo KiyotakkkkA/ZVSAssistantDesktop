@@ -5,7 +5,7 @@ import { Button, Modal } from "../components/atoms";
 import { JobManageForm } from "../components/organisms/forms";
 
 type NavigationTab = {
-    id: "workspace" | "storage";
+    id: "workspace" | "storage" | "ext";
     label: string;
     to: string;
     icon: string;
@@ -24,6 +24,12 @@ const navigationTabs: NavigationTab[] = [
         to: "/storage",
         icon: "mdi:database-outline",
     },
+    {
+        id: "ext",
+        label: "Расширения",
+        to: "/ext",
+        icon: "mdi:puzzle-outline",
+    },
 ];
 
 export const NavigationMenuLayout = () => {
@@ -31,6 +37,10 @@ export const NavigationMenuLayout = () => {
     const navigate = useNavigate();
     const [isJobsModalOpen, setIsJobsModalOpen] = useState(false);
     const activeTabId = useMemo(() => {
+        if (location.pathname.startsWith("/ext")) {
+            return "ext";
+        }
+
         if (location.pathname.startsWith("/storage")) {
             return "storage";
         }

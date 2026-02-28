@@ -5,6 +5,7 @@ import type {
 } from "../../../src/types/ElectronApi";
 import { JobsStorage } from "./JobsStorage";
 import { VectorizationService } from "../storage/VectorizationService";
+import { ExtensionsService } from "../extensions/ExtensionsService";
 
 type JobRuntime = {
     abortController: AbortController;
@@ -16,6 +17,7 @@ export class JobService {
     constructor(
         private readonly jobsStorage: JobsStorage,
         private readonly vectorizationService: VectorizationService,
+        private readonly extensionsService: ExtensionsService,
         private readonly emitEvent: (event: JobRealtimeEvent) => void,
     ) {
         this.jobsStorage.markPendingJobsAsInterrupted();
@@ -148,6 +150,55 @@ export class JobService {
                     const doneEvent = this.jobsStorage.appendJobEvent(
                         job.id,
                         "Задача векторизации успешно завершена",
+                        "success",
+                    );
+                    this.emitJobEvent(doneEvent);
+                    return;
+                }
+
+                if (payload.kind === "extension-install") {
+                    const extensionId =
+                        typeof payload.extensionId === "string"
+                            ? payload.extensionId.trim()
+                            : "";
+
+                    if (!extensionId) {
+                        throw new Error(
+                            "Не передан extensionId для установки расширения",
+                        );
+                    }
+
+                    await this.extensionsService.installFromGithubRelease({
+                        extensionId,
+                        releaseZipUrl:
+                            payload.extensionReleaseZipUrl?.trim() ?? "",
+                        signal: abortController.signal,
+                        onStage: (message, tag = "info") => {
+                            currentStage = message;
+                            const progressEvent =
+                                this.jobsStorage.appendJobEvent(
+                                    job.id,
+                                    message,
+                                    tag,
+                                );
+                            this.emitJobEvent(progressEvent);
+                        },
+                    });
+
+                    const completed = this.jobsStorage.updateJob(job.id, {
+                        isCompleted: true,
+                        isPending: false,
+                        finishedAt: new Date().toISOString(),
+                        errorMessage: null,
+                    });
+
+                    if (completed) {
+                        this.emitJobUpdate(completed);
+                    }
+
+                    const doneEvent = this.jobsStorage.appendJobEvent(
+                        job.id,
+                        "Расширение установлено. Перезапустите приложение, чтобы изменения применились во всех сервисах.",
                         "success",
                     );
                     this.emitJobEvent(doneEvent);

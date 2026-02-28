@@ -1,5 +1,6 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import type { UserProfile } from "../types/App";
+import { extensionsStore } from "./extensionsStore";
 
 const DEFAULT_THEME_ID = "dark-main";
 const DEFAULT_OLLAMA_MODEL = "gpt-oss:20b";
@@ -25,6 +26,7 @@ class UserProfileStore {
         userName: "Пользователь",
         userPrompt: "",
         userLanguage: "Русский",
+        useSpeechSynthesis: false,
         activeDialogId: null,
         activeProjectId: null,
         activeScenarioId: null,
@@ -60,6 +62,8 @@ class UserProfileStore {
                 this.userProfile = bootData.userProfile;
                 this.isReady = true;
             });
+
+            extensionsStore.hydrateFromBootData(bootData.extensions);
         } finally {
             runInAction(() => {
                 this.isInitializing = false;

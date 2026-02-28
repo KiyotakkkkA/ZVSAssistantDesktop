@@ -201,6 +201,7 @@ export const MessageComposer = observer(function MessageComposer({
         ollamaModel,
         mistralVoiceRecModel,
         mistralToken,
+        useSpeechSynthesis,
         voiceRecognitionDriver,
     } = userProfile;
     const { scenarios, switchScenario } = useScenario();
@@ -236,9 +237,15 @@ export const MessageComposer = observer(function MessageComposer({
     const isVoiceChatLoopRunningRef = useRef(false);
     const streamingWaitersRef = useRef<Array<() => void>>([]);
     const voiceChatStopWaitersRef = useRef<Array<() => void>>([]);
+    const previousIsStreamingRef = useRef(isStreaming);
+    const speechRequestTokenRef = useRef(0);
+    const speechAudioRef = useRef<HTMLAudioElement | null>(null);
+    const speechObjectUrlRef = useRef<string | null>(null);
+    const lastSpokenAssistantMessageIdRef = useRef<string | null>(null);
     const { isUploading, pickFiles } = useFileUpload();
 
     const dialogTokenUsage = chatsStore.activeDialog?.tokenUsage;
+    const activeDialogId = chatsStore.activeDialog?.id ?? null;
     const dialogMessagesCount = chatsStore.activeDialog?.messages.length ?? 0;
     const totalTokens = dialogTokenUsage?.totalTokens ?? 0;
     const promptTokens = dialogTokenUsage?.promptTokens ?? 0;
@@ -268,6 +275,149 @@ export const MessageComposer = observer(function MessageComposer({
             waiters.forEach((resolve) => resolve());
         }
     }, [isStreaming]);
+
+    const clearSpeechPlayback = useCallback(() => {
+        const activeAudio = speechAudioRef.current;
+        if (activeAudio) {
+            activeAudio.pause();
+            activeAudio.src = "";
+            activeAudio.onended = null;
+            activeAudio.onerror = null;
+            speechAudioRef.current = null;
+        }
+
+        const activeObjectUrl = speechObjectUrlRef.current;
+        if (activeObjectUrl) {
+            URL.revokeObjectURL(activeObjectUrl);
+            speechObjectUrlRef.current = null;
+        }
+    }, []);
+
+    const stopSpeechPlayback = useCallback(
+        (invalidatePending: boolean) => {
+            if (invalidatePending) {
+                speechRequestTokenRef.current += 1;
+            }
+            clearSpeechPlayback();
+        },
+        [clearSpeechPlayback],
+    );
+
+    const synthesizeAndPlaySpeech = useCallback(
+        async (text: string) => {
+            const voiceApi = window.appApi?.voice;
+            const synthesize = voiceApi?.synthesizeSpeechWithPiper;
+            const normalizedText = text.trim();
+
+            if (!synthesize || !normalizedText) {
+                return;
+            }
+
+            const requestToken = speechRequestTokenRef.current + 1;
+            speechRequestTokenRef.current = requestToken;
+            clearSpeechPlayback();
+
+            try {
+                const wavBytes = await synthesize(normalizedText);
+
+                if (
+                    speechRequestTokenRef.current !== requestToken ||
+                    !isVoiceChatModeRef.current ||
+                    !useSpeechSynthesis ||
+                    !wavBytes.length
+                ) {
+                    return;
+                }
+
+                const wavBufferCopy = new Uint8Array(wavBytes.byteLength);
+                wavBufferCopy.set(wavBytes);
+                const wavBlob = new Blob([wavBufferCopy.buffer], {
+                    type: "audio/wav",
+                });
+                const objectUrl = URL.createObjectURL(wavBlob);
+                const audio = new Audio(objectUrl);
+
+                speechObjectUrlRef.current = objectUrl;
+                speechAudioRef.current = audio;
+
+                audio.onended = () => {
+                    if (speechAudioRef.current === audio) {
+                        clearSpeechPlayback();
+                    }
+                };
+
+                audio.onerror = () => {
+                    if (speechAudioRef.current === audio) {
+                        clearSpeechPlayback();
+                    }
+                };
+
+                await audio.play();
+            } catch {
+                if (speechRequestTokenRef.current === requestToken) {
+                    clearSpeechPlayback();
+                }
+            }
+        },
+        [clearSpeechPlayback, useSpeechSynthesis],
+    );
+
+    useEffect(() => {
+        return () => {
+            stopSpeechPlayback(true);
+        };
+    }, [stopSpeechPlayback]);
+
+    useEffect(() => {
+        if (!useSpeechSynthesis) {
+            stopSpeechPlayback(true);
+        }
+    }, [stopSpeechPlayback, useSpeechSynthesis]);
+
+    useEffect(() => {
+        lastSpokenAssistantMessageIdRef.current = null;
+    }, [activeDialogId]);
+
+    useEffect(() => {
+        const wasStreaming = previousIsStreamingRef.current;
+        previousIsStreamingRef.current = isStreaming;
+
+        if (
+            !wasStreaming ||
+            isStreaming ||
+            !isVoiceChatModeRef.current ||
+            !useSpeechSynthesis
+        ) {
+            return;
+        }
+
+        const activeDialogMessages = chatsStore.activeDialog?.messages ?? [];
+
+        const lastAssistantMessage = [...activeDialogMessages]
+            .reverse()
+            .find(
+                (message) =>
+                    message.author === "assistant" &&
+                    message.content.trim().length > 0,
+            );
+
+        if (!lastAssistantMessage) {
+            return;
+        }
+
+        if (lastSpokenAssistantMessageIdRef.current === lastAssistantMessage.id) {
+            return;
+        }
+
+        lastSpokenAssistantMessageIdRef.current = lastAssistantMessage.id;
+        void synthesizeAndPlaySpeech(lastAssistantMessage.content);
+    }, [
+        activeDialogId,
+        dialogMessagesCount,
+        isStreaming,
+        synthesizeAndPlaySpeech,
+        useSpeechSynthesis,
+    ]);
 
     const formatFileSize = (bytes: number) => {
         if (bytes < 1024) {
@@ -645,6 +795,7 @@ export const MessageComposer = observer(function MessageComposer({
         isVoiceChatModeRef.current = false;
         isVoiceChatLoopRunningRef.current = false;
         setIsVoiceChatMode(false);
+        stopSpeechPlayback(true);
 
         const stopWaiters = [
             ...voiceChatStopWaitersRef.current,
@@ -653,7 +804,7 @@ export const MessageComposer = observer(function MessageComposer({
         voiceChatStopWaitersRef.current = [];
         streamingWaitersRef.current = [];
         stopWaiters.forEach((resolve) => resolve());
-    }, []);
+    }, [stopSpeechPlayback]);
 
     const toggleVoiceChatMode = useCallback(() => {
         if (isVoiceChatModeRef.current) {

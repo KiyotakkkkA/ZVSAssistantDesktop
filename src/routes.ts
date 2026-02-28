@@ -9,6 +9,7 @@ import { ProjectPage } from "./presentation/pages/workspace/projects/ProjectPage
 import { CreateScenarioPage } from "./presentation/pages/workspace/scenario/CreateScenarioPage";
 import { ScenarioPage } from "./presentation/pages/workspace/scenario/ScenarioPage";
 import { StoragePage } from "./presentation/pages/storage/StoragePage";
+import { ExtViewPage } from "./presentation/pages/ext/ExtViewPage";
 import { LoadingFallbackPage } from "./presentation/pages/LoadingFallbackPage";
 import { userProfileStore } from "./stores/userProfileStore";
 
@@ -93,6 +94,10 @@ export const router = createHashRouter([
             {
                 path: "storage",
                 element: createElement(StoragePage),
+            },
+            {
+                path: "ext",
+                element: createElement(ExtViewPage),
             },
         ],
     },

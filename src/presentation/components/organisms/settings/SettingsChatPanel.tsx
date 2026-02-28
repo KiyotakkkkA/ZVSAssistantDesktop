@@ -1,15 +1,19 @@
 import { useState } from "react";
 import { Button, InputCheckbox, InputSmall, Modal } from "../../atoms";
 import { Icon } from "@iconify/react";
-import { useChatParams } from "../../../../hooks";
+import { useChatParams, useExtensions } from "../../../../hooks";
 import { SettingsChatOllamaModelsPickForm } from "../forms";
 import { PrettyBR } from "../../atoms/PrettyBR";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export const SettingsChatPanel = () => {
     const [isModelsPickOpen, setIsModelsPickOpen] = useState(false);
+    const [isMissingPiperModalOpen, setIsMissingPiperModalOpen] =
+        useState(false);
+    const navigate = useNavigate();
 
     const { userProfile, updateChatParams } = useChatParams();
+    const { getExtensionById, refreshExtensions } = useExtensions();
 
     const {
         chatDriver,
@@ -24,7 +28,33 @@ export const SettingsChatPanel = () => {
         telegramBotToken,
         assistantName,
         maxToolCallsPerResponse,
+        useSpeechSynthesis,
     } = userProfile;
+
+    const handleSpeechSynthesisToggle = async (checked: boolean) => {
+        if (!checked) {
+            await updateChatParams({
+                useSpeechSynthesis: false,
+            });
+            return;
+        }
+
+        let piperExtension = getExtensionById("piper");
+
+        if (!piperExtension) {
+            await refreshExtensions();
+            piperExtension = getExtensionById("piper");
+        }
+
+        if (!piperExtension?.isInstalled) {
+            setIsMissingPiperModalOpen(true);
+            return;
+        }
+
+        await updateChatParams({
+            useSpeechSynthesis: true,
+        });
+    };
 
     return (
         <div className="gap-5">
@@ -80,6 +110,30 @@ export const SettingsChatPanel = () => {
                             placeholder="4"
                             type="number"
                             min={1}
+                        />
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex gap-2 items-center">
+                            <Icon
+                                icon="mdi:account-voice"
+                                width={28}
+                                height={28}
+                                className={`text-main-300 rounded-md p-0.5 ${useSpeechSynthesis ? "bg-lime-700/80" : "bg-main-700/80"}`}
+                            />
+                            <div>
+                                <p className="text-sm font-medium text-main-200">
+                                    Использовать синтез речи
+                                </p>
+                                <p className="text-xs text-main-400">Piper</p>
+                            </div>
+                        </div>
+
+                        <InputCheckbox
+                            checked={useSpeechSynthesis}
+                            onChange={(checked) => {
+                                void handleSpeechSynthesisToggle(checked);
+                            }}
                         />
                     </div>
                 </div>
@@ -394,6 +448,42 @@ export const SettingsChatPanel = () => {
                     }}
                     onClose={() => setIsModelsPickOpen(false)}
                 />
+            </Modal>
+
+            <Modal
+                open={isMissingPiperModalOpen}
+                onClose={() => setIsMissingPiperModalOpen(false)}
+                title="Piper не установлен"
+                footer={
+                    <>
+                        <Button
+                            variant="secondary"
+                            className="p-2"
+                            shape="rounded-lg"
+                            onClick={() => setIsMissingPiperModalOpen(false)}
+                        >
+                            Позже
+                        </Button>
+                        <Button
+                            variant="primary"
+                            className="p-2"
+                            shape="rounded-lg"
+                            onClick={() => {
+                                setIsMissingPiperModalOpen(false);
+                                navigate("/ext");
+                            }}
+                        >
+                            Открыть расширения
+                        </Button>
+                    </>
+                }
+                className="max-w-xl"
+            >
+                <p className="text-sm text-main-200">
+                    Для синтеза речи нужно установить расширение Piper.
+                    Перейдите во вкладку «Расширения», установите Piper и
+                    перезапустите приложение.
+                </p>
             </Modal>
         </div>
     );

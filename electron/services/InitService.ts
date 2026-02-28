@@ -5,6 +5,7 @@ import type { ElectronPaths } from "../paths";
 
 export class InitService {
     private readonly resourcesPath: string;
+    private readonly extensionsPath: string;
     private readonly themesPath: string;
     private readonly filesPath: string;
     private readonly vectorIndexPath: string;
@@ -13,6 +14,7 @@ export class InitService {
 
     constructor(paths: ElectronPaths) {
         this.resourcesPath = paths.resourcesPath;
+        this.extensionsPath = paths.extensionsPath;
         this.themesPath = paths.themesPath;
         this.filesPath = paths.filesPath;
         this.vectorIndexPath = paths.vectorIndexPath;
@@ -22,6 +24,7 @@ export class InitService {
 
     initialize(): void {
         this.ensureDirectory(this.resourcesPath);
+        this.ensureDirectory(this.extensionsPath);
         this.ensureDirectory(this.themesPath);
         this.ensureDirectory(this.filesPath);
         this.ensureDirectory(this.vectorIndexPath);

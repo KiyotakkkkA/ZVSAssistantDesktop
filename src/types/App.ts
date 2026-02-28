@@ -4,6 +4,17 @@ export type EmbeddingDriver = "" | "ollama";
 
 export type WorkspaceTab = "dialogs" | "projects" | "scenario";
 
+export type AppExtensionInfo = {
+    id: string;
+    title: string;
+    description: string;
+    repositoryUrl: string;
+    releaseZipUrl: string;
+    installPath: string;
+    entryFilePath: string;
+    isInstalled: boolean;
+};
+
 export type UserProfile = {
     themePreference: string;
     ollamaModel: string;
@@ -17,6 +28,7 @@ export type UserProfile = {
     telegramBotToken: string;
     chatDriver: ChatDriver;
     assistantName: string;
+    useSpeechSynthesis: boolean;
     maxToolCallsPerResponse: number;
     userName: string;
     userPrompt: string;
@@ -41,4 +53,5 @@ export type ThemeListItem = {
 export type BootData = {
     userProfile: UserProfile;
     preferredThemeData: Record<string, string>;
+    extensions: AppExtensionInfo[];
 };

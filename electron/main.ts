@@ -10,6 +10,8 @@ import { CommandExecService } from "./services/CommandExecService";
 import { BrowserService } from "./services/BrowserService";
 import { OllamaService } from "./services/agents/OllamaService";
 import { MistralService } from "./services/agents/MistralService";
+import { PiperService } from "./services/agents/PiperService";
+import { ExtensionsService } from "./services/extensions/ExtensionsService";
 import { LanceDbService } from "./services/storage/LanceDbService";
 import { VectorizationService } from "./services/storage/VectorizationService";
 import { JobsStorage } from "./services/jobs/JobsStorage";
@@ -63,7 +65,9 @@ let commandExecService: CommandExecService;
 let browserService: BrowserService;
 let ollamaService: OllamaService;
 let mistralService: MistralService;
+let piperService: PiperService;
 let jobService: JobService;
+let extensionsService: ExtensionsService;
 
 app.setAppUserModelId(APP_ID);
 
@@ -209,6 +213,7 @@ app.whenReady()
         const initDirectoriesService = new InitService(appPaths);
 
         initDirectoriesService.initialize();
+        extensionsService = new ExtensionsService(appPaths.extensionsPath);
         userDataService = new UserDataService(appPaths);
         commandExecService = new CommandExecService();
         browserService = new BrowserService();
@@ -226,6 +231,7 @@ app.whenReady()
         jobService = new JobService(
             jobsStorage,
             vectorizationService,
+            extensionsService,
             (jobEvent) => {
                 win?.webContents.send("app:jobs-event", jobEvent);
             },
@@ -236,9 +242,23 @@ app.whenReady()
                 eventPayload,
             );
         });
+        piperService = new PiperService({
+            tempDir: app.getPath("temp"),
+            resolvePiperExecutablePath: () =>
+                extensionsService.resolvePiperExecutablePath(),
+        });
 
-        ipcMain.handle("app:get-boot-data", () =>
-            userDataService.getBootData(),
+        ipcMain.handle("app:get-boot-data", async () => {
+            const bootData = userDataService.getBootData();
+            const extensions = await extensionsService.getExtensionsState();
+
+            return {
+                ...bootData,
+                extensions,
+            };
+        });
+        ipcMain.handle("app:get-extensions-state", () =>
+            extensionsService.getExtensionsState(),
         );
         ipcMain.handle("app:get-themes-list", () =>
             userDataService.getThemesList(),
@@ -601,6 +621,12 @@ app.whenReady()
             "app:voice-transcription-stop",
             async (_event, sessionId: string) => {
                 await mistralService.stopSession(sessionId);
+            },
+        );
+        ipcMain.handle(
+            "app:voice-synthesize-with-piper",
+            async (_event, text: string) => {
+                return piperService.synthesize(text);
             },
         );
         ipcMain.handle(

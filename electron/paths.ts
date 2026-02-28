@@ -3,6 +3,7 @@ import path from "node:path";
 export type ElectronPaths = {
     basePath: string;
     resourcesPath: string;
+    extensionsPath: string;
     themesPath: string;
     filesPath: string;
     vectorIndexPath: string;
@@ -17,6 +18,7 @@ export const createElectronPaths = (basePath: string): ElectronPaths => {
     return {
         basePath,
         resourcesPath,
+        extensionsPath: path.join(resourcesPath, "extensions"),
         themesPath: path.join(resourcesPath, "themes"),
         filesPath: path.join(resourcesPath, "files"),
         vectorIndexPath: path.join(resourcesPath, "vector-index"),
