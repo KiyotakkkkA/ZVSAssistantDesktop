@@ -246,6 +246,12 @@ app.whenReady()
             tempDir: app.getPath("temp"),
             resolvePiperExecutablePath: () =>
                 extensionsService.resolvePiperExecutablePath(),
+            resolveConfiguredModelPath: () => {
+                const configuredPath =
+                    userDataService.getBootData().userProfile.piperModelPath;
+
+                return Promise.resolve(configuredPath?.trim() || "");
+            },
         });
 
         ipcMain.handle("app:get-boot-data", async () => {

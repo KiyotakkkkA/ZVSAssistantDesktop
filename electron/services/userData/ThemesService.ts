@@ -3,6 +3,7 @@ import path from "node:path";
 import { defaultProfile } from "../../static/data";
 import { staticThemesMap, staticThemesList } from "../../static/themes";
 import type { ThemeData, ThemeListItem } from "../../../src/types/App";
+import { attemptSyncOrNull } from "../errors/errorPattern";
 
 export class ThemesService {
     constructor(private readonly themesPath: string) {}
@@ -67,20 +68,22 @@ export class ThemesService {
         for (const fileName of files) {
             const filePath = path.join(this.themesPath, fileName);
 
-            try {
+            const parsed = attemptSyncOrNull(() => {
                 const rawTheme = fs.readFileSync(filePath, "utf-8");
-                const parsed = JSON.parse(rawTheme) as ThemeData;
+                return JSON.parse(rawTheme) as ThemeData;
+            });
 
-                if (
-                    typeof parsed.id === "string" &&
-                    typeof parsed.name === "string" &&
-                    typeof parsed.palette === "object" &&
-                    parsed.palette !== null
-                ) {
-                    result.push(parsed);
-                }
-            } catch {
+            if (!parsed) {
                 continue;
+            }
+
+            if (
+                typeof parsed.id === "string" &&
+                typeof parsed.name === "string" &&
+                typeof parsed.palette === "object" &&
+                parsed.palette !== null
+            ) {
+                result.push(parsed);
             }
         }
 

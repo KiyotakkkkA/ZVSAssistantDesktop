@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import type { MetaPayload } from "../../../src/types/UserData";
+import { attemptSyncOr } from "../errors/errorPattern";
 
 const defaultMeta: MetaPayload = {
     currentUserId: "",
@@ -39,7 +40,7 @@ export class MetaService {
             return defaultMeta;
         }
 
-        try {
+        return attemptSyncOr(() => {
             const raw = fs.readFileSync(this.metaPath, "utf-8");
             const parsed = JSON.parse(raw) as Partial<MetaPayload>;
 
@@ -49,8 +50,6 @@ export class MetaService {
                         ? parsed.currentUserId
                         : "",
             };
-        } catch {
-            return defaultMeta;
-        }
+        }, defaultMeta);
     }
 }

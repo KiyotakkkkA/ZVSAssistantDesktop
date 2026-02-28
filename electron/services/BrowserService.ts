@@ -59,13 +59,11 @@ export class BrowserService {
             throw new Error("URL не указан");
         }
 
-        let parsed: URL;
-
-        try {
-            parsed = new URL(url);
-        } catch {
+        if (!URL.canParse(url)) {
             throw new Error("Некорректный URL");
         }
+
+        const parsed = new URL(url);
 
         const protocol = parsed.protocol.toLowerCase();
         if (!SUPPORTED_PROTOCOLS.has(protocol)) {
@@ -167,25 +165,39 @@ export class BrowserService {
             onCompleted,
         );
 
-        try {
-            await Promise.race([
-                webContents.loadURL(requestedUrl),
-                new Promise((_, reject) => {
-                    setTimeout(
-                        () =>
-                            reject(
-                                new Error(
-                                    `Таймаут загрузки страницы (${timeoutMs}ms)`,
-                                ),
+        const loadResult = await Promise.race([
+            webContents
+                .loadURL(requestedUrl)
+                .then(() => ({ ok: true as const })),
+            new Promise<{ ok: false; error: Error }>((resolve) => {
+                setTimeout(
+                    () =>
+                        resolve({
+                            ok: false,
+                            error: new Error(
+                                `Таймаут загрузки страницы (${timeoutMs}ms)`,
                             ),
-                        timeoutMs,
-                    );
-                }),
-            ]);
+                        }),
+                    timeoutMs,
+                );
+            }),
+        ]).catch((error) => ({
+            ok: false as const,
+            error: error instanceof Error ? error : new Error(String(error)),
+        }));
 
-            const finalUrl = webContents.getURL() || currentUrl || requestedUrl;
-            const title = webContents.getTitle();
+        const finalUrl = webContents.getURL() || currentUrl || requestedUrl;
+        const title = webContents.getTitle();
 
+        webContentsAny.removeListener("did-redirect-navigation", onRedirect);
+        webContentsAny.removeListener("did-fail-load", onFailLoad);
+        webContentsAny.removeListener("did-finish-load", onDidFinishLoad);
+        webContents.session.webRequest.onCompleted(
+            { urls: ["*://*/*"] },
+            null as unknown as (details: unknown) => void,
+        );
+
+        if (loadResult.ok) {
             return {
                 success: true,
                 requestedUrl,
@@ -199,12 +211,16 @@ export class BrowserService {
                 statusCode,
                 loadTimeMs: Date.now() - startedAt,
             };
-        } catch (error) {
+        }
+
+        {
             const finalUrl = webContents.getURL() || currentUrl || requestedUrl;
             const title = webContents.getTitle();
             const errorMessage =
                 navigationError ||
-                (error instanceof Error ? error.message : String(error));
+                (loadResult.error instanceof Error
+                    ? loadResult.error.message
+                    : String(loadResult.error));
             const isAbortedError =
                 errorMessage.includes("ERR_ABORTED") ||
                 errorMessage.includes("[-3]");
@@ -242,17 +258,6 @@ export class BrowserService {
                 loadTimeMs: Date.now() - startedAt,
                 error: errorMessage,
             };
-        } finally {
-            webContentsAny.removeListener(
-                "did-redirect-navigation",
-                onRedirect,
-            );
-            webContentsAny.removeListener("did-fail-load", onFailLoad);
-            webContentsAny.removeListener("did-finish-load", onDidFinishLoad);
-            webContents.session.webRequest.onCompleted(
-                { urls: ["*://*/*"] },
-                null as unknown as (details: unknown) => void,
-            );
         }
     }
 

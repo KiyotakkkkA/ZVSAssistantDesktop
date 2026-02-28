@@ -76,66 +76,24 @@ export class MistralService {
         const audioStream = this.createAudioStream(session);
         const client = new RealtimeTranscription({ apiKey });
 
-        session.runPromise = (async () => {
-            try {
-                for await (const event of client.transcribeStream(
-                    audioStream,
-                    model,
-                    {
-                        audioFormat: {
-                            encoding: AudioEncoding.PcmS16le,
-                            sampleRate,
-                        },
-                    },
-                )) {
-                    if (
-                        event.type === "transcription.text.delta" &&
-                        "text" in event &&
-                        typeof event.text === "string"
-                    ) {
-                        this.emitEvent({
-                            sessionId,
-                            type: "transcription.text.delta",
-                            text: event.text,
-                        });
-                        continue;
-                    }
-
-                    if (event.type === "transcription.done") {
-                        this.emitEvent({
-                            sessionId,
-                            type: "transcription.done",
-                        });
-                        break;
-                    }
-
-                    if (event.type === "error") {
-                        const error =
-                            "error" in event ? event.error : undefined;
-                        const message =
-                            typeof error?.message === "string"
-                                ? error.message
-                                : JSON.stringify(error?.message);
-
-                        this.emitEvent({
-                            sessionId,
-                            type: "error",
-                            message: message || "Realtime transcription error",
-                        });
-                        break;
-                    }
-                }
-            } catch (error) {
+        session.runPromise = this.consumeTranscriptionStream(
+            sessionId,
+            client,
+            audioStream,
+            model,
+            sampleRate,
+        )
+            .catch((error) => {
                 this.emitEvent({
                     sessionId,
                     type: "error",
                     message: toErrorMessage(error),
                 });
-            } finally {
+            })
+            .finally(async () => {
                 await audioStream.return?.();
                 this.cleanupSession(sessionId);
-            }
-        })();
+            });
 
         this.sessions.set(sessionId, session);
 
@@ -199,6 +157,57 @@ export class MistralService {
                 await waitForChunk();
             }
         })();
+    }
+
+    private async consumeTranscriptionStream(
+        sessionId: string,
+        client: RealtimeTranscription,
+        audioStream: AsyncGenerator<Uint8Array, void, unknown>,
+        model: string,
+        sampleRate: number,
+    ): Promise<void> {
+        for await (const event of client.transcribeStream(audioStream, model, {
+            audioFormat: {
+                encoding: AudioEncoding.PcmS16le,
+                sampleRate,
+            },
+        })) {
+            if (
+                event.type === "transcription.text.delta" &&
+                "text" in event &&
+                typeof event.text === "string"
+            ) {
+                this.emitEvent({
+                    sessionId,
+                    type: "transcription.text.delta",
+                    text: event.text,
+                });
+                continue;
+            }
+
+            if (event.type === "transcription.done") {
+                this.emitEvent({
+                    sessionId,
+                    type: "transcription.done",
+                });
+                break;
+            }
+
+            if (event.type === "error") {
+                const error = "error" in event ? event.error : undefined;
+                const message =
+                    typeof error?.message === "string"
+                        ? error.message
+                        : JSON.stringify(error?.message);
+
+                this.emitEvent({
+                    sessionId,
+                    type: "error",
+                    message: message || "Realtime transcription error",
+                });
+                break;
+            }
+        }
     }
 
     private notifyWaiters(session: SessionState): void {

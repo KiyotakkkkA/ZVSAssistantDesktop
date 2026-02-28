@@ -6,6 +6,7 @@ import mammoth from "mammoth";
 import { UserDataService } from "../UserDataService";
 import { LanceDbService } from "./LanceDbService";
 import { OllamaService } from "../agents/OllamaService";
+import { attemptOrNull, raiseBusinessError } from "../errors/errorPattern";
 import type { CreateJobPayload } from "../../../src/types/ElectronApi";
 import type {
     LanceVectorRow,
@@ -34,14 +35,20 @@ export class VectorizationService {
         const vectorStorageId = payload.vectorStorageId?.trim();
 
         if (!vectorStorageId) {
-            throw new Error("Не передан идентификатор векторного хранилища");
+            raiseBusinessError(
+                "VECTOR_STORAGE_ID_EMPTY",
+                "Не передан идентификатор векторного хранилища",
+            );
         }
 
         const storage =
             this.userDataService.getVectorStorageById(vectorStorageId);
 
         if (!storage) {
-            throw new Error("Векторное хранилище не найдено");
+            raiseBusinessError(
+                "VECTOR_STORAGE_NOT_FOUND",
+                "Векторное хранилище не найдено",
+            );
         }
 
         const activeDataPath =
@@ -273,7 +280,10 @@ export class VectorizationService {
         }
 
         if (!documents.length) {
-            throw new Error("Не удалось извлечь текст из выбранных файлов");
+            raiseBusinessError(
+                "VECTORIZATION_TEXT_NOT_EXTRACTED",
+                "Не удалось извлечь текст из выбранных файлов",
+            );
         }
 
         return documents;
@@ -283,16 +293,20 @@ export class VectorizationService {
         directoryPath: string,
         callbacks: VectorizationCallbacks,
     ): Promise<VectorizationSourceFile[]> {
-        let rootStats;
+        const rootStats = await attemptOrNull(() => fs.stat(directoryPath));
 
-        try {
-            rootStats = await fs.stat(directoryPath);
-        } catch {
-            throw new Error("Папка данных для индексации недоступна");
+        if (!rootStats) {
+            raiseBusinessError(
+                "VECTORIZATION_DIRECTORY_UNAVAILABLE",
+                "Папка данных для индексации недоступна",
+            );
         }
 
         if (!rootStats.isDirectory()) {
-            throw new Error("Путь данных должен указывать на папку");
+            raiseBusinessError(
+                "VECTORIZATION_DIRECTORY_REQUIRED",
+                "Путь данных должен указывать на папку",
+            );
         }
 
         callbacks.onStage(`Сканирую папку данных: ${directoryPath}`, "info");
@@ -355,7 +369,8 @@ export class VectorizationService {
         const profile = this.userDataService.getBootData().userProfile;
 
         if (profile.embeddingDriver !== "ollama") {
-            throw new Error(
+            raiseBusinessError(
+                "EMBEDDING_DRIVER_NOT_OLLAMA",
                 "Для векторизации нужно включить настройку 'Использовать для создания эмбеддингов' в Ollama",
             );
         }
@@ -364,7 +379,10 @@ export class VectorizationService {
             profile.ollamaEmbeddingModel.trim() || profile.ollamaModel.trim();
 
         if (!model) {
-            throw new Error("Не выбрана Ollama эмбеддинг-модель");
+            raiseBusinessError(
+                "EMBEDDING_MODEL_EMPTY",
+                "Не выбрана Ollama эмбеддинг-модель",
+            );
         }
 
         const token = profile.ollamaToken;
@@ -425,7 +443,8 @@ export class VectorizationService {
             );
 
             if (embedResult.embeddings.length !== batch.length) {
-                throw new Error(
+                raiseBusinessError(
+                    "EMBEDDING_BATCH_MISMATCH",
                     "Количество эмбеддингов не совпадает с размером батча",
                 );
             }

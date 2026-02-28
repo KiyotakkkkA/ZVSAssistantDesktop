@@ -14,6 +14,7 @@ export const defaultProfile: UserProfile = {
     chatDriver: "ollama",
     assistantName: "Чарли",
     useSpeechSynthesis: false,
+    piperModelPath: "",
     maxToolCallsPerResponse: 10,
     userName: "Пользователь",
     userPrompt: "",

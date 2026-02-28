@@ -17,6 +17,7 @@ type ChatSettingsFields = Pick<
     | "telegramBotToken"
     | "assistantName"
     | "useSpeechSynthesis"
+    | "piperModelPath"
     | "maxToolCallsPerResponse"
 >;
 

@@ -195,6 +195,8 @@ export class DialogsService {
             deletedIds.add(previousMessage.id);
         }
 
+        this.extendDeletedIdsByAnsweringAt(dialog.messages, deletedIds);
+
         const nextMessages = dialog.messages.filter(
             (message) =>
                 !deletedIds.has(message.id) &&
@@ -212,6 +214,35 @@ export class DialogsService {
 
         this.writeDialog(updatedDialog);
         return updatedDialog;
+    }
+
+    private extendDeletedIdsByAnsweringAt(
+        messages: ChatMessage[],
+        deletedIds: Set<string>,
+    ): void {
+        let hasNewItems = true;
+
+        while (hasNewItems) {
+            hasNewItems = false;
+
+            for (const message of messages) {
+                if (
+                    typeof message.answeringAt !== "string" ||
+                    !message.answeringAt
+                ) {
+                    continue;
+                }
+
+                if (!deletedIds.has(message.answeringAt)) {
+                    continue;
+                }
+
+                if (!deletedIds.has(message.id)) {
+                    deletedIds.add(message.id);
+                    hasNewItems = true;
+                }
+            }
+        }
     }
 
     truncateDialogFromMessage(

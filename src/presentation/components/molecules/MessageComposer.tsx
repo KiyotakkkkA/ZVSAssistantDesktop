@@ -189,6 +189,8 @@ interface MessageComposerProps {
     isStreaming?: boolean;
 }
 
+type VoiceListeningResult = "sent" | "empty" | "error";
+
 export const MessageComposer = observer(function MessageComposer({
     onMessageSend,
     onCancelGeneration,
@@ -219,6 +221,7 @@ export const MessageComposer = observer(function MessageComposer({
     );
     const [isVoiceListening, setIsVoiceListening] = useState(false);
     const [isVoiceChatMode, setIsVoiceChatMode] = useState(false);
+    const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
     const [voiceTranscriptPreview, setVoiceTranscriptPreview] = useState("");
     const [voiceEqualizerBars, setVoiceEqualizerBars] = useState<number[]>(() =>
         new Array<number>(VOICE_EQUALIZER_BARS_COUNT).fill(6),
@@ -232,6 +235,7 @@ export const MessageComposer = observer(function MessageComposer({
     const rejectVoiceDoneRef = useRef<((error: Error) => void) | null>(null);
     const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isVoiceChatModeRef = useRef(false);
+    const isVoiceListeningRef = useRef(false);
     const isStreamingRef = useRef(isStreaming);
     const voiceChatLoopTokenRef = useRef(0);
     const isVoiceChatLoopRunningRef = useRef(false);
@@ -241,7 +245,11 @@ export const MessageComposer = observer(function MessageComposer({
     const speechRequestTokenRef = useRef(0);
     const speechAudioRef = useRef<HTMLAudioElement | null>(null);
     const speechObjectUrlRef = useRef<string | null>(null);
+    const speechBusyRef = useRef(false);
+    const speechBusyWaitersRef = useRef<Array<() => void>>([]);
     const lastSpokenAssistantMessageIdRef = useRef<string | null>(null);
+    const voiceTranscriptPreviewFrameRef = useRef<number | null>(null);
+    const pendingVoiceTranscriptPreviewRef = useRef("");
     const { isUploading, pickFiles } = useFileUpload();
 
     const dialogTokenUsage = chatsStore.activeDialog?.tokenUsage;
@@ -266,6 +274,10 @@ export const MessageComposer = observer(function MessageComposer({
     }, [isVoiceChatMode]);
 
     useEffect(() => {
+        isVoiceListeningRef.current = isVoiceListening;
+    }, [isVoiceListening]);
+
+    useEffect(() => {
         isStreamingRef.current = isStreaming;
 
         if (!isStreaming && streamingWaitersRef.current.length > 0) {
@@ -275,6 +287,59 @@ export const MessageComposer = observer(function MessageComposer({
             waiters.forEach((resolve) => resolve());
         }
     }, [isStreaming]);
+
+    const setSpeechBusy = useCallback((nextBusy: boolean) => {
+        if (speechBusyRef.current === nextBusy) {
+            return;
+        }
+
+        speechBusyRef.current = nextBusy;
+        setIsAssistantSpeaking(nextBusy);
+
+        if (!nextBusy && speechBusyWaitersRef.current.length > 0) {
+            const waiters = speechBusyWaitersRef.current;
+            speechBusyWaitersRef.current = [];
+            waiters.forEach((resolve) => resolve());
+        }
+    }, []);
+
+    const waitForSpeechIdle = useCallback(async () => {
+        if (!speechBusyRef.current) {
+            return;
+        }
+
+        await new Promise<void>((resolve) => {
+            speechBusyWaitersRef.current.push(resolve);
+        });
+    }, []);
+
+    const resetVoiceTranscriptPreview = useCallback(() => {
+        pendingVoiceTranscriptPreviewRef.current = "";
+
+        if (voiceTranscriptPreviewFrameRef.current !== null) {
+            window.cancelAnimationFrame(voiceTranscriptPreviewFrameRef.current);
+            voiceTranscriptPreviewFrameRef.current = null;
+        }
+
+        setVoiceTranscriptPreview("");
+    }, []);
+
+    const scheduleVoiceTranscriptPreview = useCallback((nextText: string) => {
+        pendingVoiceTranscriptPreviewRef.current = nextText;
+
+        if (voiceTranscriptPreviewFrameRef.current !== null) {
+            return;
+        }
+
+        voiceTranscriptPreviewFrameRef.current = window.requestAnimationFrame(
+            () => {
+                voiceTranscriptPreviewFrameRef.current = null;
+                setVoiceTranscriptPreview(
+                    pendingVoiceTranscriptPreviewRef.current,
+                );
+            },
+        );
+    }, []);
 
     const clearSpeechPlayback = useCallback(() => {
         const activeAudio = speechAudioRef.current;
@@ -298,9 +363,11 @@ export const MessageComposer = observer(function MessageComposer({
             if (invalidatePending) {
                 speechRequestTokenRef.current += 1;
             }
+
             clearSpeechPlayback();
+            setSpeechBusy(false);
         },
-        [clearSpeechPlayback],
+        [clearSpeechPlayback, setSpeechBusy],
     );
 
     const synthesizeAndPlaySpeech = useCallback(
@@ -315,6 +382,7 @@ export const MessageComposer = observer(function MessageComposer({
 
             const requestToken = speechRequestTokenRef.current + 1;
             speechRequestTokenRef.current = requestToken;
+            setSpeechBusy(true);
             clearSpeechPlayback();
 
             try {
@@ -326,6 +394,9 @@ export const MessageComposer = observer(function MessageComposer({
                     !useSpeechSynthesis ||
                     !wavBytes.length
                 ) {
+                    if (speechRequestTokenRef.current === requestToken) {
+                        setSpeechBusy(false);
+                    }
                     return;
                 }
 
@@ -343,12 +414,14 @@ export const MessageComposer = observer(function MessageComposer({
                 audio.onended = () => {
                     if (speechAudioRef.current === audio) {
                         clearSpeechPlayback();
+                        setSpeechBusy(false);
                     }
                 };
 
                 audio.onerror = () => {
                     if (speechAudioRef.current === audio) {
                         clearSpeechPlayback();
+                        setSpeechBusy(false);
                     }
                 };
 
@@ -356,17 +429,19 @@ export const MessageComposer = observer(function MessageComposer({
             } catch {
                 if (speechRequestTokenRef.current === requestToken) {
                     clearSpeechPlayback();
+                    setSpeechBusy(false);
                 }
             }
         },
-        [clearSpeechPlayback, useSpeechSynthesis],
+        [clearSpeechPlayback, setSpeechBusy, useSpeechSynthesis],
     );
 
     useEffect(() => {
         return () => {
+            resetVoiceTranscriptPreview();
             stopSpeechPlayback(true);
         };
-    }, [stopSpeechPlayback]);
+    }, [resetVoiceTranscriptPreview, stopSpeechPlayback]);
 
     useEffect(() => {
         if (!useSpeechSynthesis) {
@@ -382,6 +457,11 @@ export const MessageComposer = observer(function MessageComposer({
         const wasStreaming = previousIsStreamingRef.current;
         previousIsStreamingRef.current = isStreaming;
 
+        if (!wasStreaming && isStreaming) {
+            stopSpeechPlayback(true);
+            return;
+        }
+
         if (
             !wasStreaming ||
             isStreaming ||
@@ -392,20 +472,35 @@ export const MessageComposer = observer(function MessageComposer({
         }
 
         const activeDialogMessages = chatsStore.activeDialog?.messages ?? [];
+        let lastAssistantMessage:
+            | (typeof activeDialogMessages)[number]
+            | undefined;
 
-        const lastAssistantMessage = [...activeDialogMessages]
-            .reverse()
-            .find(
-                (message) =>
-                    message.author === "assistant" &&
-                    message.content.trim().length > 0,
-            );
+        for (
+            let index = activeDialogMessages.length - 1;
+            index >= 0;
+            index -= 1
+        ) {
+            const currentMessage = activeDialogMessages[index];
+
+            if (
+                currentMessage.author === "assistant" &&
+                !currentMessage.hidden &&
+                !currentMessage.toolTrace &&
+                currentMessage.content.trim().length > 0
+            ) {
+                lastAssistantMessage = currentMessage;
+                break;
+            }
+        }
 
         if (!lastAssistantMessage) {
             return;
         }
 
-        if (lastSpokenAssistantMessageIdRef.current === lastAssistantMessage.id) {
+        if (
+            lastSpokenAssistantMessageIdRef.current === lastAssistantMessage.id
+        ) {
             return;
         }
 
@@ -415,6 +510,7 @@ export const MessageComposer = observer(function MessageComposer({
         activeDialogId,
         dialogMessagesCount,
         isStreaming,
+        stopSpeechPlayback,
         synthesizeAndPlaySpeech,
         useSpeechSynthesis,
     ]);
@@ -497,6 +593,7 @@ export const MessageComposer = observer(function MessageComposer({
             return;
         }
 
+        stopSpeechPlayback(true);
         onMessageSend(payload);
         setMsgContent("");
         setAttachedImages([]);
@@ -506,6 +603,13 @@ export const MessageComposer = observer(function MessageComposer({
     };
 
     const stopVoiceListening = useCallback(async () => {
+        isVoiceListeningRef.current = false;
+        setIsVoiceListening(false);
+        resetVoiceTranscriptPreview();
+        setVoiceEqualizerBars(
+            new Array<number>(VOICE_EQUALIZER_BARS_COUNT).fill(6),
+        );
+
         resolveVoiceDoneRef.current?.();
 
         const stopCapture = stopVoiceCaptureRef.current;
@@ -530,10 +634,6 @@ export const MessageComposer = observer(function MessageComposer({
         }
 
         if (!stopCapture) {
-            setVoiceEqualizerBars(
-                new Array<number>(VOICE_EQUALIZER_BARS_COUNT).fill(6),
-            );
-            setIsVoiceListening(false);
             return;
         }
 
@@ -550,12 +650,7 @@ export const MessageComposer = observer(function MessageComposer({
                 // noop
             }
         }
-
-        setVoiceEqualizerBars(
-            new Array<number>(VOICE_EQUALIZER_BARS_COUNT).fill(6),
-        );
-        setIsVoiceListening(false);
-    }, []);
+    }, [resetVoiceTranscriptPreview]);
 
     useEffect(() => {
         return () => {
@@ -563,221 +658,242 @@ export const MessageComposer = observer(function MessageComposer({
         };
     }, [stopVoiceListening]);
 
-    const startVoiceListening = useCallback(async () => {
-        if (isStreaming) {
-            toasts.warning({
-                title: "Дождитесь завершения ответа",
-                description: "Во время генерации ответа запись недоступна.",
-            });
-            return;
-        }
-
-        if (voiceRecognitionDriver !== "mistral") {
-            toasts.warning({
-                title: "Голосовой провайдер не выбран",
-                description:
-                    "Включите «Использовать для распознавания голоса» для Mistral в настройках чата.",
-            });
-            return;
-        }
-
-        const token = mistralToken.trim();
-        const voiceModel = mistralVoiceRecModel.trim();
-
-        if (!token) {
-            toasts.warning({
-                title: "Mistral token не задан",
-                description:
-                    "Укажите Mistral API key в настройках чата, чтобы использовать голосовой ввод.",
-            });
-            return;
-        }
-
-        if (!voiceModel) {
-            toasts.warning({
-                title: "Модель распознавания не задана",
-                description:
-                    "Укажите mistralVoiceRecModel в настройках чата, чтобы использовать голосовой ввод.",
-            });
-            return;
-        }
-
-        const voiceApi = window.appApi?.voice;
-
-        if (!voiceApi) {
-            toasts.danger({
-                title: "Voice API недоступен",
-                description:
-                    "Не удалось подключиться к Electron API для распознавания речи.",
-            });
-            return;
-        }
-
-        setVoiceTranscriptPreview("");
-        setIsVoiceListening(true);
-
-        let transcriptText = "";
-        let hasVoiceError = false;
-        let capture: PcmRealtimeCapture | null = null;
-        let pushAudioPromise: Promise<void> | null = null;
-        let stopEqualizerAnimation: (() => void) | null = null;
-
-        try {
-            capture = await createPcmRealtimeCapture();
-            const activeCapture = capture;
-            stopVoiceCaptureRef.current = capture.stop;
-
-            let rafId: number | null = null;
-            const runEqualizerFrame = () => {
-                setVoiceEqualizerBars(activeCapture.readEqualizerBars());
-                rafId = window.requestAnimationFrame(runEqualizerFrame);
-            };
-            runEqualizerFrame();
-
-            stopEqualizerAnimation = () => {
-                if (rafId !== null) {
-                    window.cancelAnimationFrame(rafId);
-                }
-            };
-            stopEqualizerAnimationRef.current = stopEqualizerAnimation;
-
-            const { sessionId } =
-                await voiceApi.startMistralRealtimeTranscription({
-                    apiKey: token,
-                    model: voiceModel,
-                    sampleRate: MISTRAL_SAMPLE_RATE,
+    const startVoiceListening =
+        useCallback(async (): Promise<VoiceListeningResult> => {
+            if (isStreaming) {
+                toasts.warning({
+                    title: "Дождитесь завершения ответа",
+                    description: "Во время генерации ответа запись недоступна.",
                 });
+                return "error";
+            }
 
-            voiceSessionIdRef.current = sessionId;
+            if (voiceRecognitionDriver !== "mistral") {
+                toasts.warning({
+                    title: "Голосовой провайдер не выбран",
+                    description:
+                        "Включите «Использовать для распознавания голоса» для Mistral в настройках чата.",
+                });
+                return "error";
+            }
 
-            const waitForCompletion = new Promise<void>((resolve, reject) => {
-                resolveVoiceDoneRef.current = resolve;
-                rejectVoiceDoneRef.current = reject;
-            });
+            const token = mistralToken.trim();
+            const voiceModel = mistralVoiceRecModel.trim();
 
-            unsubscribeVoiceEventsRef.current =
-                voiceApi.onRealtimeTranscriptionEvent(
-                    (event: VoiceTranscriptionEvent) => {
-                        if (event.sessionId !== sessionId) {
-                            return;
-                        }
+            if (!token) {
+                toasts.warning({
+                    title: "Mistral token не задан",
+                    description:
+                        "Укажите Mistral API key в настройках чата, чтобы использовать голосовой ввод.",
+                });
+                return "error";
+            }
 
-                        if (event.type === "transcription.text.delta") {
-                            transcriptText += event.text;
-                            setVoiceTranscriptPreview(transcriptText);
+            if (!voiceModel) {
+                toasts.warning({
+                    title: "Модель распознавания не задана",
+                    description:
+                        "Укажите mistralVoiceRecModel в настройках чата, чтобы использовать голосовой ввод.",
+                });
+                return "error";
+            }
 
-                            if (silenceTimerRef.current) {
-                                clearTimeout(silenceTimerRef.current);
-                            }
+            const voiceApi = window.appApi?.voice;
 
-                            silenceTimerRef.current = setTimeout(() => {
-                                resolveVoiceDoneRef.current?.();
-                            }, VOICE_SILENCE_TIMEOUT_MS);
-                            return;
-                        }
+            if (!voiceApi) {
+                toasts.danger({
+                    title: "Voice API недоступен",
+                    description:
+                        "Не удалось подключиться к Electron API для распознавания речи.",
+                });
+                return "error";
+            }
 
-                        if (event.type === "transcription.done") {
-                            if (silenceTimerRef.current) {
-                                clearTimeout(silenceTimerRef.current);
-                                silenceTimerRef.current = null;
-                            }
-                            resolveVoiceDoneRef.current?.();
-                            return;
-                        }
+            resetVoiceTranscriptPreview();
+            setIsVoiceListening(true);
 
-                        if (event.type === "error") {
-                            if (silenceTimerRef.current) {
-                                clearTimeout(silenceTimerRef.current);
-                                silenceTimerRef.current = null;
-                            }
-                            rejectVoiceDoneRef.current?.(
-                                new Error(event.message),
-                            );
-                        }
+            let transcriptText = "";
+            let hasVoiceError = false;
+            let hasInterruptedSpeechOnPhraseStart = false;
+            let capture: PcmRealtimeCapture | null = null;
+            let pushAudioPromise: Promise<void> | null = null;
+            let stopEqualizerAnimation: (() => void) | null = null;
+
+            try {
+                capture = await createPcmRealtimeCapture();
+                const activeCapture = capture;
+                stopVoiceCaptureRef.current = capture.stop;
+
+                let rafId: number | null = null;
+                const runEqualizerFrame = () => {
+                    setVoiceEqualizerBars(activeCapture.readEqualizerBars());
+                    rafId = window.requestAnimationFrame(runEqualizerFrame);
+                };
+                runEqualizerFrame();
+
+                stopEqualizerAnimation = () => {
+                    if (rafId !== null) {
+                        window.cancelAnimationFrame(rafId);
+                    }
+                };
+                stopEqualizerAnimationRef.current = stopEqualizerAnimation;
+
+                const { sessionId } =
+                    await voiceApi.startMistralRealtimeTranscription({
+                        apiKey: token,
+                        model: voiceModel,
+                        sampleRate: MISTRAL_SAMPLE_RATE,
+                    });
+
+                voiceSessionIdRef.current = sessionId;
+
+                const waitForCompletion = new Promise<void>(
+                    (resolve, reject) => {
+                        resolveVoiceDoneRef.current = resolve;
+                        rejectVoiceDoneRef.current = reject;
                     },
                 );
 
-            pushAudioPromise = (async () => {
-                for await (const chunk of capture.audioStream) {
-                    await voiceApi.pushRealtimeTranscriptionChunk(
-                        sessionId,
-                        chunk,
+                unsubscribeVoiceEventsRef.current =
+                    voiceApi.onRealtimeTranscriptionEvent(
+                        (event: VoiceTranscriptionEvent) => {
+                            if (event.sessionId !== sessionId) {
+                                return;
+                            }
+
+                            if (event.type === "transcription.text.delta") {
+                                transcriptText += event.text;
+
+                                if (
+                                    !hasInterruptedSpeechOnPhraseStart &&
+                                    transcriptText.trim().length > 0
+                                ) {
+                                    hasInterruptedSpeechOnPhraseStart = true;
+                                    stopSpeechPlayback(true);
+                                }
+
+                                scheduleVoiceTranscriptPreview(transcriptText);
+
+                                if (silenceTimerRef.current) {
+                                    clearTimeout(silenceTimerRef.current);
+                                }
+
+                                silenceTimerRef.current = setTimeout(() => {
+                                    resolveVoiceDoneRef.current?.();
+                                }, VOICE_SILENCE_TIMEOUT_MS);
+                                return;
+                            }
+
+                            if (event.type === "transcription.done") {
+                                if (silenceTimerRef.current) {
+                                    clearTimeout(silenceTimerRef.current);
+                                    silenceTimerRef.current = null;
+                                }
+                                resolveVoiceDoneRef.current?.();
+                                return;
+                            }
+
+                            if (event.type === "error") {
+                                if (silenceTimerRef.current) {
+                                    clearTimeout(silenceTimerRef.current);
+                                    silenceTimerRef.current = null;
+                                }
+                                rejectVoiceDoneRef.current?.(
+                                    new Error(event.message),
+                                );
+                            }
+                        },
                     );
-                }
-            })();
 
-            await waitForCompletion;
-            await capture.stop();
-            await pushAudioPromise;
-            await voiceApi.stopRealtimeTranscription(sessionId);
-        } catch (error) {
-            hasVoiceError = true;
-            toasts.danger({
-                title: "Ошибка голосового ввода",
-                description:
-                    error instanceof Error
-                        ? error.message
-                        : "Не удалось распознать речь",
+                pushAudioPromise = (async () => {
+                    for await (const chunk of capture.audioStream) {
+                        await voiceApi.pushRealtimeTranscriptionChunk(
+                            sessionId,
+                            chunk,
+                        );
+                    }
+                })();
+
+                await waitForCompletion;
+                await capture.stop();
+                await pushAudioPromise;
+                await voiceApi.stopRealtimeTranscription(sessionId);
+            } catch (error) {
+                hasVoiceError = true;
+                toasts.danger({
+                    title: "Ошибка голосового ввода",
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : "Не удалось распознать речь",
+                });
+            } finally {
+                if (silenceTimerRef.current) {
+                    clearTimeout(silenceTimerRef.current);
+                    silenceTimerRef.current = null;
+                }
+
+                resolveVoiceDoneRef.current = null;
+                rejectVoiceDoneRef.current = null;
+
+                const unsubscribe = unsubscribeVoiceEventsRef.current;
+                unsubscribeVoiceEventsRef.current = null;
+                unsubscribe?.();
+
+                stopEqualizerAnimationRef.current = null;
+                stopEqualizerAnimation?.();
+
+                if (capture) {
+                    await capture.audioStream.return?.();
+                }
+
+                if (pushAudioPromise) {
+                    try {
+                        await pushAudioPromise;
+                    } catch {
+                        // noop
+                    }
+                }
+
+                voiceSessionIdRef.current = null;
+                stopVoiceCaptureRef.current = null;
+                setVoiceEqualizerBars(
+                    new Array<number>(VOICE_EQUALIZER_BARS_COUNT).fill(6),
+                );
+                setIsVoiceListening(false);
+            }
+
+            const trimmedTranscript = transcriptText.trim();
+
+            if (hasVoiceError) {
+                resetVoiceTranscriptPreview();
+                return "error";
+            }
+
+            if (!trimmedTranscript) {
+                resetVoiceTranscriptPreview();
+                return "empty";
+            }
+
+            onMessageSend(trimmedTranscript);
+            resetVoiceTranscriptPreview();
+            setMsgContent("");
+            setAttachedImages([]);
+            requestAnimationFrame(() => {
+                areaRef.current?.focus();
             });
-        } finally {
-            if (silenceTimerRef.current) {
-                clearTimeout(silenceTimerRef.current);
-                silenceTimerRef.current = null;
-            }
-
-            resolveVoiceDoneRef.current = null;
-            rejectVoiceDoneRef.current = null;
-
-            const unsubscribe = unsubscribeVoiceEventsRef.current;
-            unsubscribeVoiceEventsRef.current = null;
-            unsubscribe?.();
-
-            stopEqualizerAnimationRef.current = null;
-            stopEqualizerAnimation?.();
-
-            if (capture) {
-                await capture.audioStream.return?.();
-            }
-
-            if (pushAudioPromise) {
-                try {
-                    await pushAudioPromise;
-                } catch {
-                    // noop
-                }
-            }
-
-            voiceSessionIdRef.current = null;
-            stopVoiceCaptureRef.current = null;
-            setVoiceEqualizerBars(
-                new Array<number>(VOICE_EQUALIZER_BARS_COUNT).fill(6),
-            );
-            setIsVoiceListening(false);
-        }
-
-        const trimmedTranscript = transcriptText.trim();
-
-        if (!trimmedTranscript || hasVoiceError) {
-            setVoiceTranscriptPreview("");
-            return false;
-        }
-
-        onMessageSend(trimmedTranscript);
-        setVoiceTranscriptPreview("");
-        setMsgContent("");
-        setAttachedImages([]);
-        requestAnimationFrame(() => {
-            areaRef.current?.focus();
-        });
-        return true;
-    }, [
-        isStreaming,
-        mistralVoiceRecModel,
-        mistralToken,
-        onMessageSend,
-        toasts,
-        voiceRecognitionDriver,
-    ]);
+            return "sent";
+        }, [
+            isStreaming,
+            mistralVoiceRecModel,
+            mistralToken,
+            onMessageSend,
+            resetVoiceTranscriptPreview,
+            scheduleVoiceTranscriptPreview,
+            stopSpeechPlayback,
+            toasts,
+            voiceRecognitionDriver,
+        ]);
 
     const waitForVoiceChatContinue = useCallback(async () => {
         if (!isStreamingRef.current || !isVoiceChatModeRef.current) {
@@ -810,7 +926,7 @@ export const MessageComposer = observer(function MessageComposer({
         if (isVoiceChatModeRef.current) {
             stopVoiceChatMode();
 
-            if (isVoiceListening) {
+            if (isVoiceListeningRef.current) {
                 void stopVoiceListening();
             }
 
@@ -836,11 +952,21 @@ export const MessageComposer = observer(function MessageComposer({
                         break;
                     }
 
-                    const hasSentMessage = await startVoiceListening();
+                    await waitForSpeechIdle();
 
-                    if (!hasSentMessage) {
+                    if (!isVoiceChatModeRef.current) {
+                        break;
+                    }
+
+                    const listeningResult = await startVoiceListening();
+
+                    if (listeningResult === "error") {
                         stopVoiceChatMode();
                         break;
+                    }
+
+                    if (listeningResult === "empty") {
+                        continue;
                     }
                 }
             } finally {
@@ -853,15 +979,15 @@ export const MessageComposer = observer(function MessageComposer({
             }
         })();
     }, [
-        isVoiceListening,
         startVoiceListening,
         stopVoiceChatMode,
         stopVoiceListening,
+        waitForSpeechIdle,
         waitForVoiceChatContinue,
     ]);
 
     const toggleVoiceListening = useCallback(() => {
-        if (isVoiceListening) {
+        if (isVoiceListeningRef.current) {
             stopVoiceChatMode();
             void stopVoiceListening();
             return;
@@ -869,12 +995,7 @@ export const MessageComposer = observer(function MessageComposer({
 
         stopVoiceChatMode();
         void startVoiceListening();
-    }, [
-        isVoiceListening,
-        startVoiceListening,
-        stopVoiceChatMode,
-        stopVoiceListening,
-    ]);
+    }, [startVoiceListening, stopVoiceChatMode, stopVoiceListening]);
 
     const startScenario = useCallback(
         async (scenarioId: string) => {
@@ -916,6 +1037,7 @@ export const MessageComposer = observer(function MessageComposer({
 
                 onMessageSend(launchPayload);
 
+                stopSpeechPlayback(true);
                 setMsgContent("");
                 setAttachedImages([]);
                 setIsScenarioModalOpen(false);
@@ -926,8 +1048,20 @@ export const MessageComposer = observer(function MessageComposer({
                 setStartingScenarioId(null);
             }
         },
-        [isStreaming, onMessageSend, scenarioToFlow, switchScenario, toasts],
+        [
+            isStreaming,
+            onMessageSend,
+            scenarioToFlow,
+            stopSpeechPlayback,
+            switchScenario,
+            toasts,
+        ],
     );
+
+    const handleCancelStreaming = useCallback(() => {
+        stopSpeechPlayback(true);
+        onCancelGeneration();
+    }, [onCancelGeneration, stopSpeechPlayback]);
 
     return (
         <>
@@ -997,6 +1131,12 @@ export const MessageComposer = observer(function MessageComposer({
                         {isVoiceListening && voiceTranscriptPreview ? (
                             <p className="mt-1 truncate text-xs text-main-400">
                                 {voiceTranscriptPreview}
+                            </p>
+                        ) : null}
+
+                        {!isVoiceListening && isAssistantSpeaking ? (
+                            <p className="mt-1 truncate text-xs text-main-400">
+                                Ассистент озвучивает ответ...
                             </p>
                         ) : null}
 
@@ -1233,7 +1373,7 @@ export const MessageComposer = observer(function MessageComposer({
                                 <Button
                                     onClick={
                                         isStreaming
-                                            ? onCancelGeneration
+                                            ? handleCancelStreaming
                                             : handleSend
                                     }
                                     label={isStreaming ? "Cancel" : "Send"}

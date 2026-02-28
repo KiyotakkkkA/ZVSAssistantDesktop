@@ -1,5 +1,6 @@
 import Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
+import { attemptSyncOrNull } from "../errors/errorPattern";
 import type {
     AppCacheEntry,
     FileManifestEntry,
@@ -1485,10 +1486,6 @@ export class DatabaseService {
     }
 
     private tryParseJson(raw: string): unknown | null {
-        try {
-            return JSON.parse(raw);
-        } catch {
-            return null;
-        }
+        return attemptSyncOrNull(() => JSON.parse(raw));
     }
 }

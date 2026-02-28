@@ -17,7 +17,7 @@ export const useFileSave = () => {
 
             try {
                 setIsSaving(true);
-                return await api(files);
+                return api(files);
             } finally {
                 setIsSaving(false);
             }
@@ -32,7 +32,7 @@ export const useFileSave = () => {
             return [];
         }
 
-        return await api(fileIds);
+        return api(fileIds);
     }, []);
 
     const getAllFiles = useCallback(async (): Promise<SavedFileRecord[]> => {
@@ -42,7 +42,7 @@ export const useFileSave = () => {
             return [];
         }
 
-        return await api();
+        return api();
     }, []);
 
     const openFile = useCallback(async (fileId: string): Promise<boolean> => {
@@ -52,7 +52,7 @@ export const useFileSave = () => {
             return false;
         }
 
-        return await api(fileId);
+        return api(fileId);
     }, []);
 
     const deleteFile = useCallback(async (fileId: string): Promise<boolean> => {
@@ -62,7 +62,7 @@ export const useFileSave = () => {
             return false;
         }
 
-        return await api(fileId);
+        return api(fileId);
     }, []);
 
     const openPath = useCallback(
@@ -73,7 +73,7 @@ export const useFileSave = () => {
                 return false;
             }
 
-            return await api(targetPath);
+            return api(targetPath);
         },
         [],
     );

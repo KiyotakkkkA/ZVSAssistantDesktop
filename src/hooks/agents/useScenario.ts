@@ -7,12 +7,12 @@ import type {
 
 export const useScenario = () => {
     useEffect(() => {
-        scenarioStore.initialize();
+        void scenarioStore.initialize();
     }, []);
 
     const createScenario = useCallback(
         async (payload: CreateScenarioPayload) => {
-            return await scenarioStore.createScenario(payload);
+            return scenarioStore.createScenario(payload);
         },
         [],
     );
@@ -22,7 +22,7 @@ export const useScenario = () => {
             return null;
         }
 
-        return await scenarioStore.switchScenario(scenarioId);
+        return scenarioStore.switchScenario(scenarioId);
     }, []);
 
     const updateScenario = useCallback(
@@ -31,7 +31,7 @@ export const useScenario = () => {
                 return null;
             }
 
-            return await scenarioStore.updateScenario(scenarioId, payload);
+            return scenarioStore.updateScenario(scenarioId, payload);
         },
         [],
     );
@@ -41,7 +41,7 @@ export const useScenario = () => {
             return false;
         }
 
-        return await scenarioStore.deleteScenario(scenarioId);
+        return scenarioStore.deleteScenario(scenarioId);
     }, []);
 
     return {

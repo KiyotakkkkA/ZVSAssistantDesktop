@@ -22,6 +22,7 @@ class UserProfileStore {
         telegramBotToken: "",
         chatDriver: "ollama",
         assistantName: "Чарли",
+        piperModelPath: "",
         maxToolCallsPerResponse: 4,
         userName: "Пользователь",
         userPrompt: "",

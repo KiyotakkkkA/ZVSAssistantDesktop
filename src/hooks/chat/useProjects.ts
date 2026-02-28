@@ -4,11 +4,11 @@ import type { CreateProjectPayload } from "../../types/Project";
 
 export const useProjects = () => {
     useEffect(() => {
-        projectsStore.initialize();
+        void projectsStore.initialize();
     }, []);
 
     const createProject = useCallback(async (payload: CreateProjectPayload) => {
-        return await projectsStore.createProject(payload);
+        return projectsStore.createProject(payload);
     }, []);
 
     const switchProject = useCallback(async (projectId: string) => {
@@ -16,7 +16,7 @@ export const useProjects = () => {
             return null;
         }
 
-        return await projectsStore.switchProject(projectId);
+        return projectsStore.switchProject(projectId);
     }, []);
 
     const deleteProject = useCallback(async (projectId: string) => {
@@ -24,7 +24,7 @@ export const useProjects = () => {
             return false;
         }
 
-        return await projectsStore.deleteProject(projectId);
+        return projectsStore.deleteProject(projectId);
     }, []);
 
     return {

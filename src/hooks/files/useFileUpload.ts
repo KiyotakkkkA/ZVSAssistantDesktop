@@ -24,7 +24,7 @@ export const useFileUpload = () => {
 
             try {
                 setIsUploading(true);
-                return await api(options);
+                return api(options);
             } finally {
                 setIsUploading(false);
             }
@@ -42,7 +42,7 @@ export const useFileUpload = () => {
 
             try {
                 setIsPickingPath(true);
-                return await api(options);
+                return api(options);
             } finally {
                 setIsPickingPath(false);
             }

@@ -207,6 +207,7 @@ const defaultProfile = {
   chatDriver: "ollama",
   assistantName: "Чарли",
   useSpeechSynthesis: false,
+  piperModelPath: "",
   maxToolCallsPerResponse: 10,
   userName: "Пользователь",
   userPrompt: "",
@@ -307,37 +308,34 @@ class UserProfileService {
     if (!parsed || typeof parsed !== "object") {
       return defaultProfile;
     }
-    try {
-      const normalized = {
-        ...defaultProfile,
-        ...typeof parsed.themePreference === "string" ? { themePreference: parsed.themePreference } : {},
-        ...typeof parsed.ollamaModel === "string" ? { ollamaModel: parsed.ollamaModel } : {},
-        ...typeof parsed.ollamaEmbeddingModel === "string" ? { ollamaEmbeddingModel: parsed.ollamaEmbeddingModel } : {},
-        ...typeof parsed.ollamaToken === "string" ? { ollamaToken: parsed.ollamaToken } : {},
-        ...typeof parsed.mistralVoiceRecModel === "string" ? { mistralVoiceRecModel: parsed.mistralVoiceRecModel } : {},
-        ...typeof parsed.mistralToken === "string" ? { mistralToken: parsed.mistralToken } : {},
-        ...isVoiceRecognitionDriver(parsed.voiceRecognitionDriver) ? { voiceRecognitionDriver: parsed.voiceRecognitionDriver } : {},
-        ...isEmbeddingDriver(parsed.embeddingDriver) ? { embeddingDriver: parsed.embeddingDriver } : {},
-        ...typeof parsed.telegramId === "string" ? { telegramId: parsed.telegramId } : {},
-        ...typeof parsed.telegramBotToken === "string" ? { telegramBotToken: parsed.telegramBotToken } : {},
-        ...isChatDriver(parsed.chatDriver) ? { chatDriver: parsed.chatDriver } : {},
-        ...typeof parsed.assistantName === "string" ? { assistantName: parsed.assistantName } : {},
-        ...typeof parsed.useSpeechSynthesis === "boolean" ? { useSpeechSynthesis: parsed.useSpeechSynthesis } : {},
-        ...typeof parsed.maxToolCallsPerResponse === "number" && Number.isFinite(parsed.maxToolCallsPerResponse) ? {
-          maxToolCallsPerResponse: parsed.maxToolCallsPerResponse
-        } : {},
-        ...typeof parsed.userName === "string" ? { userName: parsed.userName } : {},
-        ...typeof parsed.userPrompt === "string" ? { userPrompt: parsed.userPrompt } : {},
-        ...typeof parsed.userLanguage === "string" ? { userLanguage: parsed.userLanguage } : {},
-        activeDialogId: normalizeNullableId(parsed.activeDialogId),
-        activeProjectId: normalizeNullableId(parsed.activeProjectId),
-        activeScenarioId: normalizeNullableId(parsed.activeScenarioId),
-        lastActiveTab: isWorkspaceTab(parsed.lastActiveTab) ? parsed.lastActiveTab : defaultProfile.lastActiveTab
-      };
-      return normalizeWorkspaceContext(normalized);
-    } catch {
-      return defaultProfile;
-    }
+    const normalized = {
+      ...defaultProfile,
+      ...typeof parsed.themePreference === "string" ? { themePreference: parsed.themePreference } : {},
+      ...typeof parsed.ollamaModel === "string" ? { ollamaModel: parsed.ollamaModel } : {},
+      ...typeof parsed.ollamaEmbeddingModel === "string" ? { ollamaEmbeddingModel: parsed.ollamaEmbeddingModel } : {},
+      ...typeof parsed.ollamaToken === "string" ? { ollamaToken: parsed.ollamaToken } : {},
+      ...typeof parsed.mistralVoiceRecModel === "string" ? { mistralVoiceRecModel: parsed.mistralVoiceRecModel } : {},
+      ...typeof parsed.mistralToken === "string" ? { mistralToken: parsed.mistralToken } : {},
+      ...isVoiceRecognitionDriver(parsed.voiceRecognitionDriver) ? { voiceRecognitionDriver: parsed.voiceRecognitionDriver } : {},
+      ...isEmbeddingDriver(parsed.embeddingDriver) ? { embeddingDriver: parsed.embeddingDriver } : {},
+      ...typeof parsed.telegramId === "string" ? { telegramId: parsed.telegramId } : {},
+      ...typeof parsed.telegramBotToken === "string" ? { telegramBotToken: parsed.telegramBotToken } : {},
+      ...isChatDriver(parsed.chatDriver) ? { chatDriver: parsed.chatDriver } : {},
+      ...typeof parsed.assistantName === "string" ? { assistantName: parsed.assistantName } : {},
+      ...typeof parsed.useSpeechSynthesis === "boolean" ? { useSpeechSynthesis: parsed.useSpeechSynthesis } : {},
+      ...typeof parsed.piperModelPath === "string" ? { piperModelPath: parsed.piperModelPath } : {},
+      ...typeof parsed.maxToolCallsPerResponse === "number" && Number.isFinite(parsed.maxToolCallsPerResponse) ? {
+        maxToolCallsPerResponse: parsed.maxToolCallsPerResponse
+      } : {},
+      ...typeof parsed.userName === "string" ? { userName: parsed.userName } : {},
+      ...typeof parsed.userPrompt === "string" ? { userPrompt: parsed.userPrompt } : {},
+      ...typeof parsed.userLanguage === "string" ? { userLanguage: parsed.userLanguage } : {},
+      activeDialogId: normalizeNullableId(parsed.activeDialogId),
+      activeProjectId: normalizeNullableId(parsed.activeProjectId),
+      activeScenarioId: normalizeNullableId(parsed.activeScenarioId),
+      lastActiveTab: isWorkspaceTab(parsed.lastActiveTab) ? parsed.lastActiveTab : defaultProfile.lastActiveTab
+    };
+    return normalizeWorkspaceContext(normalized);
   }
   updateUserProfile(nextProfile) {
     const currentProfile = this.getUserProfile();
@@ -367,6 +365,84 @@ class UserProfileService {
     return profileId;
   }
 }
+class ServiceError extends Error {
+  constructor(entity) {
+    super(entity.message);
+    this.entity = entity;
+    this.name = "ServiceError";
+  }
+}
+const unknownToMessage = (error) => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return typeof error === "string" ? error : "Unknown error";
+};
+const createBusinessErrorEntity = (code, message, details) => ({
+  kind: "business",
+  code,
+  message,
+  ...{},
+  timestamp: (/* @__PURE__ */ new Date()).toISOString()
+});
+const createTechnicalExceptionEntity = (code, context2, error, details) => ({
+  kind: "technical",
+  code,
+  message: unknownToMessage(error),
+  context: context2,
+  ...{},
+  cause: error instanceof Error ? error.name : void 0,
+  timestamp: (/* @__PURE__ */ new Date()).toISOString()
+});
+const raiseBusinessError = (code, message, details) => {
+  throw new ServiceError(createBusinessErrorEntity(code, message));
+};
+const throwTechnicalException = (context2, error, code = "TECHNICAL_FAILURE", details) => {
+  throw new ServiceError(
+    createTechnicalExceptionEntity(code, context2, error)
+  );
+};
+const runWithServiceBoundary = async (context2, action) => {
+  try {
+    return await action();
+  } catch (error) {
+    if (error instanceof ServiceError) {
+      throw error;
+    }
+    throwTechnicalException(context2, error);
+  }
+  throw new Error("Unreachable service boundary state");
+};
+const attempt = async (action) => {
+  try {
+    return { ok: true, value: await action() };
+  } catch (error) {
+    return { ok: false, error };
+  }
+};
+const attemptSync = (action) => {
+  try {
+    return { ok: true, value: action() };
+  } catch (error) {
+    return { ok: false, error };
+  }
+};
+const attemptOrNull = async (action) => {
+  const result = await attempt(action);
+  return result.ok ? result.value : null;
+};
+const attemptOr = async (action, fallback2) => {
+  const result = await attempt(action);
+  return result.ok ? result.value : fallback2;
+};
+const attemptSyncOr = (action, fallback2) => {
+  const result = attemptSync(action);
+  return result.ok ? result.value : fallback2;
+};
+const attemptSyncOrNull = (action) => {
+  const result = attemptSync(action);
+  return result.ok ? result.value : null;
+};
 class ThemesService {
   constructor(themesPath) {
     this.themesPath = themesPath;
@@ -414,14 +490,15 @@ class ThemesService {
     const result = [];
     for (const fileName of files2) {
       const filePath = path.join(this.themesPath, fileName);
-      try {
+      const parsed = attemptSyncOrNull(() => {
         const rawTheme = fs.readFileSync(filePath, "utf-8");
-        const parsed = JSON.parse(rawTheme);
-        if (typeof parsed.id === "string" && typeof parsed.name === "string" && typeof parsed.palette === "object" && parsed.palette !== null) {
-          result.push(parsed);
-        }
-      } catch {
+        return JSON.parse(rawTheme);
+      });
+      if (!parsed) {
         continue;
+      }
+      if (typeof parsed.id === "string" && typeof parsed.name === "string" && typeof parsed.palette === "object" && parsed.palette !== null) {
+        result.push(parsed);
       }
     }
     return result;
@@ -564,6 +641,7 @@ class DialogsService {
     if (targetMessage.author === "user" && this.isScenarioLaunchMessage(previousMessage)) {
       deletedIds.add(previousMessage.id);
     }
+    this.extendDeletedIdsByAnsweringAt(dialog2.messages, deletedIds);
     const nextMessages = dialog2.messages.filter(
       (message) => !deletedIds.has(message.id) && !(typeof message.answeringAt === "string" && deletedIds.has(message.answeringAt))
     );
@@ -574,6 +652,24 @@ class DialogsService {
     };
     this.writeDialog(updatedDialog);
     return updatedDialog;
+  }
+  extendDeletedIdsByAnsweringAt(messages2, deletedIds) {
+    let hasNewItems = true;
+    while (hasNewItems) {
+      hasNewItems = false;
+      for (const message of messages2) {
+        if (typeof message.answeringAt !== "string" || !message.answeringAt) {
+          continue;
+        }
+        if (!deletedIds.has(message.answeringAt)) {
+          continue;
+        }
+        if (!deletedIds.has(message.id)) {
+          deletedIds.add(message.id);
+          hasNewItems = true;
+        }
+      }
+    }
   }
   truncateDialogFromMessage(dialogId, messageId, activeDialogId) {
     const dialog2 = this.getDialogById(dialogId, activeDialogId);
@@ -1010,15 +1106,13 @@ class MetaService {
     if (!fs.existsSync(this.metaPath)) {
       return defaultMeta;
     }
-    try {
+    return attemptSyncOr(() => {
       const raw = fs.readFileSync(this.metaPath, "utf-8");
       const parsed = JSON.parse(raw);
       return {
         currentUserId: typeof parsed.currentUserId === "string" ? parsed.currentUserId : ""
       };
-    } catch {
-      return defaultMeta;
-    }
+    }, defaultMeta);
   }
 }
 class FileStorageService {
@@ -2110,11 +2204,7 @@ class DatabaseService {
     };
   }
   tryParseJson(raw) {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return null;
-    }
+    return attemptSyncOrNull(() => JSON.parse(raw));
   }
 }
 class UserDataService {
@@ -2445,90 +2535,108 @@ const decodeOutput = (buffer) => {
   if (process.platform !== "win32") {
     return utf82;
   }
-  try {
+  return attemptSyncOr(() => {
     const cp866 = new TextDecoder("ibm866").decode(buffer);
     const utf8ReplacementCount = (utf82.match(/�/g) || []).length;
     const cp866ReplacementCount = (cp866.match(/�/g) || []).length;
     return cp866ReplacementCount < utf8ReplacementCount ? cp866 : utf82;
-  } catch {
-    return utf82;
-  }
+  }, utf82);
 };
 class CommandExecService {
   async execute(command, cwd) {
-    const trimmedCommand = command.trim();
-    if (!trimmedCommand) {
-      throw new Error("Команда для выполнения не указана");
-    }
-    const resolvedCwd = cwd?.trim() ? path.resolve(cwd) : process.cwd();
-    if (!fs.existsSync(resolvedCwd)) {
-      throw new Error(`Рабочая директория не существует: ${resolvedCwd}`);
-    }
-    const executableCommand = process.platform === "win32" ? `chcp 65001>nul & ${trimmedCommand}` : trimmedCommand;
-    return await new Promise((resolve2, reject) => {
-      const child = spawn(executableCommand, {
-        cwd: resolvedCwd,
-        shell: true,
-        windowsHide: true
-      });
-      const stdoutChunks = [];
-      const stderrChunks = [];
-      let stdoutBytes = 0;
-      let stderrBytes = 0;
-      let stdoutTruncated = false;
-      let stderrTruncated = false;
-      const appendChunk = (chunks, chunk, bytes) => {
-        if (bytes >= MAX_OUTPUT_BYTES) {
+    return runWithServiceBoundary("command-exec.execute", async () => {
+      const trimmedCommand = command.trim();
+      if (!trimmedCommand) {
+        raiseBusinessError(
+          "COMMAND_EMPTY",
+          "Команда для выполнения не указана"
+        );
+      }
+      const resolvedCwd = cwd?.trim() ? path.resolve(cwd) : process.cwd();
+      if (!fs.existsSync(resolvedCwd)) {
+        raiseBusinessError(
+          "CWD_NOT_FOUND",
+          `Рабочая директория не существует: ${resolvedCwd}`
+        );
+      }
+      const executableCommand = process.platform === "win32" ? `chcp 65001>nul & ${trimmedCommand}` : trimmedCommand;
+      return new Promise((resolve2, reject) => {
+        const child = spawn(executableCommand, {
+          cwd: resolvedCwd,
+          shell: true,
+          windowsHide: true
+        });
+        const stdoutChunks = [];
+        const stderrChunks = [];
+        let stdoutBytes = 0;
+        let stderrBytes = 0;
+        let stdoutTruncated = false;
+        let stderrTruncated = false;
+        const appendChunk = (chunks, chunk, bytes) => {
+          if (bytes >= MAX_OUTPUT_BYTES) {
+            return {
+              nextBytes: bytes,
+              truncated: true
+            };
+          }
+          const remaining = MAX_OUTPUT_BYTES - bytes;
+          if (chunk.byteLength <= remaining) {
+            chunks.push(chunk);
+            return {
+              nextBytes: bytes + chunk.byteLength,
+              truncated: false
+            };
+          }
+          chunks.push(chunk.subarray(0, remaining));
           return {
-            nextBytes: bytes,
+            nextBytes: MAX_OUTPUT_BYTES,
             truncated: true
           };
-        }
-        const remaining = MAX_OUTPUT_BYTES - bytes;
-        if (chunk.byteLength <= remaining) {
-          chunks.push(chunk);
-          return {
-            nextBytes: bytes + chunk.byteLength,
-            truncated: false
-          };
-        }
-        chunks.push(chunk.subarray(0, remaining));
-        return {
-          nextBytes: MAX_OUTPUT_BYTES,
-          truncated: true
         };
-      };
-      child.stdout.on("data", (chunk) => {
-        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
-        const result = appendChunk(stdoutChunks, buffer, stdoutBytes);
-        stdoutBytes = result.nextBytes;
-        stdoutTruncated = stdoutTruncated || result.truncated;
-      });
-      child.stderr.on("data", (chunk) => {
-        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
-        const result = appendChunk(stderrChunks, buffer, stderrBytes);
-        stderrBytes = result.nextBytes;
-        stderrTruncated = stderrTruncated || result.truncated;
-      });
-      child.on("error", (error) => {
-        reject(error);
-      });
-      child.on("close", (code) => {
-        const stdoutBase = decodeOutput(Buffer.concat(stdoutChunks));
-        const stderrBase = decodeOutput(Buffer.concat(stderrChunks));
-        const stdout = stdoutTruncated ? `${stdoutBase}
+        child.stdout.on("data", (chunk) => {
+          const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
+          const result = appendChunk(
+            stdoutChunks,
+            buffer,
+            stdoutBytes
+          );
+          stdoutBytes = result.nextBytes;
+          stdoutTruncated = stdoutTruncated || result.truncated;
+        });
+        child.stderr.on("data", (chunk) => {
+          const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
+          const result = appendChunk(
+            stderrChunks,
+            buffer,
+            stderrBytes
+          );
+          stderrBytes = result.nextBytes;
+          stderrTruncated = stderrTruncated || result.truncated;
+        });
+        child.on("error", (error) => {
+          reject(error);
+        });
+        child.on("close", (code) => {
+          const stdoutBase = decodeOutput(
+            Buffer.concat(stdoutChunks)
+          );
+          const stderrBase = decodeOutput(
+            Buffer.concat(stderrChunks)
+          );
+          const stdout = stdoutTruncated ? `${stdoutBase}
 
 [output truncated to ${MAX_OUTPUT_BYTES} bytes]` : stdoutBase;
-        const stderr = stderrTruncated ? `${stderrBase}
+          const stderr = stderrTruncated ? `${stderrBase}
 
 [output truncated to ${MAX_OUTPUT_BYTES} bytes]` : stderrBase;
-        resolve2({
-          command: trimmedCommand,
-          cwd: resolvedCwd,
-          isAdmin: false,
-          exitCode: typeof code === "number" ? code : -1,
-          stdout,
-          stderr
+          resolve2({
+            command: trimmedCommand,
+            cwd: resolvedCwd,
+            isAdmin: false,
+            exitCode: typeof code === "number" ? code : -1,
+            stdout,
+            stderr
+          });
         });
       });
     });
@@ -2571,12 +2679,10 @@ class BrowserService {
     if (!url2) {
       throw new Error("URL не указан");
     }
-    let parsed;
-    try {
-      parsed = new URL(url2);
-    } catch {
+    if (!URL.canParse(url2)) {
       throw new Error("Некорректный URL");
     }
+    const parsed = new URL(url2);
     const protocol = parsed.protocol.toLowerCase();
     if (!SUPPORTED_PROTOCOLS.has(protocol)) {
       throw new Error("Поддерживаются только http и https URL");
@@ -2636,22 +2742,33 @@ class BrowserService {
       { urls: ["*://*/*"] },
       onCompleted
     );
-    try {
-      await Promise.race([
-        webContents.loadURL(requestedUrl),
-        new Promise((_, reject) => {
-          setTimeout(
-            () => reject(
-              new Error(
-                `Таймаут загрузки страницы (${timeoutMs}ms)`
-              )
-            ),
-            timeoutMs
-          );
-        })
-      ]);
-      const finalUrl = webContents.getURL() || currentUrl || requestedUrl;
-      const title = webContents.getTitle();
+    const loadResult = await Promise.race([
+      webContents.loadURL(requestedUrl).then(() => ({ ok: true })),
+      new Promise((resolve2) => {
+        setTimeout(
+          () => resolve2({
+            ok: false,
+            error: new Error(
+              `Таймаут загрузки страницы (${timeoutMs}ms)`
+            )
+          }),
+          timeoutMs
+        );
+      })
+    ]).catch((error) => ({
+      ok: false,
+      error: error instanceof Error ? error : new Error(String(error))
+    }));
+    const finalUrl = webContents.getURL() || currentUrl || requestedUrl;
+    const title = webContents.getTitle();
+    webContentsAny.removeListener("did-redirect-navigation", onRedirect);
+    webContentsAny.removeListener("did-fail-load", onFailLoad);
+    webContentsAny.removeListener("did-finish-load", onDidFinishLoad);
+    webContents.session.webRequest.onCompleted(
+      { urls: ["*://*/*"] },
+      null
+    );
+    if (loadResult.ok) {
       return {
         success: true,
         requestedUrl,
@@ -2662,19 +2779,20 @@ class BrowserService {
         statusCode,
         loadTimeMs: Date.now() - startedAt
       };
-    } catch (error) {
-      const finalUrl = webContents.getURL() || currentUrl || requestedUrl;
-      const title = webContents.getTitle();
-      const errorMessage = navigationError || (error instanceof Error ? error.message : String(error));
+    }
+    {
+      const finalUrl2 = webContents.getURL() || currentUrl || requestedUrl;
+      const title2 = webContents.getTitle();
+      const errorMessage = navigationError || (loadResult.error instanceof Error ? loadResult.error.message : String(loadResult.error));
       const isAbortedError = errorMessage.includes("ERR_ABORTED") || errorMessage.includes("[-3]");
-      const hasLoadedPage = didFinishLoad || Boolean((webContents.getURL() || currentUrl) && title);
+      const hasLoadedPage = didFinishLoad || Boolean((webContents.getURL() || currentUrl) && title2);
       if (isAbortedError && hasLoadedPage) {
         return {
           success: true,
           requestedUrl,
-          finalUrl,
-          title,
-          redirected: redirects.length > 0 || finalUrl.replace(/\/$/, "") !== requestedUrl.replace(/\/$/, ""),
+          finalUrl: finalUrl2,
+          title: title2,
+          redirected: redirects.length > 0 || finalUrl2.replace(/\/$/, "") !== requestedUrl.replace(/\/$/, ""),
           redirects,
           statusCode,
           loadTimeMs: Date.now() - startedAt
@@ -2683,25 +2801,14 @@ class BrowserService {
       return {
         success: false,
         requestedUrl,
-        finalUrl,
-        title,
-        redirected: redirects.length > 0 || finalUrl.replace(/\/$/, "") !== requestedUrl.replace(/\/$/, ""),
+        finalUrl: finalUrl2,
+        title: title2,
+        redirected: redirects.length > 0 || finalUrl2.replace(/\/$/, "") !== requestedUrl.replace(/\/$/, ""),
         redirects,
         statusCode,
         loadTimeMs: Date.now() - startedAt,
         error: errorMessage
       };
-    } finally {
-      webContentsAny.removeListener(
-        "did-redirect-navigation",
-        onRedirect
-      );
-      webContentsAny.removeListener("did-fail-load", onFailLoad);
-      webContentsAny.removeListener("did-finish-load", onDidFinishLoad);
-      webContents.session.webRequest.onCompleted(
-        { urls: ["*://*/*"] },
-        null
-      );
     }
   }
   async getPageSnapshot(maxElements = 60) {
@@ -4021,13 +4128,13 @@ class Ollama2 extends Ollama$1 {
   }
 }
 new Ollama2();
-class Config {
+let Config$1 = class Config {
   OLLAMA_BASE_URL = "https://ollama.com";
   MIREA_BASE_URL = "https://schedule-of.mirea.ru";
   MISTRAL_BASE_URL = "https://api.mistral.ai";
   TELEGRAM_BOT_BASE_URL = "https://api.telegram.org/bot";
-}
-const Config$1 = new Config();
+};
+const Config2 = new Config$1();
 const LOCAL_OLLAMA_HOST = "http://127.0.0.1:11434";
 class OllamaService {
   cachedHost = "";
@@ -4078,14 +4185,14 @@ class OllamaService {
     const modes = normalizedToken ? ["bearer", "raw", "none"] : ["none"];
     let lastError = null;
     for (const mode of modes) {
-      try {
-        const client = this.getClient(host, normalizedToken, mode);
-        return await callback(client);
-      } catch (error) {
-        lastError = error;
-        if (!this.isUnauthorizedError(error)) {
-          throw error;
-        }
+      const client = this.getClient(host, normalizedToken, mode);
+      const result = await attempt(() => callback(client));
+      if (result.ok) {
+        return result.value;
+      }
+      lastError = result.error;
+      if (!this.isUnauthorizedError(result.error)) {
+        throw result.error;
       }
     }
     if (lastError instanceof Error) {
@@ -4102,7 +4209,7 @@ class OllamaService {
   }
   async streamChat(payload, token) {
     const stream2 = await this.executeWithAuthFallback(
-      Config$1.OLLAMA_BASE_URL.trim(),
+      Config2.OLLAMA_BASE_URL.trim(),
       token,
       (client) => client.chat({
         model: payload.model,
@@ -15737,55 +15844,22 @@ class MistralService {
     };
     const audioStream = this.createAudioStream(session);
     const client = new realtimeExports.RealtimeTranscription({ apiKey });
-    session.runPromise = (async () => {
-      try {
-        for await (const event of client.transcribeStream(
-          audioStream,
-          model,
-          {
-            audioFormat: {
-              encoding: realtimeExports.AudioEncoding.PcmS16le,
-              sampleRate
-            }
-          }
-        )) {
-          if (event.type === "transcription.text.delta" && "text" in event && typeof event.text === "string") {
-            this.emitEvent({
-              sessionId,
-              type: "transcription.text.delta",
-              text: event.text
-            });
-            continue;
-          }
-          if (event.type === "transcription.done") {
-            this.emitEvent({
-              sessionId,
-              type: "transcription.done"
-            });
-            break;
-          }
-          if (event.type === "error") {
-            const error = "error" in event ? event.error : void 0;
-            const message = typeof error?.message === "string" ? error.message : JSON.stringify(error?.message);
-            this.emitEvent({
-              sessionId,
-              type: "error",
-              message: message || "Realtime transcription error"
-            });
-            break;
-          }
-        }
-      } catch (error) {
-        this.emitEvent({
-          sessionId,
-          type: "error",
-          message: toErrorMessage(error)
-        });
-      } finally {
-        await audioStream.return?.();
-        this.cleanupSession(sessionId);
-      }
-    })();
+    session.runPromise = this.consumeTranscriptionStream(
+      sessionId,
+      client,
+      audioStream,
+      model,
+      sampleRate
+    ).catch((error) => {
+      this.emitEvent({
+        sessionId,
+        type: "error",
+        message: toErrorMessage(error)
+      });
+    }).finally(async () => {
+      await audioStream.return?.();
+      this.cleanupSession(sessionId);
+    });
     this.sessions.set(sessionId, session);
     return { sessionId };
   }
@@ -15832,6 +15906,40 @@ class MistralService {
       }
     })();
   }
+  async consumeTranscriptionStream(sessionId, client, audioStream, model, sampleRate) {
+    for await (const event of client.transcribeStream(audioStream, model, {
+      audioFormat: {
+        encoding: realtimeExports.AudioEncoding.PcmS16le,
+        sampleRate
+      }
+    })) {
+      if (event.type === "transcription.text.delta" && "text" in event && typeof event.text === "string") {
+        this.emitEvent({
+          sessionId,
+          type: "transcription.text.delta",
+          text: event.text
+        });
+        continue;
+      }
+      if (event.type === "transcription.done") {
+        this.emitEvent({
+          sessionId,
+          type: "transcription.done"
+        });
+        break;
+      }
+      if (event.type === "error") {
+        const error = "error" in event ? event.error : void 0;
+        const message = typeof error?.message === "string" ? error.message : JSON.stringify(error?.message);
+        this.emitEvent({
+          sessionId,
+          type: "error",
+          message: message || "Realtime transcription error"
+        });
+        break;
+      }
+    }
+  }
   notifyWaiters(session) {
     while (session.waiters.length > 0) {
       const resolve2 = session.waiters.shift();
@@ -15852,40 +15960,49 @@ const DEFAULT_PIPER_MODEL_PATH = process.env.PIPER_MODEL_PATH?.trim() || process
 class PiperService {
   outputWavPath;
   resolvePiperExecutablePath;
+  resolveConfiguredModelPath;
   constructor(options) {
     this.outputWavPath = path.join(
       options.tempDir,
       "zvs-assistant-tts.wav"
     );
     this.resolvePiperExecutablePath = options.resolvePiperExecutablePath;
+    this.resolveConfiguredModelPath = options.resolveConfiguredModelPath;
   }
   async synthesize(text) {
     const normalizedText = text.trim();
     if (!normalizedText) {
-      throw new Error("Пустой текст для синтеза речи");
+      raiseBusinessError(
+        "PIPER_EMPTY_TEXT",
+        "Пустой текст для синтеза речи"
+      );
     }
     const piperExecutablePath = await this.resolvePiperExecutablePath();
     if (!piperExecutablePath) {
-      throw new Error(
+      raiseBusinessError(
+        "PIPER_NOT_INSTALLED",
         "Piper не установлен. Откройте вкладку «Расширения» и установите Piper."
       );
     }
-    const modelPath = await this.resolveModelPath(piperExecutablePath);
+    const configuredModelPath = await this.resolveConfiguredModelPath();
+    const modelPath = await this.resolveModelPath(
+      piperExecutablePath,
+      configuredModelPath
+    );
     if (!modelPath) {
-      throw new Error(
-        "Не задан путь к модели Piper. Укажите переменную окружения PIPER_MODEL_PATH."
+      raiseBusinessError(
+        "PIPER_MODEL_NOT_FOUND",
+        "Не найдена модель Piper. Укажите директорию модели в настройках или переменную окружения PIPER_MODEL_PATH."
       );
     }
-    await this.runPiper(normalizedText, piperExecutablePath, modelPath);
-    try {
-      const wavBuffer = await promises$1.readFile(this.outputWavPath);
-      return new Uint8Array(wavBuffer);
-    } finally {
-      try {
-        await promises$1.unlink(this.outputWavPath);
-      } catch {
-      }
-    }
+    await this.runPiper(
+      normalizedText,
+      piperExecutablePath,
+      modelPath
+    );
+    const wavBuffer = await promises$1.readFile(this.outputWavPath);
+    await attemptOr(() => promises$1.unlink(this.outputWavPath), void 0);
+    return new Uint8Array(wavBuffer);
   }
   async runPiper(text, piperExecutablePath, modelPath) {
     await new Promise((resolve2, reject) => {
@@ -15923,9 +16040,23 @@ class PiperService {
       child.stdin.end();
     });
   }
-  async resolveModelPath(piperExecutablePath) {
+  async resolveModelPath(piperExecutablePath, configuredModelPath) {
+    const normalizedConfiguredModelPath = configuredModelPath.trim();
+    if (normalizedConfiguredModelPath) {
+      const fromProfile = await this.resolveCandidatePath(
+        normalizedConfiguredModelPath
+      );
+      if (fromProfile) {
+        return fromProfile;
+      }
+    }
     if (DEFAULT_PIPER_MODEL_PATH) {
-      return DEFAULT_PIPER_MODEL_PATH;
+      const fromEnv = await this.resolveCandidatePath(
+        DEFAULT_PIPER_MODEL_PATH
+      );
+      if (fromEnv) {
+        return fromEnv;
+      }
     }
     const executableDirectory = path.dirname(piperExecutablePath);
     const root = path.dirname(executableDirectory);
@@ -15937,13 +16068,13 @@ class PiperService {
         continue;
       }
       seen.add(currentPath);
-      let entries;
-      try {
-        entries = await promises$1.readdir(currentPath, {
+      const entries = await attemptOrNull(
+        () => promises$1.readdir(currentPath, {
           withFileTypes: true,
           encoding: "utf8"
-        });
-      } catch {
+        })
+      );
+      if (!entries) {
         continue;
       }
       for (const entry of entries) {
@@ -15956,6 +16087,51 @@ class PiperService {
           continue;
         }
         if (entry.name.toLowerCase().endsWith(".onnx")) {
+          return entryPath;
+        }
+      }
+    }
+    return null;
+  }
+  async resolveCandidatePath(candidatePath) {
+    const trimmedPath = candidatePath.trim();
+    if (!trimmedPath) {
+      return null;
+    }
+    const stat = await attemptOrNull(() => promises$1.stat(trimmedPath));
+    if (!stat) {
+      return null;
+    }
+    if (stat.isFile()) {
+      return trimmedPath.toLowerCase().endsWith(".onnx") ? trimmedPath : null;
+    }
+    if (!stat.isDirectory()) {
+      return null;
+    }
+    const stack = [trimmedPath];
+    const visited = /* @__PURE__ */ new Set();
+    while (stack.length > 0) {
+      const currentPath = stack.pop();
+      if (!currentPath || visited.has(currentPath)) {
+        continue;
+      }
+      visited.add(currentPath);
+      const entries = await attemptOrNull(
+        () => promises$1.readdir(currentPath, {
+          withFileTypes: true,
+          encoding: "utf8"
+        })
+      );
+      if (!entries) {
+        continue;
+      }
+      for (const entry of entries) {
+        const entryPath = path.join(currentPath, entry.name);
+        if (entry.isDirectory()) {
+          stack.push(entryPath);
+          continue;
+        }
+        if (entry.isFile() && entry.name.toLowerCase().endsWith(".onnx")) {
           return entryPath;
         }
       }
@@ -18639,7 +18815,6 @@ const EXTENSIONS_MANIFEST = [
 ];
 const entryBasenameSet = (entry) => new Set(entry.executableBasenames.map((name) => name.toLowerCase()));
 const normalizePath = (targetPath) => path.normalize(targetPath).replace(/[\\/]+$/, "");
-const DOWNLOAD_RETRY_DELAYS_MS = [600, 1200, 2400];
 class ExtensionsService {
   constructor(extensionsBasePath) {
     this.extensionsBasePath = extensionsBasePath;
@@ -18689,11 +18864,18 @@ class ExtensionsService {
       (entry) => entry.id === extensionId
     );
     if (!manifestEntry) {
-      throw new Error(`Расширение '${extensionId}' не поддерживается`);
+      raiseBusinessError(
+        "EXTENSION_NOT_SUPPORTED",
+        `Расширение '${extensionId}' не поддерживается`
+      );
     }
-    const normalizedUrl = releaseZipUrl.trim() || manifestEntry.releaseZipUrl;
+    const selectedManifest = manifestEntry;
+    const normalizedUrl = releaseZipUrl.trim() || selectedManifest.releaseZipUrl;
     if (!normalizedUrl) {
-      throw new Error("Не указан URL архива расширения");
+      raiseBusinessError(
+        "EXTENSION_URL_EMPTY",
+        "Не указан URL архива расширения"
+      );
     }
     const installPath = path.join(this.extensionsBasePath, extensionId);
     await promises$1.mkdir(this.extensionsBasePath, { recursive: true });
@@ -18702,151 +18884,61 @@ class ExtensionsService {
       `${extensionId}-${Date.now()}-${randomUUID()}.zip`
     );
     onStage?.("Скачивание архива расширения", "info");
-    try {
-      await this.downloadArchive(normalizedUrl, tempZipPath, signal);
-      onStage?.("Подготовка директории расширения", "info");
-      await promises$1.rm(installPath, { recursive: true, force: true });
-      await promises$1.mkdir(installPath, { recursive: true });
-      onStage?.("Распаковка архива расширения", "info");
-      await this.extractArchive(tempZipPath, installPath, signal);
-    } finally {
-      await promises$1.rm(tempZipPath, { force: true }).catch(() => {
-      });
-    }
+    await this.downloadArchive(normalizedUrl, tempZipPath, signal);
+    onStage?.("Подготовка директории расширения", "info");
+    await promises$1.rm(installPath, { recursive: true, force: true });
+    await promises$1.mkdir(installPath, { recursive: true });
+    onStage?.("Распаковка архива расширения", "info");
+    await this.extractArchive(tempZipPath, installPath, signal);
+    await attemptOr(() => promises$1.rm(tempZipPath, { force: true }), void 0);
     const installedState = await this.getExtensionStateById(extensionId);
     if (!installedState?.isInstalled) {
-      throw new Error(
+      raiseBusinessError(
+        "EXTENSION_ENTRY_NOT_FOUND",
         "Расширение установлено, но исполняемый файл не найден после распаковки"
       );
     }
+    const ensuredInstalledState = installedState;
     onStage?.("Расширение установлено", "success");
-    return installedState;
+    return ensuredInstalledState;
   }
   async downloadArchive(url2, targetPath, signal) {
-    let lastError = null;
-    for (let attemptIndex = 0; attemptIndex < DOWNLOAD_RETRY_DELAYS_MS.length; attemptIndex += 1) {
-      if (signal.aborted) {
-        throw new DOMException("Aborted", "AbortError");
-      }
-      try {
-        await this.downloadArchiveViaFetch(url2, targetPath, signal);
-        return;
-      } catch (error) {
-        const normalizedError = error instanceof Error ? error : new Error("Ошибка скачивания архива");
-        lastError = normalizedError;
-        if (signal.aborted) {
-          throw new DOMException("Aborted", "AbortError");
-        }
-        await this.delay(DOWNLOAD_RETRY_DELAYS_MS[attemptIndex], signal);
-      }
+    if (signal.aborted) {
+      raiseBusinessError(
+        "EXTENSION_INSTALL_ABORTED",
+        "Установка расширения была прервана"
+      );
     }
-    if (process.platform === "win32") {
-      try {
-        await this.downloadArchiveViaPowerShell(url2, targetPath, signal);
-        return;
-      } catch (error) {
-        const normalizedError = error instanceof Error ? error : new Error("PowerShell download failed");
-        lastError = normalizedError;
-      }
-    }
-    throw new Error(
-      `Не удалось скачать архив расширения: ${lastError?.message || "неизвестная ошибка"}`
-    );
-  }
-  async downloadArchiveViaFetch(url2, targetPath, signal) {
-    const response = await fetch(url2, {
-      signal,
-      redirect: "follow",
-      headers: {
-        "User-Agent": "zvs-assistant-installer/1.0",
-        Accept: "application/octet-stream,application/zip,*/*"
-      }
-    });
+    const response = await fetch(url2, { signal });
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      raiseBusinessError(
+        "EXTENSION_DOWNLOAD_FAILED",
+        `Не удалось скачать архив (${response.status})`
+      );
     }
     const rawBytes = await response.arrayBuffer();
     if (signal.aborted) {
-      throw new DOMException("Aborted", "AbortError");
+      raiseBusinessError(
+        "EXTENSION_INSTALL_ABORTED",
+        "Установка расширения была прервана"
+      );
     }
     await promises$1.writeFile(targetPath, Buffer.from(rawBytes));
   }
-  async downloadArchiveViaPowerShell(url2, targetPath, signal) {
-    const escapedUrl = url2.replace(/'/g, "''");
-    const escapedTargetPath = targetPath.replace(/'/g, "''");
-    const command = [
-      "$ProgressPreference='SilentlyContinue'",
-      `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12`,
-      `Invoke-WebRequest -UseBasicParsing -Uri '${escapedUrl}' -OutFile '${escapedTargetPath}'`
-    ].join("; ");
-    await new Promise((resolve2, reject) => {
-      const child = spawn(
-        "powershell.exe",
-        [
-          "-NoProfile",
-          "-NonInteractive",
-          "-ExecutionPolicy",
-          "Bypass",
-          "-Command",
-          command
-        ],
-        {
-          windowsHide: true,
-          stdio: ["ignore", "pipe", "pipe"]
-        }
-      );
-      let stderr = "";
-      child.stderr.on("data", (chunk) => {
-        stderr += chunk.toString("utf-8");
-      });
-      const onAbort = () => {
-        child.kill();
-        reject(new DOMException("Aborted", "AbortError"));
-      };
-      signal.addEventListener("abort", onAbort, { once: true });
-      child.on("error", (error) => {
-        signal.removeEventListener("abort", onAbort);
-        reject(error);
-      });
-      child.on("close", (code) => {
-        signal.removeEventListener("abort", onAbort);
-        if (code !== 0) {
-          reject(
-            new Error(
-              stderr.trim() || `PowerShell завершился с кодом ${String(code)}`
-            )
-          );
-          return;
-        }
-        resolve2();
-      });
-    });
-  }
-  async delay(ms, signal) {
-    if (signal.aborted) {
-      throw new DOMException("Aborted", "AbortError");
-    }
-    await new Promise((resolve2, reject) => {
-      const timeoutId = setTimeout(() => {
-        signal.removeEventListener("abort", onAbort);
-        resolve2();
-      }, ms);
-      const onAbort = () => {
-        clearTimeout(timeoutId);
-        signal.removeEventListener("abort", onAbort);
-        reject(new DOMException("Aborted", "AbortError"));
-      };
-      signal.addEventListener("abort", onAbort, { once: true });
-    });
-  }
   async extractArchive(zipPath, outputPath, signal) {
     if (signal.aborted) {
-      throw new DOMException("Aborted", "AbortError");
+      raiseBusinessError(
+        "EXTENSION_INSTALL_ABORTED",
+        "Установка расширения была прервана"
+      );
     }
     const zip = new AdmZip(zipPath);
     zip.extractAllTo(outputPath, true);
     if (signal.aborted) {
-      throw new DOMException("Aborted", "AbortError");
+      raiseBusinessError(
+        "EXTENSION_INSTALL_ABORTED",
+        "Установка расширения была прервана"
+      );
     }
     if (process.platform !== "win32") {
       const allState = await this.getExtensionsState();
@@ -18854,18 +18946,16 @@ class ExtensionsService {
         (entry) => normalizePath(entry.installPath) === normalizePath(outputPath)
       );
       if (installed?.entryFilePath) {
-        await promises$1.chmod(installed.entryFilePath, 493).catch(() => {
-        });
+        await attemptOr(
+          () => promises$1.chmod(installed.entryFilePath, 493),
+          void 0
+        );
       }
     }
   }
   async findExecutable(rootPath, executableBasenames) {
-    try {
-      const stat = await promises$1.stat(rootPath);
-      if (!stat.isDirectory()) {
-        return null;
-      }
-    } catch {
+    const stat = await attemptOrNull(() => promises$1.stat(rootPath));
+    if (!stat || !stat.isDirectory()) {
       return null;
     }
     const stack = [rootPath];
@@ -18874,13 +18964,13 @@ class ExtensionsService {
       if (!currentPath) {
         continue;
       }
-      let entries;
-      try {
-        entries = await promises$1.readdir(currentPath, {
+      const entries = await attemptOrNull(
+        () => promises$1.readdir(currentPath, {
           withFileTypes: true,
           encoding: "utf8"
-        });
-      } catch {
+        })
+      );
+      if (!entries) {
         continue;
       }
       for (const entry of entries) {
@@ -18914,13 +19004,12 @@ class LanceDbService {
     const { databasePath, tableName } = await this.getDataPathReferenceOrThrow(normalizedPath);
     const lancedb = await this.getLanceDbModule();
     const db = await lancedb.connect(databasePath);
-    try {
-      const table = await db.openTable(tableName);
-      await table.add(rows);
+    const openedTableResult = await attempt(() => db.openTable(tableName));
+    if (openedTableResult.ok) {
+      await openedTableResult.value.add(rows);
       return;
-    } catch {
-      await db.createTable(tableName, rows);
     }
+    await db.createTable(tableName, rows);
   }
   async search(dataPath, embedding, limit) {
     if (!embedding.length) {
@@ -18951,10 +19040,8 @@ class LanceDbService {
     if (!normalized) {
       return null;
     }
-    let stats;
-    try {
-      stats = await fs$1.stat(normalized);
-    } catch {
+    const stats = await attemptOrNull(() => fs$1.stat(normalized));
+    if (!stats) {
       return null;
     }
     if (!stats.isDirectory()) {
@@ -18968,13 +19055,14 @@ class LanceDbService {
         dataPath: normalized
       };
     }
-    let entries = [];
-    try {
-      entries = await fs$1.readdir(normalized, { withFileTypes: true });
-    } catch {
+    const entries = await attemptOrNull(
+      () => fs$1.readdir(normalized, { withFileTypes: true })
+    );
+    if (!entries) {
       return null;
     }
-    const tableDirs = entries.filter(
+    const typedEntries = entries;
+    const tableDirs = typedEntries.filter(
       (entry) => entry.isDirectory() && /\.lance$/i.test(entry.name)
     ).map((entry) => entry.name);
     if (!tableDirs.length) {
@@ -19003,10 +19091,8 @@ class LanceDbService {
     return this.lancedbModule;
   }
   async getPathSizeBytes(targetPath) {
-    let stats;
-    try {
-      stats = await fs$1.stat(targetPath);
-    } catch {
+    const stats = await attemptOrNull(() => fs$1.stat(targetPath));
+    if (!stats) {
       return 0;
     }
     if (stats.isFile()) {
@@ -19015,17 +19101,15 @@ class LanceDbService {
     if (!stats.isDirectory()) {
       return 0;
     }
-    let entries = [];
-    try {
-      entries = await fs$1.readdir(targetPath, { withFileTypes: true });
-    } catch {
+    const entries = await attemptOrNull(
+      () => fs$1.readdir(targetPath, { withFileTypes: true })
+    );
+    if (!entries || !entries.length) {
       return 0;
     }
-    if (!entries.length) {
-      return 0;
-    }
+    const typedEntries = entries;
     const nestedSizes = await Promise.all(
-      entries.map(
+      typedEntries.map(
         (entry) => this.getPathSizeBytes(path.join(targetPath, entry.name))
       )
     );
@@ -19035,13 +19119,14 @@ class LanceDbService {
     return typeof dataPath === "string" ? dataPath.trim() : "";
   }
   async getDataPathReferenceOrThrow(dataPath) {
-    const resolved = await this.resolveDataPathReference(dataPath);
-    if (!resolved) {
-      throw new Error(
+    const resolvedReference = await this.resolveDataPathReference(dataPath);
+    if (!resolvedReference) {
+      raiseBusinessError(
+        "VECTOR_STORAGE_INVALID_PATH",
         "Некорректный путь vector storage: укажите папку таблицы .lance или директорию с единственной таблицей .lance"
       );
     }
-    return resolved;
+    return resolvedReference;
   }
 }
 var lib$5 = {};
@@ -31401,7 +31486,7 @@ function requireDeflate$1() {
     }
     return BS_BLOCK_DONE;
   }
-  function Config2(good_length, max_lazy, nice_length, max_chain, func) {
+  function Config3(good_length, max_lazy, nice_length, max_chain, func) {
     this.good_length = good_length;
     this.max_lazy = max_lazy;
     this.nice_length = nice_length;
@@ -31411,25 +31496,25 @@ function requireDeflate$1() {
   var configuration_table;
   configuration_table = [
     /*      good lazy nice chain */
-    new Config2(0, 0, 0, 0, deflate_stored),
+    new Config3(0, 0, 0, 0, deflate_stored),
     /* 0 store only */
-    new Config2(4, 4, 8, 4, deflate_fast),
+    new Config3(4, 4, 8, 4, deflate_fast),
     /* 1 max speed, no lazy matches */
-    new Config2(4, 5, 16, 8, deflate_fast),
+    new Config3(4, 5, 16, 8, deflate_fast),
     /* 2 */
-    new Config2(4, 6, 32, 32, deflate_fast),
+    new Config3(4, 6, 32, 32, deflate_fast),
     /* 3 */
-    new Config2(4, 4, 16, 16, deflate_slow),
+    new Config3(4, 4, 16, 16, deflate_slow),
     /* 4 lazy matches */
-    new Config2(8, 16, 32, 32, deflate_slow),
+    new Config3(8, 16, 32, 32, deflate_slow),
     /* 5 */
-    new Config2(8, 16, 128, 128, deflate_slow),
+    new Config3(8, 16, 128, 128, deflate_slow),
     /* 6 */
-    new Config2(8, 32, 128, 256, deflate_slow),
+    new Config3(8, 32, 128, 256, deflate_slow),
     /* 7 */
-    new Config2(32, 128, 258, 1024, deflate_slow),
+    new Config3(32, 128, 258, 1024, deflate_slow),
     /* 8 */
-    new Config2(32, 258, 258, 4096, deflate_slow)
+    new Config3(32, 258, 258, 4096, deflate_slow)
     /* 9 max compression */
   ];
   function lm_init(s) {
@@ -48418,11 +48503,17 @@ class VectorizationService {
   async runVectorizationJob(payload, signal, callbacks) {
     const vectorStorageId = payload.vectorStorageId?.trim();
     if (!vectorStorageId) {
-      throw new Error("Не передан идентификатор векторного хранилища");
+      raiseBusinessError(
+        "VECTOR_STORAGE_ID_EMPTY",
+        "Не передан идентификатор векторного хранилища"
+      );
     }
     const storage = this.userDataService.getVectorStorageById(vectorStorageId);
     if (!storage) {
-      throw new Error("Векторное хранилище не найдено");
+      raiseBusinessError(
+        "VECTOR_STORAGE_NOT_FOUND",
+        "Векторное хранилище не найдено"
+      );
     }
     const activeDataPath = storage.dataPath.trim() || this.lanceDbService.getDefaultDataPath(vectorStorageId);
     this.throwIfAborted(signal);
@@ -48592,19 +48683,26 @@ class VectorizationService {
       });
     }
     if (!documents2.length) {
-      throw new Error("Не удалось извлечь текст из выбранных файлов");
+      raiseBusinessError(
+        "VECTORIZATION_TEXT_NOT_EXTRACTED",
+        "Не удалось извлечь текст из выбранных файлов"
+      );
     }
     return documents2;
   }
   async collectSupportedFilesFromDirectory(directoryPath, callbacks) {
-    let rootStats;
-    try {
-      rootStats = await fs$1.stat(directoryPath);
-    } catch {
-      throw new Error("Папка данных для индексации недоступна");
+    const rootStats = await attemptOrNull(() => fs$1.stat(directoryPath));
+    if (!rootStats) {
+      raiseBusinessError(
+        "VECTORIZATION_DIRECTORY_UNAVAILABLE",
+        "Папка данных для индексации недоступна"
+      );
     }
     if (!rootStats.isDirectory()) {
-      throw new Error("Путь данных должен указывать на папку");
+      raiseBusinessError(
+        "VECTORIZATION_DIRECTORY_REQUIRED",
+        "Путь данных должен указывать на папку"
+      );
     }
     callbacks.onStage(`Сканирую папку данных: ${directoryPath}`, "info");
     const collected = [];
@@ -48646,13 +48744,17 @@ class VectorizationService {
   async embedDocuments(documents2, vectorStorageId, signal, callbacks) {
     const profile = this.userDataService.getBootData().userProfile;
     if (profile.embeddingDriver !== "ollama") {
-      throw new Error(
+      raiseBusinessError(
+        "EMBEDDING_DRIVER_NOT_OLLAMA",
         "Для векторизации нужно включить настройку 'Использовать для создания эмбеддингов' в Ollama"
       );
     }
     const model = profile.ollamaEmbeddingModel.trim() || profile.ollamaModel.trim();
     if (!model) {
-      throw new Error("Не выбрана Ollama эмбеддинг-модель");
+      raiseBusinessError(
+        "EMBEDDING_MODEL_EMPTY",
+        "Не выбрана Ollama эмбеддинг-модель"
+      );
     }
     const token = profile.ollamaToken;
     const chunks = [];
@@ -48701,7 +48803,8 @@ class VectorizationService {
         token
       );
       if (embedResult.embeddings.length !== batch.length) {
-        throw new Error(
+        raiseBusinessError(
+          "EMBEDDING_BATCH_MISMATCH",
           "Количество эмбеддингов не совпадает с размером батча"
         );
       }
@@ -48864,134 +48967,118 @@ class JobService {
       3e4,
       Math.max(200, Math.floor(payload.stepDelayMs))
     ) : 900;
-    void (async () => {
-      let currentStage = "инициализация";
-      try {
-        if (payload.kind === "vectorization") {
-          await this.vectorizationService.runVectorizationJob(
-            payload,
-            abortController.signal,
-            {
-              onStage: (message, tag = "info") => {
-                currentStage = message;
-                const progressEvent = this.jobsStorage.appendJobEvent(
-                  job.id,
-                  message,
-                  tag
-                );
-                this.emitJobEvent(progressEvent);
-              }
-            }
-          );
-          const completed2 = this.jobsStorage.updateJob(job.id, {
-            isCompleted: true,
-            isPending: false,
-            finishedAt: (/* @__PURE__ */ new Date()).toISOString(),
-            errorMessage: null
-          });
-          if (completed2) {
-            this.emitJobUpdate(completed2);
-          }
-          const doneEvent2 = this.jobsStorage.appendJobEvent(
-            job.id,
-            "Задача векторизации успешно завершена",
-            "success"
-          );
-          this.emitJobEvent(doneEvent2);
-          return;
-        }
-        if (payload.kind === "extension-install") {
-          const extensionId = typeof payload.extensionId === "string" ? payload.extensionId.trim() : "";
-          if (!extensionId) {
-            throw new Error(
-              "Не передан extensionId для установки расширения"
+    const stageRef = { current: "инициализация" };
+    void this.executeJobFlow(
+      job,
+      payload,
+      abortController.signal,
+      totalSteps,
+      stepDelayMs,
+      stageRef
+    ).then((doneMessage) => {
+      this.markJobCompleted(job.id, doneMessage);
+    }).catch((error) => {
+      this.markJobFailed(job.id, stageRef.current, error);
+    }).finally(() => {
+      this.runtimes.delete(job.id);
+    });
+  }
+  async executeJobFlow(job, payload, signal, totalSteps, stepDelayMs, stageRef) {
+    if (payload.kind === "vectorization") {
+      await this.vectorizationService.runVectorizationJob(
+        payload,
+        signal,
+        {
+          onStage: (message, tag = "info") => {
+            stageRef.current = message;
+            const progressEvent = this.jobsStorage.appendJobEvent(
+              job.id,
+              message,
+              tag
             );
+            this.emitJobEvent(progressEvent);
           }
-          await this.extensionsService.installFromGithubRelease({
-            extensionId,
-            releaseZipUrl: payload.extensionReleaseZipUrl?.trim() ?? "",
-            signal: abortController.signal,
-            onStage: (message, tag = "info") => {
-              currentStage = message;
-              const progressEvent = this.jobsStorage.appendJobEvent(
-                job.id,
-                message,
-                tag
-              );
-              this.emitJobEvent(progressEvent);
-            }
-          });
-          const completed2 = this.jobsStorage.updateJob(job.id, {
-            isCompleted: true,
-            isPending: false,
-            finishedAt: (/* @__PURE__ */ new Date()).toISOString(),
-            errorMessage: null
-          });
-          if (completed2) {
-            this.emitJobUpdate(completed2);
-          }
-          const doneEvent2 = this.jobsStorage.appendJobEvent(
-            job.id,
-            "Расширение установлено. Перезапустите приложение, чтобы изменения применились во всех сервисах.",
-            "success"
-          );
-          this.emitJobEvent(doneEvent2);
-          return;
         }
-        for (let step = 1; step <= totalSteps; step += 1) {
-          await this.delay(stepDelayMs, abortController.signal);
-          const progress = Math.round(step / totalSteps * 100);
+      );
+      return "Задача векторизации успешно завершена";
+    }
+    if (payload.kind === "extension-install") {
+      const extensionId = typeof payload.extensionId === "string" ? payload.extensionId.trim() : "";
+      if (!extensionId) {
+        throw new Error(
+          "Не передан extensionId для установки расширения"
+        );
+      }
+      await this.extensionsService.installFromGithubRelease({
+        extensionId,
+        releaseZipUrl: payload.extensionReleaseZipUrl?.trim() ?? "",
+        signal,
+        onStage: (message, tag = "info") => {
+          stageRef.current = message;
           const progressEvent = this.jobsStorage.appendJobEvent(
             job.id,
-            `Шаг ${step}/${totalSteps} (${progress}%)`,
-            "info"
+            message,
+            tag
           );
           this.emitJobEvent(progressEvent);
         }
-        const completed = this.jobsStorage.updateJob(job.id, {
-          isCompleted: true,
-          isPending: false,
-          finishedAt: (/* @__PURE__ */ new Date()).toISOString(),
-          errorMessage: null
-        });
-        if (completed) {
-          this.emitJobUpdate(completed);
-        }
-        const doneEvent = this.jobsStorage.appendJobEvent(
-          job.id,
-          "Задача успешно завершена",
-          "success"
-        );
-        this.emitJobEvent(doneEvent);
-      } catch (error) {
-        const isAbort = error instanceof DOMException && error.name === "AbortError";
-        const normalizedError = error instanceof Error ? error : new Error("Неизвестная ошибка выполнения задачи");
-        const stageAwareErrorMessage = isAbort ? `Задача отменена (стадия: ${currentStage})` : `[${currentStage}] ${normalizedError.message}`;
-        const nextJob = this.jobsStorage.updateJob(job.id, {
-          isCompleted: false,
-          isPending: false,
-          finishedAt: (/* @__PURE__ */ new Date()).toISOString(),
-          errorMessage: stageAwareErrorMessage
-        });
-        if (nextJob) {
-          this.emitJobUpdate(nextJob);
-        }
-        const event = this.jobsStorage.appendJobEvent(
-          job.id,
-          isAbort ? `Выполнение прервано пользователем на стадии: ${currentStage}` : [
-            "Задача завершилась с ошибкой",
-            `Стадия: ${currentStage}`,
-            `Сообщение: ${normalizedError.message}`,
-            normalizedError.stack ? `Stack:
+      });
+      return "Расширение установлено. Перезапустите приложение, чтобы изменения применились во всех сервисах.";
+    }
+    for (let step = 1; step <= totalSteps; step += 1) {
+      await this.delay(stepDelayMs, signal);
+      const progress = Math.round(step / totalSteps * 100);
+      const progressEvent = this.jobsStorage.appendJobEvent(
+        job.id,
+        `Шаг ${step}/${totalSteps} (${progress}%)`,
+        "info"
+      );
+      this.emitJobEvent(progressEvent);
+    }
+    return "Задача успешно завершена";
+  }
+  markJobCompleted(jobId, doneMessage) {
+    const completed = this.jobsStorage.updateJob(jobId, {
+      isCompleted: true,
+      isPending: false,
+      finishedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      errorMessage: null
+    });
+    if (completed) {
+      this.emitJobUpdate(completed);
+    }
+    const doneEvent = this.jobsStorage.appendJobEvent(
+      jobId,
+      doneMessage,
+      "success"
+    );
+    this.emitJobEvent(doneEvent);
+  }
+  markJobFailed(jobId, currentStage, error) {
+    const isAbort = error instanceof DOMException && error.name === "AbortError";
+    const normalizedError = error instanceof Error ? error : new Error("Неизвестная ошибка выполнения задачи");
+    const stageAwareErrorMessage = isAbort ? `Задача отменена (стадия: ${currentStage})` : `[${currentStage}] ${normalizedError.message}`;
+    const nextJob = this.jobsStorage.updateJob(jobId, {
+      isCompleted: false,
+      isPending: false,
+      finishedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      errorMessage: stageAwareErrorMessage
+    });
+    if (nextJob) {
+      this.emitJobUpdate(nextJob);
+    }
+    const event = this.jobsStorage.appendJobEvent(
+      jobId,
+      isAbort ? `Выполнение прервано пользователем на стадии: ${currentStage}` : [
+        "Задача завершилась с ошибкой",
+        `Стадия: ${currentStage}`,
+        `Сообщение: ${normalizedError.message}`,
+        normalizedError.stack ? `Stack:
 ${normalizedError.stack}` : ""
-          ].filter(Boolean).join("\n\n"),
-          isAbort ? "warning" : "error"
-        );
-        this.emitJobEvent(event);
-      } finally {
-        this.runtimes.delete(job.id);
-      }
-    })();
+      ].filter(Boolean).join("\n\n"),
+      isAbort ? "warning" : "error"
+    );
+    this.emitJobEvent(event);
   }
   emitJobUpdate(job) {
     this.emitEvent({
@@ -49199,7 +49286,11 @@ app.whenReady().then(() => {
   });
   piperService = new PiperService({
     tempDir: app.getPath("temp"),
-    resolvePiperExecutablePath: () => extensionsService.resolvePiperExecutablePath()
+    resolvePiperExecutablePath: () => extensionsService.resolvePiperExecutablePath(),
+    resolveConfiguredModelPath: () => {
+      const configuredPath = userDataService.getBootData().userProfile.piperModelPath;
+      return Promise.resolve(configuredPath?.trim() || "");
+    }
   });
   ipcMain.handle("app:get-boot-data", async () => {
     const bootData = userDataService.getBootData();

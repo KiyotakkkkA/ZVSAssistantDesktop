@@ -330,7 +330,7 @@ export const useScenarioCanvas = () => {
                     );
                 const serializableViewport = normalizeViewport(mergedViewport);
 
-                return await updateScenario(activeScenario.id, {
+                return updateScenario(activeScenario.id, {
                     name: activeScenario.name,
                     description: activeScenario.description,
                     content: {

@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { chatsStore } from "../../stores/chatsStore";
 import { commandExecApprovalService } from "../../services/commandExecApproval";
 import { useToasts } from "../useToasts";
+import type { ChatDialog } from "../../types/Chat";
 
 type UseMessagesParams = {
     sendMessage: (content: string) => void;
@@ -67,6 +68,32 @@ const resolveDeletedIds = (
         isScenarioLaunchMessage(previousMessage.content, previousMessage.author)
     ) {
         deletedIds.add(previousMessage.id);
+    }
+
+    let hasNewItems = true;
+
+    while (hasNewItems) {
+        hasNewItems = false;
+
+        for (const message of messages) {
+            if (
+                typeof (message as { answeringAt?: string }).answeringAt !==
+                "string"
+            ) {
+                continue;
+            }
+
+            const parentId = (message as { answeringAt?: string }).answeringAt;
+
+            if (!parentId || !deletedIds.has(parentId)) {
+                continue;
+            }
+
+            if (!deletedIds.has(message.id)) {
+                deletedIds.add(message.id);
+                hasNewItems = true;
+            }
+        }
     }
 
     return deletedIds;
@@ -138,6 +165,63 @@ export const useMessages = ({ sendMessage }: UseMessagesParams) => {
         [],
     );
 
+    const truncateDialogFromMessage = useCallback(
+        async (dialog: ChatDialog, messageId: string) => {
+            const truncateApi =
+                window.appApi?.dialogs.truncateDialogFromMessage;
+
+            if (truncateApi) {
+                const updatedDialog = await truncateApi(dialog.id, messageId);
+                chatsStore.replaceByDialog(updatedDialog);
+                return;
+            }
+
+            const truncateIndex = resolveTruncateIndex(
+                dialog.messages,
+                messageId,
+            );
+
+            if (truncateIndex === -1) {
+                return;
+            }
+
+            chatsStore.replaceByDialog({
+                ...dialog,
+                messages: dialog.messages.slice(0, truncateIndex),
+                updatedAt: new Date().toISOString(),
+            });
+        },
+        [],
+    );
+
+    const deleteDialogMessage = useCallback(
+        async (dialog: ChatDialog, messageId: string) => {
+            const deleteApi = window.appApi?.dialogs.deleteMessageFromDialog;
+
+            if (deleteApi) {
+                const updatedDialog = await deleteApi(dialog.id, messageId);
+                chatsStore.replaceByDialog(updatedDialog);
+                return;
+            }
+
+            const deletedIds = resolveDeletedIds(dialog.messages, messageId);
+
+            chatsStore.replaceByDialog({
+                ...dialog,
+                messages: dialog.messages.filter(
+                    (message) =>
+                        !deletedIds.has(message.id) &&
+                        !(
+                            typeof message.answeringAt === "string" &&
+                            deletedIds.has(message.answeringAt)
+                        ),
+                ),
+                updatedAt: new Date().toISOString(),
+            });
+        },
+        [],
+    );
+
     const sendQaAnswer = useCallback(
         (qaMessageId: string, answer: string) => {
             setToolTraceStatus(qaMessageId, "answered");
@@ -155,34 +239,12 @@ export const useMessages = ({ sendMessage }: UseMessagesParams) => {
                 return;
             }
 
-            const api = window.appApi;
-
-            if (api?.dialogs.truncateDialogFromMessage) {
-                const updatedDialog =
-                    await api.dialogs.truncateDialogFromMessage(
-                        dialog.id,
-                        messageId,
-                    );
-                chatsStore.replaceByDialog(updatedDialog);
-            } else {
-                const truncateIndex = resolveTruncateIndex(
-                    dialog.messages,
-                    messageId,
-                );
-
-                if (truncateIndex !== -1) {
-                    chatsStore.replaceByDialog({
-                        ...dialog,
-                        messages: dialog.messages.slice(0, truncateIndex),
-                        updatedAt: new Date().toISOString(),
-                    });
-                }
-            }
+            await truncateDialogFromMessage(dialog, messageId);
 
             cancelEdit();
             sendMessage(trimmedContent);
         },
-        [cancelEdit, sendMessage],
+        [cancelEdit, sendMessage, truncateDialogFromMessage],
     );
 
     const submitEdit = useCallback(async () => {
@@ -217,33 +279,7 @@ export const useMessages = ({ sendMessage }: UseMessagesParams) => {
             return;
         }
 
-        const api = window.appApi;
-
-        if (api?.dialogs.deleteMessageFromDialog) {
-            const updatedDialog = await api.dialogs.deleteMessageFromDialog(
-                dialog.id,
-                deleteMessageId,
-            );
-            chatsStore.replaceByDialog(updatedDialog);
-        } else {
-            const deletedIds = resolveDeletedIds(
-                dialog.messages,
-                deleteMessageId,
-            );
-
-            chatsStore.replaceByDialog({
-                ...dialog,
-                messages: dialog.messages.filter(
-                    (message) =>
-                        !deletedIds.has(message.id) &&
-                        !(
-                            typeof message.answeringAt === "string" &&
-                            deletedIds.has(message.answeringAt)
-                        ),
-                ),
-                updatedAt: new Date().toISOString(),
-            });
-        }
+        await deleteDialogMessage(dialog, deleteMessageId);
 
         toasts.info({
             title: "Сообщение удалено",
@@ -251,7 +287,7 @@ export const useMessages = ({ sendMessage }: UseMessagesParams) => {
         });
 
         setDeleteMessageId(null);
-    }, [deleteMessageId, toasts]);
+    }, [deleteDialogMessage, deleteMessageId, toasts]);
 
     const approveCommandExec = useCallback(
         (messageId: string) => {

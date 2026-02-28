@@ -1,5 +1,10 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import {
+    attempt,
+    attemptOrNull,
+    raiseBusinessError,
+} from "../errors/errorPattern";
 
 type LanceDbModule = typeof import("@lancedb/lancedb");
 import type {
@@ -24,13 +29,14 @@ export class LanceDbService {
         const lancedb = await this.getLanceDbModule();
         const db = await lancedb.connect(databasePath);
 
-        try {
-            const table = await db.openTable(tableName);
-            await table.add(rows);
+        const openedTableResult = await attempt(() => db.openTable(tableName));
+
+        if (openedTableResult.ok) {
+            await openedTableResult.value.add(rows);
             return;
-        } catch {
-            await db.createTable(tableName, rows);
         }
+
+        await db.createTable(tableName, rows);
     }
 
     async search(
@@ -95,11 +101,9 @@ export class LanceDbService {
             return null;
         }
 
-        let stats;
+        const stats = await attemptOrNull(() => fs.stat(normalized));
 
-        try {
-            stats = await fs.stat(normalized);
-        } catch {
+        if (!stats) {
             return null;
         }
 
@@ -117,18 +121,20 @@ export class LanceDbService {
             };
         }
 
-        let entries: Array<{
-            name: string;
-            isDirectory: () => boolean;
-        }> = [];
+        const entries = await attemptOrNull(() =>
+            fs.readdir(normalized, { withFileTypes: true }),
+        );
 
-        try {
-            entries = await fs.readdir(normalized, { withFileTypes: true });
-        } catch {
+        if (!entries) {
             return null;
         }
 
-        const tableDirs = entries
+        const typedEntries: Array<{
+            name: string;
+            isDirectory: () => boolean;
+        }> = entries;
+
+        const tableDirs = typedEntries
             .filter(
                 (entry) => entry.isDirectory() && /\.lance$/i.test(entry.name),
             )
@@ -171,11 +177,9 @@ export class LanceDbService {
     }
 
     private async getPathSizeBytes(targetPath: string): Promise<number> {
-        let stats;
+        const stats = await attemptOrNull(() => fs.stat(targetPath));
 
-        try {
-            stats = await fs.stat(targetPath);
-        } catch {
+        if (!stats) {
             return 0;
         }
 
@@ -187,24 +191,22 @@ export class LanceDbService {
             return 0;
         }
 
-        let entries: Array<{
+        const entries = await attemptOrNull(() =>
+            fs.readdir(targetPath, { withFileTypes: true }),
+        );
+
+        if (!entries || !entries.length) {
+            return 0;
+        }
+
+        const typedEntries: Array<{
             name: string;
             isFile: () => boolean;
             isDirectory: () => boolean;
-        }> = [];
-
-        try {
-            entries = await fs.readdir(targetPath, { withFileTypes: true });
-        } catch {
-            return 0;
-        }
-
-        if (!entries.length) {
-            return 0;
-        }
+        }> = entries;
 
         const nestedSizes = await Promise.all(
-            entries.map((entry) =>
+            typedEntries.map((entry) =>
                 this.getPathSizeBytes(path.join(targetPath, entry.name)),
             ),
         );
@@ -221,14 +223,19 @@ export class LanceDbService {
         tableName: string;
         dataPath: string;
     }> {
-        const resolved = await this.resolveDataPathReference(dataPath);
+        const resolvedReference = await this.resolveDataPathReference(dataPath);
 
-        if (!resolved) {
-            throw new Error(
+        if (!resolvedReference) {
+            raiseBusinessError(
+                "VECTOR_STORAGE_INVALID_PATH",
                 "Некорректный путь vector storage: укажите папку таблицы .lance или директорию с единственной таблицей .lance",
             );
         }
 
-        return resolved;
+        return resolvedReference as {
+            databasePath: string;
+            tableName: string;
+            dataPath: string;
+        };
     }
 }

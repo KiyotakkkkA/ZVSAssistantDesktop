@@ -29,6 +29,7 @@ export type UserProfile = {
     chatDriver: ChatDriver;
     assistantName: string;
     useSpeechSynthesis: boolean;
+    piperModelPath: string;
     maxToolCallsPerResponse: number;
     userName: string;
     userPrompt: string;

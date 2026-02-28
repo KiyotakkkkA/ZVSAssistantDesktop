@@ -124,6 +124,8 @@ export function useChat() {
                 return;
             }
 
+            messagesRef.current = chatsStore.messages;
+
             isSendInFlightRef.current = true;
 
             try {
@@ -361,23 +363,18 @@ export function useChat() {
                             }
 
                             if (toolName !== "command_exec") {
-                                return await toolsStore.executeTool(
-                                    toolName,
-                                    args,
-                                    {
-                                        ollamaToken: ollamaToken,
-                                        telegramId: userProfile.telegramId,
-                                        telegramBotToken:
-                                            userProfile.telegramBotToken,
-                                        scenarioRuntimeEnv: {
-                                            current_date:
-                                                new Date().toISOString(),
-                                            project_directory:
-                                                projectsStore.activeProject
-                                                    ?.directoryPath ?? "",
-                                        },
+                                return toolsStore.executeTool(toolName, args, {
+                                    ollamaToken: ollamaToken,
+                                    telegramId: userProfile.telegramId,
+                                    telegramBotToken:
+                                        userProfile.telegramBotToken,
+                                    scenarioRuntimeEnv: {
+                                        current_date: new Date().toISOString(),
+                                        project_directory:
+                                            projectsStore.activeProject
+                                                ?.directoryPath ?? "",
                                     },
-                                );
+                                });
                             }
 
                             const messageId = toolTraceMessageIds.get(
@@ -428,22 +425,17 @@ export function useChat() {
                                 };
                             }
 
-                            return await toolsStore.executeTool(
-                                toolName,
-                                args,
-                                {
-                                    ollamaToken: ollamaToken,
-                                    telegramId: userProfile.telegramId,
-                                    telegramBotToken:
-                                        userProfile.telegramBotToken,
-                                    scenarioRuntimeEnv: {
-                                        current_date: new Date().toISOString(),
-                                        project_directory:
-                                            projectsStore.activeProject
-                                                ?.directoryPath ?? "",
-                                    },
+                            return toolsStore.executeTool(toolName, args, {
+                                ollamaToken: ollamaToken,
+                                telegramId: userProfile.telegramId,
+                                telegramBotToken: userProfile.telegramBotToken,
+                                scenarioRuntimeEnv: {
+                                    current_date: new Date().toISOString(),
+                                    project_directory:
+                                        projectsStore.activeProject
+                                            ?.directoryPath ?? "",
                                 },
-                            );
+                            });
                         },
                         onToolCall: ({ callId, toolName, args }) => {
                             chunkQueueManager.flushImmediate();

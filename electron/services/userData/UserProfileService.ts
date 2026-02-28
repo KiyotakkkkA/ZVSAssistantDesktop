@@ -116,76 +116,74 @@ export class UserProfileService {
             return defaultProfile;
         }
 
-        try {
-            const normalized: UserProfile = {
-                ...defaultProfile,
-                ...(typeof parsed.themePreference === "string"
-                    ? { themePreference: parsed.themePreference }
-                    : {}),
-                ...(typeof parsed.ollamaModel === "string"
-                    ? { ollamaModel: parsed.ollamaModel }
-                    : {}),
-                ...(typeof parsed.ollamaEmbeddingModel === "string"
-                    ? { ollamaEmbeddingModel: parsed.ollamaEmbeddingModel }
-                    : {}),
-                ...(typeof parsed.ollamaToken === "string"
-                    ? { ollamaToken: parsed.ollamaToken }
-                    : {}),
-                ...(typeof parsed.mistralVoiceRecModel === "string"
-                    ? { mistralVoiceRecModel: parsed.mistralVoiceRecModel }
-                    : {}),
-                ...(typeof parsed.mistralToken === "string"
-                    ? { mistralToken: parsed.mistralToken }
-                    : {}),
-                ...(isVoiceRecognitionDriver(parsed.voiceRecognitionDriver)
-                    ? { voiceRecognitionDriver: parsed.voiceRecognitionDriver }
-                    : {}),
-                ...(isEmbeddingDriver(parsed.embeddingDriver)
-                    ? { embeddingDriver: parsed.embeddingDriver }
-                    : {}),
-                ...(typeof parsed.telegramId === "string"
-                    ? { telegramId: parsed.telegramId }
-                    : {}),
-                ...(typeof parsed.telegramBotToken === "string"
-                    ? { telegramBotToken: parsed.telegramBotToken }
-                    : {}),
-                ...(isChatDriver(parsed.chatDriver)
-                    ? { chatDriver: parsed.chatDriver }
-                    : {}),
-                ...(typeof parsed.assistantName === "string"
-                    ? { assistantName: parsed.assistantName }
-                    : {}),
-                ...(typeof parsed.useSpeechSynthesis === "boolean"
-                    ? { useSpeechSynthesis: parsed.useSpeechSynthesis }
-                    : {}),
-                ...(typeof parsed.maxToolCallsPerResponse === "number" &&
-                Number.isFinite(parsed.maxToolCallsPerResponse)
-                    ? {
-                          maxToolCallsPerResponse:
-                              parsed.maxToolCallsPerResponse,
-                      }
-                    : {}),
-                ...(typeof parsed.userName === "string"
-                    ? { userName: parsed.userName }
-                    : {}),
-                ...(typeof parsed.userPrompt === "string"
-                    ? { userPrompt: parsed.userPrompt }
-                    : {}),
-                ...(typeof parsed.userLanguage === "string"
-                    ? { userLanguage: parsed.userLanguage }
-                    : {}),
-                activeDialogId: normalizeNullableId(parsed.activeDialogId),
-                activeProjectId: normalizeNullableId(parsed.activeProjectId),
-                activeScenarioId: normalizeNullableId(parsed.activeScenarioId),
-                lastActiveTab: isWorkspaceTab(parsed.lastActiveTab)
-                    ? parsed.lastActiveTab
-                    : defaultProfile.lastActiveTab,
-            };
+        const normalized: UserProfile = {
+            ...defaultProfile,
+            ...(typeof parsed.themePreference === "string"
+                ? { themePreference: parsed.themePreference }
+                : {}),
+            ...(typeof parsed.ollamaModel === "string"
+                ? { ollamaModel: parsed.ollamaModel }
+                : {}),
+            ...(typeof parsed.ollamaEmbeddingModel === "string"
+                ? { ollamaEmbeddingModel: parsed.ollamaEmbeddingModel }
+                : {}),
+            ...(typeof parsed.ollamaToken === "string"
+                ? { ollamaToken: parsed.ollamaToken }
+                : {}),
+            ...(typeof parsed.mistralVoiceRecModel === "string"
+                ? { mistralVoiceRecModel: parsed.mistralVoiceRecModel }
+                : {}),
+            ...(typeof parsed.mistralToken === "string"
+                ? { mistralToken: parsed.mistralToken }
+                : {}),
+            ...(isVoiceRecognitionDriver(parsed.voiceRecognitionDriver)
+                ? { voiceRecognitionDriver: parsed.voiceRecognitionDriver }
+                : {}),
+            ...(isEmbeddingDriver(parsed.embeddingDriver)
+                ? { embeddingDriver: parsed.embeddingDriver }
+                : {}),
+            ...(typeof parsed.telegramId === "string"
+                ? { telegramId: parsed.telegramId }
+                : {}),
+            ...(typeof parsed.telegramBotToken === "string"
+                ? { telegramBotToken: parsed.telegramBotToken }
+                : {}),
+            ...(isChatDriver(parsed.chatDriver)
+                ? { chatDriver: parsed.chatDriver }
+                : {}),
+            ...(typeof parsed.assistantName === "string"
+                ? { assistantName: parsed.assistantName }
+                : {}),
+            ...(typeof parsed.useSpeechSynthesis === "boolean"
+                ? { useSpeechSynthesis: parsed.useSpeechSynthesis }
+                : {}),
+            ...(typeof parsed.piperModelPath === "string"
+                ? { piperModelPath: parsed.piperModelPath }
+                : {}),
+            ...(typeof parsed.maxToolCallsPerResponse === "number" &&
+            Number.isFinite(parsed.maxToolCallsPerResponse)
+                ? {
+                      maxToolCallsPerResponse: parsed.maxToolCallsPerResponse,
+                  }
+                : {}),
+            ...(typeof parsed.userName === "string"
+                ? { userName: parsed.userName }
+                : {}),
+            ...(typeof parsed.userPrompt === "string"
+                ? { userPrompt: parsed.userPrompt }
+                : {}),
+            ...(typeof parsed.userLanguage === "string"
+                ? { userLanguage: parsed.userLanguage }
+                : {}),
+            activeDialogId: normalizeNullableId(parsed.activeDialogId),
+            activeProjectId: normalizeNullableId(parsed.activeProjectId),
+            activeScenarioId: normalizeNullableId(parsed.activeScenarioId),
+            lastActiveTab: isWorkspaceTab(parsed.lastActiveTab)
+                ? parsed.lastActiveTab
+                : defaultProfile.lastActiveTab,
+        };
 
-            return normalizeWorkspaceContext(normalized);
-        } catch {
-            return defaultProfile;
-        }
+        return normalizeWorkspaceContext(normalized);
     }
 
     updateUserProfile(nextProfile: Partial<UserProfile>): UserProfile {

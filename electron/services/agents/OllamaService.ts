@@ -2,6 +2,7 @@ import { Ollama, type ChatRequest } from "ollama";
 import { Config } from "../../../src/config";
 import type { OllamaChatChunk, OllamaRole } from "../../../src/types/Chat";
 import type { StreamOllamaChatPayload } from "../../../src/types/ElectronApi";
+import { attempt } from "../errors/errorPattern";
 
 type GetEmbedPayload = {
     model: string;
@@ -91,15 +92,17 @@ export class OllamaService {
         let lastError: unknown = null;
 
         for (const mode of modes) {
-            try {
-                const client = this.getClient(host, normalizedToken, mode);
-                return await callback(client);
-            } catch (error) {
-                lastError = error;
+            const client = this.getClient(host, normalizedToken, mode);
+            const result = await attempt(() => callback(client));
 
-                if (!this.isUnauthorizedError(error)) {
-                    throw error;
-                }
+            if (result.ok) {
+                return result.value;
+            }
+
+            lastError = result.error;
+
+            if (!this.isUnauthorizedError(result.error)) {
+                throw result.error;
             }
         }
 

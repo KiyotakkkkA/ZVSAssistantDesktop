@@ -1,11 +1,20 @@
 import type {
     CreateJobPayload,
+    JobEventTag,
     JobRecord,
     JobRealtimeEvent,
 } from "../../../src/types/ElectronApi";
 import { JobsStorage } from "./JobsStorage";
 import { VectorizationService } from "../storage/VectorizationService";
-import { ExtensionsService } from "../extensions/ExtensionsService";
+
+type ExtensionsServicePort = {
+    installFromGithubRelease: (params: {
+        extensionId: string;
+        releaseZipUrl: string;
+        signal: AbortSignal;
+        onStage?: (message: string, tag?: JobEventTag) => void;
+    }) => Promise<unknown>;
+};
 
 type JobRuntime = {
     abortController: AbortController;
@@ -17,7 +26,7 @@ export class JobService {
     constructor(
         private readonly jobsStorage: JobsStorage,
         private readonly vectorizationService: VectorizationService,
-        private readonly extensionsService: ExtensionsService,
+        private readonly extensionsService: ExtensionsServicePort,
         private readonly emitEvent: (event: JobRealtimeEvent) => void,
     ) {
         this.jobsStorage.markPendingJobsAsInterrupted();
@@ -114,170 +123,163 @@ export class JobService {
                   )
                 : 900;
 
-        void (async () => {
-            let currentStage = "инициализация";
+        const stageRef = { current: "инициализация" };
 
-            try {
-                if (payload.kind === "vectorization") {
-                    await this.vectorizationService.runVectorizationJob(
-                        payload,
-                        abortController.signal,
-                        {
-                            onStage: (message, tag = "info") => {
-                                currentStage = message;
-                                const progressEvent =
-                                    this.jobsStorage.appendJobEvent(
-                                        job.id,
-                                        message,
-                                        tag,
-                                    );
-                                this.emitJobEvent(progressEvent);
-                            },
-                        },
-                    );
+        void this.executeJobFlow(
+            job,
+            payload,
+            abortController.signal,
+            totalSteps,
+            stepDelayMs,
+            stageRef,
+        )
+            .then((doneMessage) => {
+                this.markJobCompleted(job.id, doneMessage);
+            })
+            .catch((error) => {
+                this.markJobFailed(job.id, stageRef.current, error);
+            })
+            .finally(() => {
+                this.runtimes.delete(job.id);
+            });
+    }
 
-                    const completed = this.jobsStorage.updateJob(job.id, {
-                        isCompleted: true,
-                        isPending: false,
-                        finishedAt: new Date().toISOString(),
-                        errorMessage: null,
-                    });
-
-                    if (completed) {
-                        this.emitJobUpdate(completed);
-                    }
-
-                    const doneEvent = this.jobsStorage.appendJobEvent(
-                        job.id,
-                        "Задача векторизации успешно завершена",
-                        "success",
-                    );
-                    this.emitJobEvent(doneEvent);
-                    return;
-                }
-
-                if (payload.kind === "extension-install") {
-                    const extensionId =
-                        typeof payload.extensionId === "string"
-                            ? payload.extensionId.trim()
-                            : "";
-
-                    if (!extensionId) {
-                        throw new Error(
-                            "Не передан extensionId для установки расширения",
+    private async executeJobFlow(
+        job: JobRecord,
+        payload: CreateJobPayload,
+        signal: AbortSignal,
+        totalSteps: number,
+        stepDelayMs: number,
+        stageRef: { current: string },
+    ): Promise<string> {
+        if (payload.kind === "vectorization") {
+            await this.vectorizationService.runVectorizationJob(
+                payload,
+                signal,
+                {
+                    onStage: (message, tag = "info") => {
+                        stageRef.current = message;
+                        const progressEvent = this.jobsStorage.appendJobEvent(
+                            job.id,
+                            message,
+                            tag,
                         );
-                    }
+                        this.emitJobEvent(progressEvent);
+                    },
+                },
+            );
 
-                    await this.extensionsService.installFromGithubRelease({
-                        extensionId,
-                        releaseZipUrl:
-                            payload.extensionReleaseZipUrl?.trim() ?? "",
-                        signal: abortController.signal,
-                        onStage: (message, tag = "info") => {
-                            currentStage = message;
-                            const progressEvent =
-                                this.jobsStorage.appendJobEvent(
-                                    job.id,
-                                    message,
-                                    tag,
-                                );
-                            this.emitJobEvent(progressEvent);
-                        },
-                    });
+            return "Задача векторизации успешно завершена";
+        }
 
-                    const completed = this.jobsStorage.updateJob(job.id, {
-                        isCompleted: true,
-                        isPending: false,
-                        finishedAt: new Date().toISOString(),
-                        errorMessage: null,
-                    });
+        if (payload.kind === "extension-install") {
+            const extensionId =
+                typeof payload.extensionId === "string"
+                    ? payload.extensionId.trim()
+                    : "";
 
-                    if (completed) {
-                        this.emitJobUpdate(completed);
-                    }
+            if (!extensionId) {
+                throw new Error(
+                    "Не передан extensionId для установки расширения",
+                );
+            }
 
-                    const doneEvent = this.jobsStorage.appendJobEvent(
-                        job.id,
-                        "Расширение установлено. Перезапустите приложение, чтобы изменения применились во всех сервисах.",
-                        "success",
-                    );
-                    this.emitJobEvent(doneEvent);
-                    return;
-                }
-
-                for (let step = 1; step <= totalSteps; step += 1) {
-                    await this.delay(stepDelayMs, abortController.signal);
-
-                    const progress = Math.round((step / totalSteps) * 100);
+            await this.extensionsService.installFromGithubRelease({
+                extensionId,
+                releaseZipUrl: payload.extensionReleaseZipUrl?.trim() ?? "",
+                signal,
+                onStage: (message, tag = "info") => {
+                    stageRef.current = message;
                     const progressEvent = this.jobsStorage.appendJobEvent(
                         job.id,
-                        `Шаг ${step}/${totalSteps} (${progress}%)`,
-                        "info",
+                        message,
+                        tag,
                     );
                     this.emitJobEvent(progressEvent);
-                }
+                },
+            });
 
-                const completed = this.jobsStorage.updateJob(job.id, {
-                    isCompleted: true,
-                    isPending: false,
-                    finishedAt: new Date().toISOString(),
-                    errorMessage: null,
-                });
+            return "Расширение установлено. Перезапустите приложение, чтобы изменения применились во всех сервисах.";
+        }
 
-                if (completed) {
-                    this.emitJobUpdate(completed);
-                }
+        for (let step = 1; step <= totalSteps; step += 1) {
+            await this.delay(stepDelayMs, signal);
 
-                const doneEvent = this.jobsStorage.appendJobEvent(
-                    job.id,
-                    "Задача успешно завершена",
-                    "success",
-                );
-                this.emitJobEvent(doneEvent);
-            } catch (error) {
-                const isAbort =
-                    error instanceof DOMException &&
-                    error.name === "AbortError";
-                const normalizedError =
-                    error instanceof Error
-                        ? error
-                        : new Error("Неизвестная ошибка выполнения задачи");
-                const stageAwareErrorMessage = isAbort
-                    ? `Задача отменена (стадия: ${currentStage})`
-                    : `[${currentStage}] ${normalizedError.message}`;
+            const progress = Math.round((step / totalSteps) * 100);
+            const progressEvent = this.jobsStorage.appendJobEvent(
+                job.id,
+                `Шаг ${step}/${totalSteps} (${progress}%)`,
+                "info",
+            );
+            this.emitJobEvent(progressEvent);
+        }
 
-                const nextJob = this.jobsStorage.updateJob(job.id, {
-                    isCompleted: false,
-                    isPending: false,
-                    finishedAt: new Date().toISOString(),
-                    errorMessage: stageAwareErrorMessage,
-                });
+        return "Задача успешно завершена";
+    }
 
-                if (nextJob) {
-                    this.emitJobUpdate(nextJob);
-                }
+    private markJobCompleted(jobId: string, doneMessage: string): void {
+        const completed = this.jobsStorage.updateJob(jobId, {
+            isCompleted: true,
+            isPending: false,
+            finishedAt: new Date().toISOString(),
+            errorMessage: null,
+        });
 
-                const event = this.jobsStorage.appendJobEvent(
-                    job.id,
-                    isAbort
-                        ? `Выполнение прервано пользователем на стадии: ${currentStage}`
-                        : [
-                              "Задача завершилась с ошибкой",
-                              `Стадия: ${currentStage}`,
-                              `Сообщение: ${normalizedError.message}`,
-                              normalizedError.stack
-                                  ? `Stack:\n${normalizedError.stack}`
-                                  : "",
-                          ]
-                              .filter(Boolean)
-                              .join("\n\n"),
-                    isAbort ? "warning" : "error",
-                );
-                this.emitJobEvent(event);
-            } finally {
-                this.runtimes.delete(job.id);
-            }
-        })();
+        if (completed) {
+            this.emitJobUpdate(completed);
+        }
+
+        const doneEvent = this.jobsStorage.appendJobEvent(
+            jobId,
+            doneMessage,
+            "success",
+        );
+        this.emitJobEvent(doneEvent);
+    }
+
+    private markJobFailed(
+        jobId: string,
+        currentStage: string,
+        error: unknown,
+    ): void {
+        const isAbort =
+            error instanceof DOMException && error.name === "AbortError";
+        const normalizedError =
+            error instanceof Error
+                ? error
+                : new Error("Неизвестная ошибка выполнения задачи");
+        const stageAwareErrorMessage = isAbort
+            ? `Задача отменена (стадия: ${currentStage})`
+            : `[${currentStage}] ${normalizedError.message}`;
+
+        const nextJob = this.jobsStorage.updateJob(jobId, {
+            isCompleted: false,
+            isPending: false,
+            finishedAt: new Date().toISOString(),
+            errorMessage: stageAwareErrorMessage,
+        });
+
+        if (nextJob) {
+            this.emitJobUpdate(nextJob);
+        }
+
+        const event = this.jobsStorage.appendJobEvent(
+            jobId,
+            isAbort
+                ? `Выполнение прервано пользователем на стадии: ${currentStage}`
+                : [
+                      "Задача завершилась с ошибкой",
+                      `Стадия: ${currentStage}`,
+                      `Сообщение: ${normalizedError.message}`,
+                      normalizedError.stack
+                          ? `Stack:\n${normalizedError.stack}`
+                          : "",
+                  ]
+                      .filter(Boolean)
+                      .join("\n\n"),
+            isAbort ? "warning" : "error",
+        );
+        this.emitJobEvent(event);
     }
 
     private emitJobUpdate(job: JobRecord): void {

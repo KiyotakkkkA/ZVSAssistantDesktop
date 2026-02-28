@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { Button, InputCheckbox, InputSmall, Modal } from "../../atoms";
+import {
+    Button,
+    InputCheckbox,
+    InputPath,
+    InputSmall,
+    Modal,
+} from "../../atoms";
 import { Icon } from "@iconify/react";
 import { useChatParams, useExtensions } from "../../../../hooks";
 import { SettingsChatOllamaModelsPickForm } from "../forms";
@@ -29,6 +35,7 @@ export const SettingsChatPanel = () => {
         assistantName,
         maxToolCallsPerResponse,
         useSpeechSynthesis,
+        piperModelPath,
     } = userProfile;
 
     const handleSpeechSynthesisToggle = async (checked: boolean) => {
@@ -123,7 +130,7 @@ export const SettingsChatPanel = () => {
                             />
                             <div>
                                 <p className="text-sm font-medium text-main-200">
-                                    Использовать синтез речи
+                                    Использовать для синтеза речи
                                 </p>
                                 <p className="text-xs text-main-400">Piper</p>
                             </div>
@@ -136,6 +143,21 @@ export const SettingsChatPanel = () => {
                             }}
                         />
                     </div>
+
+                    {useSpeechSynthesis ? (
+                        <InputPath
+                            label="Путь к модели Piper"
+                            helperText="Выберите директорию, где находится модель (.onnx) и конфиг (.onnx.json)."
+                            value={piperModelPath}
+                            forFolders
+                            placeholder="Директория модели не выбрана"
+                            onChange={(nextPath) => {
+                                void updateChatParams({
+                                    piperModelPath: nextPath,
+                                });
+                            }}
+                        />
+                    ) : null}
                 </div>
             </div>
 
