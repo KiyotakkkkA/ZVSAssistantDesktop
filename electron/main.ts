@@ -1,21 +1,29 @@
 import path from "node:path";
 import fs from "node:fs/promises";
 import { readFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 
 import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import { fileURLToPath } from "node:url";
 import { InitService } from "./services/InitService";
-import { UserDataService } from "./services/UserDataService";
 import { CommandExecService } from "./services/CommandExecService";
 import { BrowserService } from "./services/BrowserService";
 import { OllamaService } from "./services/agents/OllamaService";
 import { MistralService } from "./services/agents/MistralService";
 import { PiperService } from "./services/agents/PiperService";
 import { ExtensionsService } from "./services/extensions/ExtensionsService";
+import { DialogsService } from "./services/chat/DialogsService";
+import { ProjectsService } from "./services/chat/ProjectsService";
+import { ScenariosService } from "./services/chat/ScenariosService";
 import { LanceDbService } from "./services/storage/LanceDbService";
 import { VectorizationService } from "./services/storage/VectorizationService";
 import { JobsStorage } from "./services/jobs/JobsStorage";
 import { JobService } from "./services/jobs/JobService";
+import { DatabaseService } from "./services/storage/DatabaseService";
+import { MetaService } from "./services/storage/MetaService";
+import { FileStorageService } from "./services/storage/FileStorageService";
+import { ThemesService } from "./services/userData/ThemesService";
+import { UserProfileService } from "./services/userData/UserProfileService";
 import { createElectronPaths } from "./paths";
 import type { UserProfile } from "../src/types/App";
 import type { ChatDialog } from "../src/types/Chat";
@@ -60,7 +68,6 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
     : RENDERER_DIST;
 
 let win: BrowserWindow | null;
-let userDataService: UserDataService;
 let commandExecService: CommandExecService;
 let browserService: BrowserService;
 let ollamaService: OllamaService;
@@ -214,19 +221,70 @@ app.whenReady()
 
         initDirectoriesService.initialize();
         extensionsService = new ExtensionsService(appPaths.extensionsPath);
-        userDataService = new UserDataService(appPaths);
+        const databaseService = new DatabaseService(appPaths.databasePath);
+        const metaService = new MetaService(appPaths.metaPath);
+        const userProfileService = new UserProfileService(
+            databaseService,
+            metaService,
+        );
+        const themesService = new ThemesService(appPaths.themesPath);
+        const currentUserId = userProfileService.getCurrentUserId();
+        const dialogsService = new DialogsService(
+            databaseService,
+            ({ activeDialogId, activeProjectId }) => {
+                userProfileService.updateUserProfile({
+                    activeDialogId,
+                    activeProjectId,
+                    activeScenarioId: null,
+                    lastActiveTab: activeProjectId ? "projects" : "dialogs",
+                });
+            },
+            currentUserId,
+        );
+        const projectsService = new ProjectsService(
+            databaseService,
+            currentUserId,
+        );
+        const scenariosService = new ScenariosService(
+            databaseService,
+            currentUserId,
+        );
+        const fileStorageService = new FileStorageService(
+            appPaths.filesPath,
+            databaseService,
+            currentUserId,
+        );
+
+        for (const project of projectsService.getProjectsList()) {
+            dialogsService.linkDialogToProject(project.dialogId, project.id);
+        }
+
+        const getBootData = () => {
+            const userProfile = userProfileService.getUserProfile();
+            const preferredThemeData = themesService.resolveThemePalette(
+                userProfile.themePreference,
+            );
+
+            return {
+                userProfile,
+                preferredThemeData,
+            };
+        };
+
         commandExecService = new CommandExecService();
         browserService = new BrowserService();
         ollamaService = new OllamaService();
         const lanceDbService = new LanceDbService(appPaths.vectorIndexPath);
         const vectorizationService = new VectorizationService(
-            userDataService,
+            databaseService,
+            fileStorageService,
+            userProfileService,
             ollamaService,
             lanceDbService,
         );
         const jobsStorage = new JobsStorage(
-            userDataService.getDatabaseService(),
-            () => userDataService.getCurrentUserId(),
+            databaseService,
+            userProfileService,
         );
         jobService = new JobService(
             jobsStorage,
@@ -248,14 +306,14 @@ app.whenReady()
                 extensionsService.resolvePiperExecutablePath(),
             resolveConfiguredModelPath: () => {
                 const configuredPath =
-                    userDataService.getBootData().userProfile.piperModelPath;
+                    userProfileService.getUserProfile().piperModelPath;
 
                 return Promise.resolve(configuredPath?.trim() || "");
             },
         });
 
         ipcMain.handle("app:get-boot-data", async () => {
-            const bootData = userDataService.getBootData();
+            const bootData = getBootData();
             const extensions = await extensionsService.getExtensionsState();
 
             return {
@@ -267,118 +325,282 @@ app.whenReady()
             extensionsService.getExtensionsState(),
         );
         ipcMain.handle("app:get-themes-list", () =>
-            userDataService.getThemesList(),
+            themesService.getThemesList(),
         );
         ipcMain.handle("app:get-theme-data", (_event, themeId: string) =>
-            userDataService.getThemeData(themeId),
+            themesService.getThemeData(themeId),
         );
         ipcMain.handle(
             "app:update-user-profile",
             (_event, nextProfile: Partial<UserProfile>) =>
-                userDataService.updateUserProfile(nextProfile),
+                userProfileService.updateUserProfile(nextProfile),
         );
-        ipcMain.handle("app:get-active-dialog", () =>
-            userDataService.getActiveDialog(),
-        );
+        ipcMain.handle("app:get-active-dialog", () => {
+            const profile = userProfileService.getUserProfile();
+            return dialogsService.getActiveDialog(
+                profile.activeDialogId ?? undefined,
+            );
+        });
         ipcMain.handle("app:get-dialogs-list", () =>
-            userDataService.getDialogsList(),
+            dialogsService.getDialogsList(),
         );
         ipcMain.handle("app:get-dialog-by-id", (_event, dialogId: string) =>
-            userDataService.getDialogById(dialogId),
+            dialogsService.getDialogById(
+                dialogId,
+                userProfileService.getUserProfile().activeDialogId ?? undefined,
+            ),
         );
         ipcMain.handle("app:create-dialog", () =>
-            userDataService.createDialog(),
+            dialogsService.createDialog(),
         );
         ipcMain.handle(
             "app:rename-dialog",
             (_event, dialogId: string, title: string) =>
-                userDataService.renameDialog(dialogId, title),
+                dialogsService.renameDialog(
+                    dialogId,
+                    title,
+                    userProfileService.getUserProfile().activeDialogId ??
+                        undefined,
+                ),
         );
         ipcMain.handle("app:delete-dialog", (_event, dialogId: string) =>
-            userDataService.deleteDialog(dialogId),
+            dialogsService.deleteDialog(dialogId),
         );
         ipcMain.handle(
             "app:delete-message-from-dialog",
             (_event, dialogId: string, messageId: string) =>
-                userDataService.deleteMessageFromDialog(dialogId, messageId),
+                dialogsService.deleteMessageFromDialog(
+                    dialogId,
+                    messageId,
+                    userProfileService.getUserProfile().activeDialogId ??
+                        undefined,
+                ),
         );
         ipcMain.handle(
             "app:truncate-dialog-from-message",
             (_event, dialogId: string, messageId: string) =>
-                userDataService.truncateDialogFromMessage(dialogId, messageId),
+                dialogsService.truncateDialogFromMessage(
+                    dialogId,
+                    messageId,
+                    userProfileService.getUserProfile().activeDialogId ??
+                        undefined,
+                ),
         );
         ipcMain.handle(
             "app:save-dialog-snapshot",
             (_event, dialog: ChatDialog) =>
-                userDataService.saveDialogSnapshot(dialog),
+                dialogsService.saveDialogSnapshot(dialog),
         );
         ipcMain.handle("app:get-projects-list", () =>
-            userDataService.getProjectsList(),
-        );
-        ipcMain.handle("app:get-default-projects-directory", () =>
-            userDataService.getDefaultProjectsDirectory(),
-        );
-        ipcMain.handle("app:get-project-by-id", (_event, projectId: string) =>
-            userDataService.getProjectById(projectId),
+            projectsService.getProjectsList(),
         );
         ipcMain.handle(
+            "app:get-default-projects-directory",
+            () => appPaths.defaultProjectsDirectory,
+        );
+        ipcMain.handle("app:get-project-by-id", (_event, projectId: string) => {
+            const project = projectsService.getProjectById(projectId);
+
+            if (project) {
+                userProfileService.updateUserProfile({
+                    activeProjectId: project.id,
+                    activeScenarioId: null,
+                    lastActiveTab: "projects",
+                });
+            } else {
+                userProfileService.updateUserProfile({
+                    activeProjectId: null,
+                });
+            }
+
+            return project;
+        });
+        ipcMain.handle(
             "app:create-project",
-            (_event, payload: CreateProjectPayload) =>
-                userDataService.createProject(payload),
+            (_event, payload: CreateProjectPayload) => {
+                const projectId = `project_${randomUUID().replace(/-/g, "")}`;
+                const dialog = dialogsService.createDialog(projectId);
+                const nextTitle = payload.name.trim();
+                const selectedBaseDirectory =
+                    payload.directoryPath?.trim() ||
+                    appPaths.defaultProjectsDirectory;
+
+                if (nextTitle) {
+                    dialogsService.renameDialog(dialog.id, nextTitle);
+                }
+
+                const project = projectsService.createProject({
+                    ...payload,
+                    directoryPath: selectedBaseDirectory,
+                    dialogId: dialog.id,
+                    projectId,
+                });
+
+                userProfileService.updateUserProfile({
+                    activeScenarioId: null,
+                    lastActiveTab: "projects",
+                });
+
+                return project;
+            },
         );
-        ipcMain.handle("app:delete-project", (_event, projectId: string) =>
-            userDataService.deleteProject(projectId),
-        );
+        ipcMain.handle("app:delete-project", (_event, projectId: string) => {
+            const deletedProject = projectsService.deleteProject(projectId);
+
+            if (deletedProject) {
+                fileStorageService.deleteFilesByIds(deletedProject.fileUUIDs);
+                dialogsService.deleteDialog(deletedProject.dialogId);
+
+                const profile = userProfileService.getUserProfile();
+
+                if (profile.activeProjectId === projectId) {
+                    userProfileService.updateUserProfile({
+                        activeProjectId: null,
+                        activeScenarioId: null,
+                        lastActiveTab: "dialogs",
+                    });
+                }
+            }
+
+            return {
+                projects: projectsService.getProjectsList(),
+                deletedProjectId: projectId,
+            };
+        });
         ipcMain.handle("app:get-scenarios-list", () =>
-            userDataService.getScenariosList(),
+            scenariosService.getScenariosList(),
         );
-        ipcMain.handle("app:get-scenario-by-id", (_event, scenarioId: string) =>
-            userDataService.getScenarioById(scenarioId),
+        ipcMain.handle(
+            "app:get-scenario-by-id",
+            (_event, scenarioId: string) => {
+                const scenario = scenariosService.getScenarioById(scenarioId);
+
+                if (scenario) {
+                    userProfileService.updateUserProfile({
+                        activeScenarioId: scenario.id,
+                        lastActiveTab: "scenario",
+                        activeDialogId: null,
+                        activeProjectId: null,
+                    });
+                } else {
+                    userProfileService.updateUserProfile({
+                        activeScenarioId: null,
+                    });
+                }
+
+                return scenario;
+            },
         );
         ipcMain.handle(
             "app:create-scenario",
-            (_event, payload: CreateScenarioPayload) =>
-                userDataService.createScenario(payload),
+            (_event, payload: CreateScenarioPayload) => {
+                const scenario = scenariosService.createScenario(payload);
+
+                userProfileService.updateUserProfile({
+                    activeScenarioId: scenario.id,
+                    lastActiveTab: "scenario",
+                    activeDialogId: null,
+                    activeProjectId: null,
+                });
+
+                return scenario;
+            },
         );
         ipcMain.handle(
             "app:update-scenario",
-            (_event, scenarioId: string, payload: UpdateScenarioPayload) =>
-                userDataService.updateScenario(scenarioId, payload),
+            (_event, scenarioId: string, payload: UpdateScenarioPayload) => {
+                const scenario = scenariosService.updateScenario(
+                    scenarioId,
+                    payload,
+                );
+
+                if (scenario) {
+                    userProfileService.updateUserProfile({
+                        activeScenarioId: scenario.id,
+                        lastActiveTab: "scenario",
+                        activeDialogId: null,
+                        activeProjectId: null,
+                    });
+                }
+
+                return scenario;
+            },
         );
-        ipcMain.handle("app:delete-scenario", (_event, scenarioId: string) =>
-            userDataService.deleteScenario(scenarioId),
-        );
+        ipcMain.handle("app:delete-scenario", (_event, scenarioId: string) => {
+            const deletedScenario = scenariosService.deleteScenario(scenarioId);
+
+            if (deletedScenario) {
+                const profile = userProfileService.getUserProfile();
+
+                if (profile.activeScenarioId === deletedScenario.id) {
+                    userProfileService.updateUserProfile({
+                        activeScenarioId: null,
+                        lastActiveTab: "dialogs",
+                    });
+                }
+            }
+
+            return {
+                scenarios: scenariosService.getScenariosList(),
+                deletedScenarioId: scenarioId,
+            };
+        });
         ipcMain.handle("app:save-files", (_event, files: UploadedFileData[]) =>
-            userDataService.saveFiles(files),
+            fileStorageService.saveFiles(files),
         );
         ipcMain.handle("app:get-files-by-ids", (_event, fileIds: string[]) =>
-            userDataService.getFilesByIds(fileIds),
+            fileStorageService.getFilesByIds(fileIds),
         );
         ipcMain.handle("app:get-all-files", () =>
-            userDataService.getAllFiles(),
+            fileStorageService.getAllFiles(),
         );
         ipcMain.handle("app:delete-file", (_event, fileId: string) =>
-            userDataService.deleteFileById(fileId),
+            fileStorageService.deleteFileById(fileId),
         );
         ipcMain.handle("app:get-vector-storages", () =>
-            userDataService.getVectorStorages(),
+            databaseService.getVectorStorages(
+                userProfileService.getCurrentUserId(),
+            ),
         );
-        ipcMain.handle("app:create-vector-storage", () =>
-            userDataService.createVectorStorage(),
-        );
+        ipcMain.handle("app:create-vector-storage", () => {
+            const currentOwnerId = userProfileService.getCurrentUserId();
+            const vectorStorageName = `store_${randomUUID().replace(/-/g, "")}`;
+            const vectorStorageId = `vs_${randomUUID().replace(/-/g, "")}`;
+            const defaultDataPath = path.join(
+                appPaths.vectorIndexPath,
+                `${vectorStorageId}.lance`,
+            );
+
+            return databaseService.createVectorStorage(
+                currentOwnerId,
+                vectorStorageName,
+                defaultDataPath,
+                vectorStorageId,
+            );
+        });
         ipcMain.handle("app:get-vector-tags", () =>
-            userDataService.getVectorTags(),
+            databaseService.getVectorTags(
+                userProfileService.getCurrentUserId(),
+            ),
         );
         ipcMain.handle("app:create-vector-tag", (_event, name: string) =>
-            userDataService.createVectorTag(name),
+            databaseService.createVectorTag(
+                userProfileService.getCurrentUserId(),
+                name,
+            ),
         );
         ipcMain.handle(
             "app:delete-vector-storage",
             (_event, vectorStorageId: string) =>
-                userDataService.deleteVectorStorage(vectorStorageId),
+                databaseService.deleteVectorStorage(
+                    vectorStorageId,
+                    userProfileService.getCurrentUserId(),
+                ),
         );
-        ipcMain.handle("app:get-cache-entry", (_event, key: string) =>
-            userDataService.getCacheEntry(key),
+        ipcMain.handle(
+            "app:get-cache-entry",
+            (_event, key: string) =>
+                databaseService.getCacheEntry(key) as AppCacheEntry | null,
         );
         ipcMain.handle("app:get-jobs", () => jobService.getJobs());
         ipcMain.handle("app:get-job-by-id", (_event, jobId: string) =>
@@ -428,7 +650,7 @@ app.whenReady()
                           )
                         : 0;
 
-                    return userDataService.updateVectorStorage(
+                    return databaseService.updateVectorStorage(
                         vectorStorageId,
                         {
                             ...payload,
@@ -436,12 +658,14 @@ app.whenReady()
                             size: sizeFromDataPath,
                             lastActiveAt: new Date().toISOString(),
                         },
+                        userProfileService.getCurrentUserId(),
                     );
                 }
 
-                return userDataService.updateVectorStorage(
+                return databaseService.updateVectorStorage(
                     vectorStorageId,
                     payload,
+                    userProfileService.getCurrentUserId(),
                 );
             },
         );
@@ -468,8 +692,10 @@ app.whenReady()
                     throw new Error("Поисковый запрос пуст");
                 }
 
-                const storage =
-                    userDataService.getVectorStorageById(normalizedStorageId);
+                const storage = databaseService.getVectorStorageById(
+                    normalizedStorageId,
+                    userProfileService.getCurrentUserId(),
+                );
 
                 if (!storage) {
                     throw new Error("Vector storage не найден");
@@ -483,7 +709,7 @@ app.whenReady()
                     );
                 }
 
-                const profile = userDataService.getBootData().userProfile;
+                const profile = userProfileService.getUserProfile();
                 const model =
                     profile.ollamaEmbeddingModel.trim() ||
                     profile.ollamaModel.trim();
@@ -534,14 +760,13 @@ app.whenReady()
         ipcMain.handle(
             "app:set-cache-entry",
             (_event, key: string, entry: AppCacheEntry) => {
-                userDataService.setCacheEntry(key, entry);
+                databaseService.setCacheEntry(key, entry);
             },
         );
         ipcMain.handle(
             "app:ollama-stream-chat",
             async (_event, payload: StreamOllamaChatPayload) => {
-                const token =
-                    userDataService.getBootData().userProfile.ollamaToken;
+                const token = userProfileService.getUserProfile().ollamaToken;
 
                 return ollamaService.streamChat(payload, token);
             },
@@ -638,7 +863,7 @@ app.whenReady()
         ipcMain.handle(
             "app:open-saved-file",
             async (_event, fileId: string) => {
-                const file = userDataService.getFileById(fileId);
+                const file = fileStorageService.getFileById(fileId);
 
                 if (!file) {
                     return false;

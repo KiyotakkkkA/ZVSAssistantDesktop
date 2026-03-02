@@ -5,28 +5,30 @@ import type {
     JobRecord,
 } from "../../../src/types/ElectronApi";
 import { DatabaseService } from "../storage/DatabaseService";
+import { UserProfileService } from "../userData/UserProfileService";
 
 export class JobsStorage {
     constructor(
         private readonly databaseService: DatabaseService,
-        private readonly resolveCurrentUserId: () => string,
+        private readonly userProfileService: UserProfileService,
     ) {}
 
+    private getCurrentUserId(): string {
+        return this.userProfileService.getCurrentUserId();
+    }
+
     getJobs(): JobRecord[] {
-        return this.databaseService.getJobs(this.resolveCurrentUserId());
+        return this.databaseService.getJobs(this.getCurrentUserId());
     }
 
     getJobById(jobId: string): JobRecord | null {
-        return this.databaseService.getJobById(
-            jobId,
-            this.resolveCurrentUserId(),
-        );
+        return this.databaseService.getJobById(jobId, this.getCurrentUserId());
     }
 
     getJobEvents(jobId: string): JobEventRecord[] {
         return this.databaseService.getJobEvents(
             jobId,
-            this.resolveCurrentUserId(),
+            this.getCurrentUserId(),
         );
     }
 
@@ -34,7 +36,7 @@ export class JobsStorage {
         const name = payload.name.trim() || "Фоновая задача";
         const description = payload.description?.trim() || "";
 
-        return this.databaseService.createJob(this.resolveCurrentUserId(), {
+        return this.databaseService.createJob(this.getCurrentUserId(), {
             name,
             description,
         });
@@ -46,7 +48,7 @@ export class JobsStorage {
         tag: JobEventTag,
     ): JobEventRecord {
         return this.databaseService.addJobEvent(
-            this.resolveCurrentUserId(),
+            this.getCurrentUserId(),
             jobId,
             message,
             tag,
@@ -64,14 +66,14 @@ export class JobsStorage {
     ): JobRecord | null {
         return this.databaseService.updateJob(
             jobId,
-            this.resolveCurrentUserId(),
+            this.getCurrentUserId(),
             payload,
         );
     }
 
     markPendingJobsAsInterrupted(): string[] {
         return this.databaseService.markPendingJobsAsInterrupted(
-            this.resolveCurrentUserId(),
+            this.getCurrentUserId(),
         );
     }
 }

@@ -2,7 +2,7 @@ import { Ollama, type ChatRequest } from "ollama";
 import { Config } from "../../../src/config";
 import type { OllamaChatChunk, OllamaRole } from "../../../src/types/Chat";
 import type { StreamOllamaChatPayload } from "../../../src/types/ElectronApi";
-import { attempt } from "../errors/errorPattern";
+import { attempt } from "../../errors/errorPattern";
 
 type GetEmbedPayload = {
     model: string;

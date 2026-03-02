@@ -3,11 +3,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
-import { UserDataService } from "../UserDataService";
 import { LanceDbService } from "./LanceDbService";
 import { OllamaService } from "../agents/OllamaService";
-import { attemptOrNull, raiseBusinessError } from "../errors/errorPattern";
+import { attemptOrNull, raiseBusinessError } from "../../errors/errorPattern";
 import type { CreateJobPayload } from "../../../src/types/ElectronApi";
+import { DatabaseService } from "./DatabaseService";
+import { FileStorageService } from "./FileStorageService";
+import { UserProfileService } from "../userData/UserProfileService";
 import type {
     LanceVectorRow,
     VectorizationCallbacks,
@@ -22,7 +24,9 @@ const MAX_BATCH_SIZE = 24;
 
 export class VectorizationService {
     constructor(
-        private readonly userDataService: UserDataService,
+        private readonly databaseService: DatabaseService,
+        private readonly fileStorageService: FileStorageService,
+        private readonly userProfileService: UserProfileService,
         private readonly ollamaService: OllamaService,
         private readonly lanceDbService: LanceDbService,
     ) {}
@@ -32,27 +36,36 @@ export class VectorizationService {
         signal: AbortSignal,
         callbacks: VectorizationCallbacks,
     ): Promise<{ totalFiles: number }> {
-        const vectorStorageId = payload.vectorStorageId?.trim();
+        const vectorStorageIdRaw = payload.vectorStorageId?.trim();
 
-        if (!vectorStorageId) {
+        if (!vectorStorageIdRaw) {
             raiseBusinessError(
                 "VECTOR_STORAGE_ID_EMPTY",
                 "Не передан идентификатор векторного хранилища",
             );
+            throw new Error("Не передан идентификатор векторного хранилища");
         }
 
-        const storage =
-            this.userDataService.getVectorStorageById(vectorStorageId);
+        const vectorStorageId = vectorStorageIdRaw;
+
+        const currentUserId = this.userProfileService.getCurrentUserId();
+        const storage = this.databaseService.getVectorStorageById(
+            vectorStorageId,
+            currentUserId,
+        );
 
         if (!storage) {
             raiseBusinessError(
                 "VECTOR_STORAGE_NOT_FOUND",
                 "Векторное хранилище не найдено",
             );
+            throw new Error("Векторное хранилище не найдено");
         }
 
+        const targetStorage = storage;
+
         const activeDataPath =
-            storage.dataPath.trim() ||
+            targetStorage.dataPath.trim() ||
             this.lanceDbService.getDefaultDataPath(vectorStorageId);
 
         this.throwIfAborted(signal);
@@ -103,7 +116,7 @@ export class VectorizationService {
 
         this.throwIfAborted(signal);
 
-        const existingFileIds = storage.fileIds ?? [];
+        const existingFileIds = targetStorage.fileIds ?? [];
         const preparedPersistedFileIds = preparedFiles
             .map((file) => file.persistedFileId)
             .filter((fileId): fileId is string => Boolean(fileId));
@@ -112,12 +125,16 @@ export class VectorizationService {
         ];
         const vectorStorageSizeBytes =
             await this.lanceDbService.getDataPathSizeBytes(activeDataPath);
-        await this.userDataService.updateVectorStorage(vectorStorageId, {
-            fileIds: uniqueFileIds,
-            size: vectorStorageSizeBytes,
-            dataPath: activeDataPath,
-            lastActiveAt: new Date().toISOString(),
-        });
+        await this.databaseService.updateVectorStorage(
+            vectorStorageId,
+            {
+                fileIds: uniqueFileIds,
+                size: vectorStorageSizeBytes,
+                dataPath: activeDataPath,
+                lastActiveAt: new Date().toISOString(),
+            },
+            currentUserId,
+        );
 
         callbacks.onStage("Пайплайн векторизации завершён", "success");
 
@@ -133,7 +150,8 @@ export class VectorizationService {
         const sourceFileIds = Array.isArray(payload.sourceFileIds)
             ? payload.sourceFileIds
             : [];
-        const existingFiles = this.userDataService.getFilesByIds(sourceFileIds);
+        const existingFiles =
+            this.fileStorageService.getFilesByIds(sourceFileIds);
         callbacks.onStage(
             `Файлов из хранилища получено: ${existingFiles.length}`,
             "info",
@@ -147,7 +165,7 @@ export class VectorizationService {
             "info",
         );
         const savedFromUploads = uploadedFiles.length
-            ? this.userDataService.saveFiles(uploadedFiles)
+            ? this.fileStorageService.saveFiles(uploadedFiles)
             : [];
 
         if (savedFromUploads.length) {
@@ -302,6 +320,8 @@ export class VectorizationService {
             );
         }
 
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
         if (!rootStats.isDirectory()) {
             raiseBusinessError(
                 "VECTORIZATION_DIRECTORY_REQUIRED",
@@ -366,7 +386,7 @@ export class VectorizationService {
         signal: AbortSignal,
         callbacks: VectorizationCallbacks,
     ) {
-        const profile = this.userDataService.getBootData().userProfile;
+        const profile = this.userProfileService.getUserProfile();
 
         if (profile.embeddingDriver !== "ollama") {
             raiseBusinessError(

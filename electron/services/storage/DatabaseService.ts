@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
-import { attemptSyncOrNull } from "../errors/errorPattern";
+import { attemptSyncOrNull } from "../../errors/errorPattern";
 import type {
     AppCacheEntry,
     FileManifestEntry,
@@ -22,6 +22,24 @@ export class DatabaseService {
         this.database.pragma("journal_mode = WAL");
         this.database.pragma("foreign_keys = ON");
         this.initializeSchema();
+    }
+
+    execRaw<T = unknown>(
+        sql: string,
+        params: unknown[] = [],
+        mode: "all" | "get" | "run" = "all",
+    ): T[] | T | undefined | Database.RunResult {
+        const statement = this.database.prepare(sql);
+
+        if (mode === "run") {
+            return statement.run(...params);
+        }
+
+        if (mode === "get") {
+            return statement.get(...params) as T | undefined;
+        }
+
+        return statement.all(...params) as T[];
     }
 
     createProfile(

@@ -5,7 +5,7 @@ import {
     attemptSyncOr,
     raiseBusinessError,
     runWithServiceBoundary,
-} from "./errors/errorPattern";
+} from "../errors/errorPattern";
 
 export type CommandExecResult = {
     command: string;

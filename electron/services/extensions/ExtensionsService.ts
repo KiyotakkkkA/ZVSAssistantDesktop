@@ -7,7 +7,7 @@ import {
     attemptOr,
     attemptOrNull,
     raiseBusinessError,
-} from "../errors/errorPattern";
+} from "../../errors/errorPattern";
 
 type ExtensionManifest = {
     id: string;

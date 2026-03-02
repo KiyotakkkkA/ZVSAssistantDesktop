@@ -3,7 +3,7 @@ import path from "node:path";
 import { defaultProfile } from "../../static/data";
 import { staticThemesMap, staticThemesList } from "../../static/themes";
 import type { ThemeData, ThemeListItem } from "../../../src/types/App";
-import { attemptSyncOrNull } from "../errors/errorPattern";
+import { attemptSyncOrNull } from "../../errors/errorPattern";
 
 export class ThemesService {
     constructor(private readonly themesPath: string) {}

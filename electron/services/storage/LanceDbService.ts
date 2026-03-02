@@ -4,7 +4,7 @@ import {
     attempt,
     attemptOrNull,
     raiseBusinessError,
-} from "../errors/errorPattern";
+} from "../../errors/errorPattern";
 
 type LanceDbModule = typeof import("@lancedb/lancedb");
 import type {

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import type { MetaPayload } from "../../../src/types/UserData";
-import { attemptSyncOr } from "../errors/errorPattern";
+import { attemptSyncOr } from "../../errors/errorPattern";
 
 const defaultMeta: MetaPayload = {
     currentUserId: "",

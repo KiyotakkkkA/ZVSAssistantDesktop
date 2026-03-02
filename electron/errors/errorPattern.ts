@@ -1,4 +1,4 @@
-import type { ErrorEntity } from "../../../src/types/ErrorEntity";
+import type { ErrorEntity } from "../../src/types/ErrorEntity";
 
 export class ServiceError extends Error {
     constructor(public readonly entity: ErrorEntity) {

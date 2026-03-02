@@ -15,7 +15,6 @@ export class FileStorageService {
     ) {}
 
     saveFiles(files: UploadedFileData[]): SavedFileRecord[] {
-        this.ensureStorage();
         const saved: SavedFileRecord[] = [];
 
         for (const file of files) {
@@ -111,11 +110,5 @@ export class FileStorageService {
 
         const base64 = dataUrl.slice(markerIndex + marker.length);
         return Buffer.from(base64, "base64");
-    }
-
-    private ensureStorage(): void {
-        if (!fs.existsSync(this.filesPath)) {
-            fs.mkdirSync(this.filesPath, { recursive: true });
-        }
     }
 }
