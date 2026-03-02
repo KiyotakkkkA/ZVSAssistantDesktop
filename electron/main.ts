@@ -189,6 +189,7 @@ function createWindow() {
 app.on("window-all-closed", () => {
     if (process.platform !== "darwin") {
         void mistralService?.stopAll();
+        ollamaService?.dispose();
         void jobService?.shutdown();
         app.quit();
         win = null;
