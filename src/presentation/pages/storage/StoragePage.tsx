@@ -11,12 +11,12 @@ import {
     InputSmall,
     Modal,
     Switcher,
+    PrettyBR,
 } from "../../components/atoms";
 import { StoredFileCard } from "../../components/molecules/cards/storage";
 import { LoadingFallbackPage } from "../LoadingFallbackPage";
 import { storageStore } from "../../../stores/storageStore";
 import type { UploadedFileData } from "../../../types/ElectronApi";
-import { PrettyBR } from "../../components/atoms/PrettyBR";
 
 type StorageView = "files" | "vector-stores";
 

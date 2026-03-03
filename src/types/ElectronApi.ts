@@ -180,6 +180,63 @@ export type ProxyHttpRequestResult = {
     bodyText: string;
 };
 
+export type TelegramParseMode = "Markdown" | "MarkdownV2" | "HTML";
+
+export type SendTelegramMessagePayload = {
+    telegramBotToken: string;
+    telegramId: string;
+    message: string;
+    parseMode: TelegramParseMode;
+};
+
+export type SendTelegramMessageResult = {
+    success: boolean;
+    message: string;
+    error?: string;
+    message_id?: number;
+};
+
+export type GetUnreadTelegramMessagesPayload = {
+    telegramBotToken: string;
+    telegramId: string;
+    limit?: number;
+    markAsRead?: boolean;
+};
+
+export type TelegramUserMessage = {
+    update_id: number;
+    message_id?: number;
+    date?: number;
+    text: string;
+    chat: {
+        id?: number | string;
+        type?: string;
+        title?: string;
+        username?: string;
+        first_name?: string;
+        last_name?: string;
+    };
+    from: {
+        id?: number;
+        is_bot?: boolean;
+        first_name?: string;
+        last_name?: string;
+        username?: string;
+        language_code?: string;
+    };
+};
+
+export type GetUnreadTelegramMessagesResult = {
+    success: boolean;
+    message: string;
+    error?: string;
+    unread_count?: number;
+    updates_count?: number;
+    offset_used?: number;
+    next_offset?: number;
+    messages?: TelegramUserMessage[];
+};
+
 export type AppApiBootNamespace = {
     getBootData: () => Promise<BootData>;
 };
@@ -372,6 +429,15 @@ export type AppApiNetworkNamespace = {
     ) => Promise<ProxyHttpRequestResult>;
 };
 
+export type AppApiCommunicationsNamespace = {
+    sendTelegramMessage: (
+        payload: SendTelegramMessagePayload,
+    ) => Promise<SendTelegramMessageResult>;
+    getUnreadTelegramMessages: (
+        payload: GetUnreadTelegramMessagesPayload,
+    ) => Promise<GetUnreadTelegramMessagesResult>;
+};
+
 export type AppApiExtensionsNamespace = {
     getExtensionsState: () => Promise<AppExtensionInfo[]>;
 };
@@ -488,6 +554,7 @@ export type AppApi = {
     cache: AppApiCacheNamespace;
     jobs: AppApiJobsNamespace;
     network: AppApiNetworkNamespace;
+    communications: AppApiCommunicationsNamespace;
     extensions: AppApiExtensionsNamespace;
     llm: AppApiLlmNamespace;
     voice: AppApiVoiceNamespace;

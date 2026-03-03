@@ -129,6 +129,16 @@ const appApi = {
   network: {
     proxyHttpRequest: (payload) => electron.ipcRenderer.invoke("app:proxy-http-request", payload)
   },
+  communications: {
+    sendTelegramMessage: (payload) => electron.ipcRenderer.invoke(
+      "app:communications-send-telegram-message",
+      payload
+    ),
+    getUnreadTelegramMessages: (payload) => electron.ipcRenderer.invoke(
+      "app:communications-get-unread-telegram-messages",
+      payload
+    )
+  },
   extensions: {
     getExtensionsState: () => electron.ipcRenderer.invoke("app:get-extensions-state")
   },

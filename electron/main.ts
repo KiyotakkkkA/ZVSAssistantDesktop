@@ -22,6 +22,7 @@ import { FileStorageService } from "./services/storage/FileStorageService";
 import { ThemesService } from "./services/userData/ThemesService";
 import { UserProfileService } from "./services/userData/UserProfileService";
 import { FSystemService } from "./services/FSystemService";
+import { TelegramService } from "./services/communications/TelegramService";
 import { createElectronPaths } from "./paths";
 import { registerIpcCorePack } from "./ipc/ipcCorePack";
 import { registerIpcDialogsPack } from "./ipc/ipcDialogsPack";
@@ -30,6 +31,7 @@ import { registerIpcScenariosPack } from "./ipc/ipcScenariosPack";
 import { registerIpcStoragePack } from "./ipc/ipcStoragePack";
 import { registerIpcJobsPack } from "./ipc/ipcJobsPack";
 import { registerIpcAgentsPack } from "./ipc/ipcAgentsPack";
+import { registerIpcCommunicationsPack } from "./ipc/ipcCommunicationsPack";
 import { registerIpcSystemPack } from "./ipc/ipcSystemPack";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -138,6 +140,7 @@ app.whenReady()
         const appPaths = createElectronPaths(app.getPath("userData"));
         const initDirectoriesService = new InitService(appPaths);
         const fSystemService = new FSystemService();
+        const telegramService = new TelegramService();
 
         initDirectoriesService.initialize();
         extensionsService = new ExtensionsService(appPaths.extensionsPath);
@@ -271,6 +274,9 @@ app.whenReady()
             mistralService,
             piperService,
             userProfileService,
+        });
+        registerIpcCommunicationsPack({
+            telegramService,
         });
         registerIpcSystemPack({
             commandExecService,

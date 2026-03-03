@@ -16747,6 +16747,9 @@ const defaultProfile = {
   chatDriver: "ollama",
   assistantName: "Чарли",
   useSpeechSynthesis: false,
+  notifyOnJobCompleteToast: true,
+  notifyOnJobCompleteTelegram: false,
+  notifyOnJobCompleteEmail: false,
   piperModelPath: "",
   maxToolCallsPerResponse: 10,
   userName: "Пользователь",
@@ -48761,6 +48764,11 @@ class UserProfileService {
       ...isChatDriver(parsed.chatDriver) ? { chatDriver: parsed.chatDriver } : {},
       ...typeof parsed.assistantName === "string" ? { assistantName: parsed.assistantName } : {},
       ...typeof parsed.useSpeechSynthesis === "boolean" ? { useSpeechSynthesis: parsed.useSpeechSynthesis } : {},
+      ...typeof parsed.notifyOnJobCompleteToast === "boolean" ? { notifyOnJobCompleteToast: parsed.notifyOnJobCompleteToast } : {},
+      ...typeof parsed.notifyOnJobCompleteTelegram === "boolean" ? {
+        notifyOnJobCompleteTelegram: parsed.notifyOnJobCompleteTelegram
+      } : {},
+      ...typeof parsed.notifyOnJobCompleteEmail === "boolean" ? { notifyOnJobCompleteEmail: parsed.notifyOnJobCompleteEmail } : {},
       ...typeof parsed.piperModelPath === "string" ? { piperModelPath: parsed.piperModelPath } : {},
       ...typeof parsed.maxToolCallsPerResponse === "number" && Number.isFinite(parsed.maxToolCallsPerResponse) ? {
         maxToolCallsPerResponse: parsed.maxToolCallsPerResponse
@@ -48874,6 +48882,151 @@ class FSystemService {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
+  }
+}
+const TELEGRAM_BOT_BASE_URL = "https://api.telegram.org/bot";
+class TelegramService {
+  escapeMarkdownV2(text) {
+    return text.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, "\\$&");
+  }
+  clampLimit(value) {
+    if (!Number.isFinite(value)) {
+      return 20;
+    }
+    const safeValue = Math.floor(value);
+    if (safeValue < 1) {
+      return 1;
+    }
+    if (safeValue > 100) {
+      return 100;
+    }
+    return safeValue;
+  }
+  async request(telegramBotToken, methodName, payload) {
+    const response = await fetch(
+      `${TELEGRAM_BOT_BASE_URL}${telegramBotToken}/${methodName}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+    if (!response.ok) {
+      throw new Error(`request_failed_${response.status}`);
+    }
+    let parsed;
+    try {
+      parsed = await response.json();
+    } catch {
+      throw new Error("invalid_telegram_response");
+    }
+    return parsed;
+  }
+  async sendMessage({
+    telegramBotToken,
+    telegramId,
+    message,
+    parseMode
+  }) {
+    const formattedMessage = parseMode === "MarkdownV2" ? this.escapeMarkdownV2(message) : message;
+    const response = await this.request(
+      telegramBotToken,
+      "sendMessage",
+      {
+        chat_id: telegramId,
+        text: formattedMessage,
+        parse_mode: parseMode
+      }
+    );
+    if (!response.ok) {
+      return {
+        success: false,
+        error: response.description ?? "unknown",
+        message: "failed"
+      };
+    }
+    return {
+      success: true,
+      message: "sent",
+      message_id: response.result?.message_id
+    };
+  }
+  async getUnreadMessages({
+    telegramBotToken,
+    telegramId,
+    limit,
+    markAsRead
+  }) {
+    const safeLimit = this.clampLimit(limit);
+    const shouldMarkAsRead = markAsRead !== false;
+    const offset = 0;
+    const response = await this.request(
+      telegramBotToken,
+      "getUpdates",
+      {
+        offset,
+        limit: safeLimit,
+        timeout: 0,
+        allowed_updates: ["message"]
+      }
+    );
+    if (!response.ok) {
+      return {
+        success: false,
+        error: response.description ?? "unknown",
+        message: "failed"
+      };
+    }
+    const updates = Array.isArray(response.result) ? response.result : [];
+    const nextOffset = updates.length > 0 ? Math.max(...updates.map((item) => item.update_id)) + 1 : offset;
+    if (shouldMarkAsRead && nextOffset > 0) {
+      await this.request(
+        telegramBotToken,
+        "getUpdates",
+        {
+          offset: nextOffset,
+          limit: 1,
+          timeout: 0,
+          allowed_updates: ["message"]
+        }
+      );
+    }
+    const userMessages = updates.filter((update) => {
+      const chatId = update.message?.chat?.id;
+      return String(chatId ?? "") === String(telegramId);
+    }).map((update) => ({
+      update_id: update.update_id,
+      message_id: update.message?.message_id,
+      date: update.message?.date,
+      text: update.message?.text ?? "",
+      chat: {
+        id: update.message?.chat?.id,
+        type: update.message?.chat?.type,
+        title: update.message?.chat?.title,
+        username: update.message?.chat?.username,
+        first_name: update.message?.chat?.first_name,
+        last_name: update.message?.chat?.last_name
+      },
+      from: {
+        id: update.message?.from?.id,
+        is_bot: update.message?.from?.is_bot,
+        first_name: update.message?.from?.first_name,
+        last_name: update.message?.from?.last_name,
+        username: update.message?.from?.username,
+        language_code: update.message?.from?.language_code
+      }
+    }));
+    return {
+      success: true,
+      message: "ok",
+      unread_count: userMessages.length,
+      updates_count: updates.length,
+      offset_used: offset,
+      next_offset: shouldMarkAsRead ? nextOffset : offset,
+      messages: userMessages
+    };
   }
 }
 const createElectronPaths = (basePath) => {
@@ -49394,6 +49547,20 @@ const registerIpcAgentsPack = ({
     ]
   ]);
 };
+const registerIpcCommunicationsPack = ({
+  telegramService
+}) => {
+  handleManyIpc([
+    [
+      "app:communications-send-telegram-message",
+      (payload) => telegramService.sendMessage(payload)
+    ],
+    [
+      "app:communications-get-unread-telegram-messages",
+      (payload) => telegramService.getUnreadMessages(payload)
+    ]
+  ]);
+};
 const mimeByExtension = {
   ".png": "image/png",
   ".jpg": "image/jpeg",
@@ -49716,6 +49883,7 @@ app.whenReady().then(() => {
   const appPaths = createElectronPaths(app.getPath("userData"));
   const initDirectoriesService = new InitService(appPaths);
   const fSystemService = new FSystemService();
+  const telegramService = new TelegramService();
   initDirectoriesService.initialize();
   extensionsService = new ExtensionsService(appPaths.extensionsPath);
   const databaseService = new DatabaseService(appPaths.databasePath);
@@ -49840,6 +50008,9 @@ app.whenReady().then(() => {
     mistralService,
     piperService,
     userProfileService
+  });
+  registerIpcCommunicationsPack({
+    telegramService
   });
   registerIpcSystemPack({
     commandExecService,
