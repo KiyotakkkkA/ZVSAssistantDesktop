@@ -1,10 +1,9 @@
 import path, { resolve } from "node:path";
-import fs$1, { readFile } from "node:fs/promises";
-import { randomUUID, randomBytes } from "node:crypto";
-import { BrowserWindow, app, ipcMain, shell, dialog } from "electron";
+import { BrowserWindow, ipcMain, shell, app, dialog } from "electron";
 import { fileURLToPath } from "node:url";
 import fs, { promises as promises$1 } from "node:fs";
 import { spawn } from "node:child_process";
+import { randomUUID, randomBytes } from "node:crypto";
 import require$$0 from "node:buffer";
 import require$$0$5 from "events";
 import require$$1$2 from "https";
@@ -19,6 +18,7 @@ import require$$0$1 from "fs";
 import require$$1 from "path";
 import require$$2 from "os";
 import require$$0$3 from "buffer";
+import fs$1 from "node:fs/promises";
 import { PDFParse } from "pdf-parse";
 import require$$1$3 from "util";
 import Database from "better-sqlite3";
@@ -43953,7 +43953,7 @@ function requireFiles() {
     var base = options.relativeToFile ? dirname(options.relativeToFile) : null;
     function read(uri, encoding) {
       return resolveUri(uri).then(function(path2) {
-        return readFile2(path2, encoding).caught(function(error) {
+        return readFile(path2, encoding).caught(function(error) {
           var message = "could not open external image: '" + uri + "' (document directory: '" + base + "')\n" + error.message;
           return promises2.reject(new Error(message));
         });
@@ -43973,7 +43973,7 @@ function requireFiles() {
       read
     };
   }
-  var readFile2 = promises2.promisify(fs2.readFile.bind(fs2));
+  var readFile = promises2.promisify(fs2.readFile.bind(fs2));
   function uriToPath(uriString, platform) {
     if (!platform) {
       platform = os.platform();
@@ -46725,10 +46725,10 @@ function requireUnzip() {
   var promises2 = requirePromises();
   var zipfile2 = requireZipfile();
   unzip.openZip = openZip;
-  var readFile2 = promises2.promisify(fs2.readFile);
+  var readFile = promises2.promisify(fs2.readFile);
   function openZip(options) {
     if (options.path) {
-      return readFile2(options.path).then(zipfile2.openArrayBuffer);
+      return readFile(options.path).then(zipfile2.openArrayBuffer);
     } else if (options.buffer) {
       return promises2.resolve(zipfile2.openArrayBuffer(options.buffer));
     } else if (options.file) {
@@ -48536,9 +48536,10 @@ class MetaService {
   }
 }
 class FileStorageService {
-  constructor(filesPath, databaseService, createdBy) {
+  constructor(filesPath, databaseService, fSystemService, createdBy) {
     this.filesPath = filesPath;
     this.databaseService = databaseService;
+    this.fSystemService = fSystemService;
     this.createdBy = createdBy;
   }
   saveFiles(files2) {
@@ -48549,7 +48550,7 @@ class FileStorageService {
       const encryptedName = `${fileId}${fileExt}`;
       const absolutePath = path.join(this.filesPath, encryptedName);
       const buffer = this.parseDataUrl(file.dataUrl);
-      fs.writeFileSync(absolutePath, buffer);
+      this.fSystemService.writeFileBufferSync(absolutePath, buffer);
       const entry = {
         path: absolutePath,
         originalName: file.name,
@@ -48581,9 +48582,7 @@ class FileStorageService {
     if (!file) {
       return false;
     }
-    if (fs.existsSync(file.path)) {
-      fs.unlinkSync(file.path);
-    }
+    this.fSystemService.deleteFileIfExistsSync(file.path);
     this.databaseService.deleteFilesByIds([fileId], this.createdBy);
     return true;
   }
@@ -48596,9 +48595,7 @@ class FileStorageService {
       this.createdBy
     );
     for (const entry of files2) {
-      if (fs.existsSync(entry.path)) {
-        fs.unlinkSync(entry.path);
-      }
+      this.fSystemService.deleteFileIfExistsSync(entry.path);
     }
     this.databaseService.deleteFilesByIds(fileIds, this.createdBy);
   }
@@ -48806,6 +48803,79 @@ class UserProfileService {
     return profileId;
   }
 }
+class FSystemService {
+  async listDirectory(cwd) {
+    const entries = await fs$1.readdir(cwd, { withFileTypes: true });
+    const result = await Promise.all(
+      entries.map(async (entry) => {
+        const entryPath = path.join(cwd, entry.name);
+        const stat = await fs$1.stat(entryPath);
+        return {
+          name: entry.name,
+          type: entry.isDirectory() ? "directory" : "file",
+          size: stat.size,
+          modifiedAt: stat.mtime.toISOString()
+        };
+      })
+    );
+    return {
+      path: cwd,
+      entries: result
+    };
+  }
+  async createFile(cwd, filename, content = "") {
+    const filePath = path.join(cwd, filename);
+    await fs$1.mkdir(path.dirname(filePath), { recursive: true });
+    await fs$1.writeFile(filePath, content, "utf-8");
+    return { success: true, path: filePath };
+  }
+  async createDir(cwd, dirname) {
+    const dirPath = path.join(cwd, dirname);
+    await fs$1.mkdir(dirPath, { recursive: true });
+    return { success: true, path: dirPath };
+  }
+  async readTextFileRange(filePath, readAll, fromLine, toLine) {
+    const raw = await fs$1.readFile(filePath, "utf-8");
+    const lines = raw.split("\n");
+    const totalLines = lines.length;
+    if (readAll) {
+      return {
+        path: filePath,
+        content: raw,
+        totalLines,
+        fromLine: 1,
+        toLine: totalLines
+      };
+    }
+    const from = Math.max(1, fromLine ?? 1);
+    const to = Math.min(totalLines, toLine ?? totalLines);
+    const content = lines.slice(from - 1, to).join("\n");
+    return {
+      path: filePath,
+      content,
+      totalLines,
+      fromLine: from,
+      toLine: to
+    };
+  }
+  async readFileBuffer(filePath) {
+    return fs$1.readFile(filePath);
+  }
+  async writeFileBuffer(filePath, data) {
+    await fs$1.writeFile(filePath, data);
+  }
+  writeFileBufferSync(filePath, data) {
+    fs.writeFileSync(filePath, data);
+  }
+  existsSync(targetPath) {
+    return fs.existsSync(targetPath);
+  }
+  deleteFileIfExistsSync(filePath) {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  }
+}
 const createElectronPaths = (basePath) => {
   const resourcesPath = path.join(basePath, "resources");
   return {
@@ -48820,32 +48890,510 @@ const createElectronPaths = (basePath) => {
     defaultProjectsDirectory: path.join(resourcesPath, "projects")
   };
 };
-const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
-process.env.APP_ROOT = path.join(__dirname$1, "..");
-const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
-const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
-const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
-const APP_ID = "com.zvs.assistant";
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
-let win;
-let commandExecService;
-let browserService;
-let ollamaService;
-let mistralService;
-let piperService;
-let jobService;
-let extensionsService;
-app.setAppUserModelId(APP_ID);
-const singleInstanceLock = app.requestSingleInstanceLock();
-if (!singleInstanceLock) {
-  app.quit();
-}
-process.on("uncaughtException", (error) => {
-  console.error("[main] uncaughtException", error);
-});
-process.on("unhandledRejection", (reason) => {
-  console.error("[main] unhandledRejection", reason);
-});
+const handleIpc = (channel, handler) => {
+  ipcMain.handle(channel, (_event, ...args) => handler(...args));
+};
+const handleIpcWithEvent = (channel, handler) => {
+  ipcMain.handle(
+    channel,
+    (event, ...args) => handler(event, ...args)
+  );
+};
+const handleManyIpc = (handlers) => {
+  for (const [channel, handler] of handlers) {
+    handleIpc(channel, handler);
+  }
+};
+const registerIpcCorePack = ({
+  getBootData,
+  extensionsService: extensionsService2,
+  themesService,
+  userProfileService
+}) => {
+  handleManyIpc([
+    [
+      "app:get-boot-data",
+      async () => {
+        const bootData = getBootData();
+        const extensions = await extensionsService2.getExtensionsState();
+        return {
+          ...bootData,
+          extensions
+        };
+      }
+    ],
+    [
+      "app:get-extensions-state",
+      () => extensionsService2.getExtensionsState()
+    ],
+    ["app:get-themes-list", () => themesService.getThemesList()],
+    [
+      "app:get-theme-data",
+      (themeId) => themesService.getThemeData(themeId)
+    ],
+    [
+      "app:update-user-profile",
+      (nextProfile) => userProfileService.updateUserProfile(nextProfile)
+    ]
+  ]);
+};
+const registerIpcDialogsPack = ({
+  dialogsService,
+  userProfileService
+}) => {
+  const getActiveDialogId = () => userProfileService.getUserProfile().activeDialogId ?? void 0;
+  handleManyIpc([
+    [
+      "app:get-active-dialog",
+      () => dialogsService.getActiveDialog(getActiveDialogId())
+    ],
+    ["app:get-dialogs-list", () => dialogsService.getDialogsList()],
+    [
+      "app:get-dialog-by-id",
+      (dialogId) => dialogsService.getDialogById(dialogId, getActiveDialogId())
+    ],
+    ["app:create-dialog", () => dialogsService.createDialog()],
+    [
+      "app:rename-dialog",
+      (dialogId, title) => dialogsService.renameDialog(
+        dialogId,
+        title,
+        getActiveDialogId()
+      )
+    ],
+    [
+      "app:delete-dialog",
+      (dialogId) => dialogsService.deleteDialog(dialogId)
+    ],
+    [
+      "app:delete-message-from-dialog",
+      (dialogId, messageId) => dialogsService.deleteMessageFromDialog(
+        dialogId,
+        messageId,
+        getActiveDialogId()
+      )
+    ],
+    [
+      "app:truncate-dialog-from-message",
+      (dialogId, messageId) => dialogsService.truncateDialogFromMessage(
+        dialogId,
+        messageId,
+        getActiveDialogId()
+      )
+    ],
+    [
+      "app:save-dialog-snapshot",
+      (dialog2) => dialogsService.saveDialogSnapshot(dialog2)
+    ]
+  ]);
+};
+const registerIpcProjectsPack = ({
+  projectsService,
+  dialogsService,
+  fileStorageService,
+  userProfileService,
+  defaultProjectsDirectory
+}) => {
+  handleManyIpc([
+    ["app:get-projects-list", () => projectsService.getProjectsList()],
+    ["app:get-default-projects-directory", () => defaultProjectsDirectory]
+  ]);
+  handleIpc("app:get-project-by-id", (projectId) => {
+    const project = projectsService.getProjectById(projectId);
+    if (project) {
+      userProfileService.updateUserProfile({
+        activeProjectId: project.id,
+        activeScenarioId: null,
+        lastActiveTab: "projects"
+      });
+    } else {
+      userProfileService.updateUserProfile({
+        activeProjectId: null
+      });
+    }
+    return project;
+  });
+  handleIpc("app:create-project", (payload) => {
+    const projectId = `project_${randomUUID().replace(/-/g, "")}`;
+    const dialog2 = dialogsService.createDialog(projectId);
+    const nextTitle = payload.name.trim();
+    const selectedBaseDirectory = payload.directoryPath?.trim() || defaultProjectsDirectory;
+    if (nextTitle) {
+      dialogsService.renameDialog(dialog2.id, nextTitle);
+    }
+    const project = projectsService.createProject({
+      ...payload,
+      directoryPath: selectedBaseDirectory,
+      dialogId: dialog2.id,
+      projectId
+    });
+    userProfileService.updateUserProfile({
+      activeScenarioId: null,
+      lastActiveTab: "projects"
+    });
+    return project;
+  });
+  handleIpc("app:delete-project", (projectId) => {
+    const deletedProject = projectsService.deleteProject(projectId);
+    if (deletedProject) {
+      fileStorageService.deleteFilesByIds(deletedProject.fileUUIDs);
+      dialogsService.deleteDialog(deletedProject.dialogId);
+      const profile = userProfileService.getUserProfile();
+      if (profile.activeProjectId === projectId) {
+        userProfileService.updateUserProfile({
+          activeProjectId: null,
+          activeScenarioId: null,
+          lastActiveTab: "dialogs"
+        });
+      }
+    }
+    return {
+      projects: projectsService.getProjectsList(),
+      deletedProjectId: projectId
+    };
+  });
+};
+const registerIpcScenariosPack = ({
+  scenariosService,
+  userProfileService
+}) => {
+  handleManyIpc([
+    ["app:get-scenarios-list", () => scenariosService.getScenariosList()]
+  ]);
+  handleIpc("app:get-scenario-by-id", (scenarioId) => {
+    const scenario = scenariosService.getScenarioById(scenarioId);
+    if (scenario) {
+      userProfileService.updateUserProfile({
+        activeScenarioId: scenario.id,
+        lastActiveTab: "scenario",
+        activeDialogId: null,
+        activeProjectId: null
+      });
+    } else {
+      userProfileService.updateUserProfile({
+        activeScenarioId: null
+      });
+    }
+    return scenario;
+  });
+  handleIpc("app:create-scenario", (payload) => {
+    const scenario = scenariosService.createScenario(payload);
+    userProfileService.updateUserProfile({
+      activeScenarioId: scenario.id,
+      lastActiveTab: "scenario",
+      activeDialogId: null,
+      activeProjectId: null
+    });
+    return scenario;
+  });
+  handleIpc(
+    "app:update-scenario",
+    (scenarioId, payload) => {
+      const scenario = scenariosService.updateScenario(
+        scenarioId,
+        payload
+      );
+      if (scenario) {
+        userProfileService.updateUserProfile({
+          activeScenarioId: scenario.id,
+          lastActiveTab: "scenario",
+          activeDialogId: null,
+          activeProjectId: null
+        });
+      }
+      return scenario;
+    }
+  );
+  handleIpc("app:delete-scenario", (scenarioId) => {
+    const deletedScenario = scenariosService.deleteScenario(scenarioId);
+    if (deletedScenario) {
+      const profile = userProfileService.getUserProfile();
+      if (profile.activeScenarioId === deletedScenario.id) {
+        userProfileService.updateUserProfile({
+          activeScenarioId: null,
+          lastActiveTab: "dialogs"
+        });
+      }
+    }
+    return {
+      scenarios: scenariosService.getScenariosList(),
+      deletedScenarioId: scenarioId
+    };
+  });
+};
+const registerIpcStoragePack = ({
+  databaseService,
+  fileStorageService,
+  userProfileService,
+  lanceDbService,
+  ollamaService: ollamaService2,
+  fSystemService,
+  vectorIndexPath
+}) => {
+  const getCurrentUserId = () => userProfileService.getCurrentUserId();
+  handleManyIpc([
+    [
+      "app:save-files",
+      (files2) => fileStorageService.saveFiles(files2)
+    ],
+    [
+      "app:get-files-by-ids",
+      (fileIds) => fileStorageService.getFilesByIds(fileIds)
+    ],
+    ["app:get-all-files", () => fileStorageService.getAllFiles()],
+    [
+      "app:delete-file",
+      (fileId) => fileStorageService.deleteFileById(fileId)
+    ],
+    [
+      "app:get-vector-storages",
+      () => databaseService.getVectorStorages(getCurrentUserId())
+    ],
+    [
+      "app:get-vector-tags",
+      () => databaseService.getVectorTags(getCurrentUserId())
+    ],
+    [
+      "app:create-vector-tag",
+      (name) => databaseService.createVectorTag(getCurrentUserId(), name)
+    ],
+    [
+      "app:delete-vector-storage",
+      (vectorStorageId) => databaseService.deleteVectorStorage(
+        vectorStorageId,
+        getCurrentUserId()
+      )
+    ],
+    [
+      "app:get-cache-entry",
+      (key) => databaseService.getCacheEntry(key)
+    ],
+    [
+      "app:set-cache-entry",
+      (key, entry) => {
+        databaseService.setCacheEntry(key, entry);
+      }
+    ]
+  ]);
+  handleIpc("app:create-vector-storage", () => {
+    const currentOwnerId = getCurrentUserId();
+    const vectorStorageName = `store_${randomUUID().replace(/-/g, "")}`;
+    const vectorStorageId = `vs_${randomUUID().replace(/-/g, "")}`;
+    const defaultDataPath = path.join(
+      vectorIndexPath,
+      `${vectorStorageId}.lance`
+    );
+    return databaseService.createVectorStorage(
+      currentOwnerId,
+      vectorStorageName,
+      defaultDataPath,
+      vectorStorageId
+    );
+  });
+  handleIpc(
+    "app:update-vector-storage",
+    async (vectorStorageId, payload) => {
+      const normalizedDataPath = typeof payload.dataPath === "string" ? payload.dataPath.trim() : void 0;
+      if (normalizedDataPath !== void 0) {
+        const resolvedDataPathReference = normalizedDataPath ? await lanceDbService.resolveDataPathReference(
+          normalizedDataPath
+        ) : null;
+        if (normalizedDataPath && !resolvedDataPathReference) {
+          throw new Error(
+            "Путь должен указывать на папку таблицы .lance или директорию с единственной таблицей .lance"
+          );
+        }
+        const effectiveDataPath = normalizedDataPath ? resolvedDataPathReference.dataPath : "";
+        const sizeFromDataPath = effectiveDataPath ? await lanceDbService.getDataPathSizeBytes(
+          effectiveDataPath
+        ) : 0;
+        return databaseService.updateVectorStorage(
+          vectorStorageId,
+          {
+            ...payload,
+            dataPath: effectiveDataPath,
+            size: sizeFromDataPath,
+            lastActiveAt: (/* @__PURE__ */ new Date()).toISOString()
+          },
+          getCurrentUserId()
+        );
+      }
+      return databaseService.updateVectorStorage(
+        vectorStorageId,
+        payload,
+        getCurrentUserId()
+      );
+    }
+  );
+  handleIpc(
+    "app:search-vector-storage",
+    async (vectorStorageId, query, limit) => {
+      const normalizedStorageId = typeof vectorStorageId === "string" ? vectorStorageId.trim() : "";
+      const normalizedQuery = typeof query === "string" ? query.trim() : "";
+      if (!normalizedStorageId) {
+        throw new Error("Не передан идентификатор vector storage");
+      }
+      if (!normalizedQuery) {
+        throw new Error("Поисковый запрос пуст");
+      }
+      const storage = databaseService.getVectorStorageById(
+        normalizedStorageId,
+        getCurrentUserId()
+      );
+      if (!storage) {
+        throw new Error("Vector storage не найден");
+      }
+      const dataPath = storage.dataPath.trim();
+      if (!dataPath) {
+        throw new Error(
+          "Для векторного хранилища не задан путь к индексу"
+        );
+      }
+      const profile = userProfileService.getUserProfile();
+      const model = profile.ollamaEmbeddingModel.trim() || profile.ollamaModel.trim();
+      if (!model) {
+        throw new Error("Не задана embedding model");
+      }
+      const embedResult = await ollamaService2.getEmbed(
+        {
+          model,
+          input: [normalizedQuery]
+        },
+        profile.ollamaToken
+      );
+      const queryEmbedding = embedResult.embeddings[0] && Array.isArray(embedResult.embeddings[0]) ? embedResult.embeddings[0] : [];
+      if (!queryEmbedding.length) {
+        throw new Error("Не удалось получить embedding запроса");
+      }
+      const rows = await lanceDbService.search(
+        dataPath,
+        queryEmbedding,
+        typeof limit === "number" ? limit : 5
+      );
+      return rows.map((row) => ({
+        id: row.id,
+        text: row.text,
+        fileId: row.fileId,
+        fileName: row.fileName,
+        chunkIndex: row.chunkIndex,
+        score: typeof row._distance === "number" ? row._distance : typeof row._score === "number" ? row._score : 0
+      }));
+    }
+  );
+  handleIpc(
+    "app:fs-list-directory",
+    (cwd) => fSystemService.listDirectory(cwd)
+  );
+  handleIpc(
+    "app:fs-create-file",
+    async (cwd, filename, content = "") => fSystemService.createFile(cwd, filename, content)
+  );
+  handleIpc(
+    "app:fs-create-dir",
+    (cwd, dirname) => fSystemService.createDir(cwd, dirname)
+  );
+  handleIpc(
+    "app:fs-read-file",
+    (filePath, readAll, fromLine, toLine) => fSystemService.readTextFileRange(
+      filePath,
+      readAll,
+      fromLine,
+      toLine
+    )
+  );
+};
+const registerIpcJobsPack = ({ jobService: jobService2 }) => {
+  handleManyIpc([
+    ["app:get-jobs", () => jobService2.getJobs()],
+    ["app:get-job-by-id", (jobId) => jobService2.getJobById(jobId)],
+    [
+      "app:get-job-events",
+      (jobId) => jobService2.getJobEvents(jobId)
+    ],
+    [
+      "app:create-job",
+      (payload) => jobService2.createJob(payload)
+    ],
+    ["app:cancel-job", (jobId) => jobService2.cancelJob(jobId)]
+  ]);
+};
+const registerIpcAgentsPack = ({
+  ollamaService: ollamaService2,
+  mistralService: mistralService2,
+  piperService: piperService2,
+  userProfileService
+}) => {
+  handleIpc(
+    "app:ollama-stream-chat",
+    async (payload) => {
+      const token = userProfileService.getUserProfile().ollamaToken;
+      return ollamaService2.streamChat(payload, token);
+    }
+  );
+  handleIpc(
+    "app:proxy-http-request",
+    async (payload) => {
+      const url2 = typeof payload?.url === "string" ? payload.url.trim() : "";
+      const method2 = typeof payload?.method === "string" ? payload.method.trim().toUpperCase() : "GET";
+      const headers2 = payload && typeof payload.headers === "object" ? payload.headers : void 0;
+      const requestBodyText = typeof payload?.bodyText === "string" ? payload.bodyText : void 0;
+      if (!url2) {
+        return {
+          ok: false,
+          status: 0,
+          statusText: "URL is required",
+          bodyText: ""
+        };
+      }
+      try {
+        const response = await fetch(url2, {
+          method: method2,
+          headers: {
+            Accept: "application/json, text/plain, */*",
+            ...headers2 || {}
+          },
+          ...requestBodyText && method2 !== "GET" && method2 !== "HEAD" ? { body: requestBodyText } : {}
+        });
+        const responseBodyText = await response.text();
+        return {
+          ok: response.ok,
+          status: response.status,
+          statusText: response.statusText,
+          bodyText: responseBodyText
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          status: 0,
+          statusText: error instanceof Error ? error.message : "Network request failed",
+          bodyText: ""
+        };
+      }
+    }
+  );
+  handleManyIpc([
+    [
+      "app:voice-transcription-start",
+      (payload) => mistralService2.startSession(payload)
+    ],
+    [
+      "app:voice-transcription-push-chunk",
+      async (sessionId, chunk) => {
+        await mistralService2.pushChunk(sessionId, chunk);
+      }
+    ],
+    [
+      "app:voice-transcription-stop",
+      async (sessionId) => {
+        await mistralService2.stopSession(sessionId);
+      }
+    ],
+    [
+      "app:voice-synthesize-with-piper",
+      (text) => piperService2.synthesize(text)
+    ]
+  ]);
+};
 const mimeByExtension = {
   ".png": "image/png",
   ".jpg": "image/jpeg",
@@ -48903,6 +49451,224 @@ const parseDataUrl = (src) => {
     buffer: Buffer.from(base642, "base64")
   };
 };
+const registerIpcSystemPack = ({
+  commandExecService: commandExecService2,
+  browserService: browserService2,
+  fileStorageService,
+  fSystemService
+}) => {
+  handleManyIpc([
+    [
+      "app:exec-shell-command",
+      (command, cwd) => commandExecService2.execute(command, cwd)
+    ],
+    [
+      "app:browser-open-url",
+      (url2, timeoutMs) => browserService2.openUrl(url2, timeoutMs)
+    ],
+    [
+      "app:browser-get-page-snapshot",
+      (maxElements) => browserService2.getPageSnapshot(maxElements)
+    ],
+    [
+      "app:browser-interact-with",
+      (params) => browserService2.interactWith(params)
+    ],
+    ["app:browser-close-session", () => browserService2.closeSession()]
+  ]);
+  handleIpc("app:open-saved-file", async (fileId) => {
+    const file = fileStorageService.getFileById(fileId);
+    if (!file) {
+      return false;
+    }
+    const openResult = await shell.openPath(file.path);
+    return openResult === "";
+  });
+  handleIpc("app:open-path", async (targetPath) => {
+    if (!targetPath || typeof targetPath !== "string") {
+      return false;
+    }
+    const openResult = await shell.openPath(targetPath);
+    return openResult === "";
+  });
+  handleIpc("app:open-external-url", async (url2) => {
+    if (!url2 || typeof url2 !== "string") {
+      return false;
+    }
+    try {
+      await shell.openExternal(url2);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  handleIpcWithEvent(
+    "app:save-image-from-source",
+    async (event, payload) => {
+      const source = typeof payload?.src === "string" ? payload.src.trim() : "";
+      if (!source) {
+        return null;
+      }
+      const preferredFileName = typeof payload.preferredFileName === "string" ? payload.preferredFileName.trim() : "";
+      let sourceKind = "local";
+      let buffer;
+      let mimeType = "application/octet-stream";
+      let fileName = preferredFileName || "image";
+      if (isDataUrl(source)) {
+        sourceKind = "data-url";
+        const parsed = parseDataUrl(source);
+        buffer = parsed.buffer;
+        mimeType = parsed.mimeType;
+        fileName = ensureImageExt(fileName, mimeType);
+      } else if (isRemoteUrl(source)) {
+        sourceKind = "remote";
+        const response = await fetch(source);
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch image (${response.status})`
+          );
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        buffer = Buffer.from(arrayBuffer);
+        mimeType = response.headers.get("content-type") || mimeType;
+        const remoteName = path.basename(
+          new URL(source).pathname || "image"
+        );
+        fileName = preferredFileName || remoteName || "image";
+        fileName = ensureImageExt(fileName, mimeType);
+      } else {
+        sourceKind = "local";
+        const localPath2 = isFileUrl(source) ? fileURLToPath(source) : source;
+        buffer = await fSystemService.readFileBuffer(localPath2);
+        mimeType = getMimeTypeByExtension(localPath2);
+        fileName = preferredFileName || path.basename(localPath2);
+        fileName = ensureImageExt(fileName, mimeType);
+      }
+      const currentWindow = BrowserWindow.fromWebContents(event.sender);
+      const defaultPath = app.getPath("downloads");
+      const targetPathByDialog = currentWindow ? await dialog.showSaveDialog(currentWindow, {
+        title: "Сохранить изображение",
+        defaultPath: path.join(defaultPath, fileName),
+        filters: [
+          { name: "Images", extensions: imageExtensions }
+        ]
+      }) : await dialog.showSaveDialog({
+        title: "Сохранить изображение",
+        defaultPath: path.join(defaultPath, fileName),
+        filters: [
+          { name: "Images", extensions: imageExtensions }
+        ]
+      });
+      if (targetPathByDialog.canceled || !targetPathByDialog.filePath) {
+        return null;
+      }
+      await fSystemService.writeFileBuffer(
+        targetPathByDialog.filePath,
+        buffer
+      );
+      return {
+        savedPath: targetPathByDialog.filePath,
+        fileName: path.basename(targetPathByDialog.filePath),
+        mimeType,
+        size: buffer.byteLength,
+        sourceKind
+      };
+    }
+  );
+  handleIpcWithEvent(
+    "app:pick-files",
+    async (event, options) => {
+      const currentWindow = BrowserWindow.fromWebContents(event.sender);
+      const accept = options?.accept ?? [];
+      const filters = accept.length > 0 ? [
+        {
+          name: "Allowed files",
+          extensions: accept.flatMap(
+            (item) => item.split(",").map(
+              (part) => part.trim().toLowerCase()
+            )
+          ).flatMap(
+            (item) => item === "image/*" ? imageExtensions : [item]
+          ).map(
+            (item) => item.startsWith(".") ? item.slice(1) : item.replace(/^[*]/, "").replace(/^[.]/, "")
+          ).filter((item) => item && item !== "*")
+        }
+      ] : [];
+      const dialogProperties = [
+        "openFile"
+      ];
+      if (options?.multiple) {
+        dialogProperties.push("multiSelections");
+      }
+      const openDialogOptions = {
+        properties: dialogProperties,
+        filters
+      };
+      const selection = currentWindow ? await dialog.showOpenDialog(currentWindow, openDialogOptions) : await dialog.showOpenDialog(openDialogOptions);
+      if (selection.canceled || selection.filePaths.length === 0) {
+        return [];
+      }
+      const files2 = await Promise.all(
+        selection.filePaths.map(
+          async (filePath) => {
+            const buffer = await fSystemService.readFileBuffer(filePath);
+            const mimeType = getMimeTypeByExtension(filePath);
+            return {
+              name: path.basename(filePath),
+              mimeType,
+              size: buffer.byteLength,
+              dataUrl: `data:${mimeType};base64,${buffer.toString("base64")}`
+            };
+          }
+        )
+      );
+      return files2;
+    }
+  );
+  handleIpcWithEvent(
+    "app:pick-path",
+    async (event, options) => {
+      const currentWindow = BrowserWindow.fromWebContents(event.sender);
+      const dialogProperties = [
+        options?.forFolders ? "openDirectory" : "openFile"
+      ];
+      const openDialogOptions = {
+        properties: dialogProperties
+      };
+      const selection = currentWindow ? await dialog.showOpenDialog(currentWindow, openDialogOptions) : await dialog.showOpenDialog(openDialogOptions);
+      if (selection.canceled || selection.filePaths.length === 0) {
+        return null;
+      }
+      return selection.filePaths[0] ?? null;
+    }
+  );
+};
+const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
+process.env.APP_ROOT = path.join(__dirname$1, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
+const APP_ID = "com.zvs.assistant";
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+let win;
+let commandExecService;
+let browserService;
+let ollamaService;
+let mistralService;
+let piperService;
+let jobService;
+let extensionsService;
+app.setAppUserModelId(APP_ID);
+const singleInstanceLock = app.requestSingleInstanceLock();
+if (!singleInstanceLock) {
+  app.quit();
+}
+process.on("uncaughtException", (error) => {
+  console.error("[main] uncaughtException", error);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[main] unhandledRejection", reason);
+});
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
@@ -48926,7 +49692,6 @@ function createWindow() {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     void mistralService?.stopAll();
-    ollamaService?.dispose();
     void jobService?.shutdown();
     app.quit();
     win = null;
@@ -48950,6 +49715,7 @@ app.on("second-instance", () => {
 app.whenReady().then(() => {
   const appPaths = createElectronPaths(app.getPath("userData"));
   const initDirectoriesService = new InitService(appPaths);
+  const fSystemService = new FSystemService();
   initDirectoriesService.initialize();
   extensionsService = new ExtensionsService(appPaths.extensionsPath);
   const databaseService = new DatabaseService(appPaths.databasePath);
@@ -48983,6 +49749,7 @@ app.whenReady().then(() => {
   const fileStorageService = new FileStorageService(
     appPaths.filesPath,
     databaseService,
+    fSystemService,
     currentUserId
   );
   for (const project of projectsService.getProjectsList()) {
@@ -49035,726 +49802,51 @@ app.whenReady().then(() => {
       return Promise.resolve(configuredPath?.trim() || "");
     }
   });
-  ipcMain.handle("app:get-boot-data", async () => {
-    const bootData = getBootData();
-    const extensions = await extensionsService.getExtensionsState();
-    return {
-      ...bootData,
-      extensions
-    };
+  registerIpcCorePack({
+    getBootData,
+    extensionsService,
+    themesService,
+    userProfileService
   });
-  ipcMain.handle(
-    "app:get-extensions-state",
-    () => extensionsService.getExtensionsState()
-  );
-  ipcMain.handle(
-    "app:get-themes-list",
-    () => themesService.getThemesList()
-  );
-  ipcMain.handle(
-    "app:get-theme-data",
-    (_event, themeId) => themesService.getThemeData(themeId)
-  );
-  ipcMain.handle(
-    "app:update-user-profile",
-    (_event, nextProfile) => userProfileService.updateUserProfile(nextProfile)
-  );
-  ipcMain.handle("app:get-active-dialog", () => {
-    const profile = userProfileService.getUserProfile();
-    return dialogsService.getActiveDialog(
-      profile.activeDialogId ?? void 0
-    );
+  registerIpcDialogsPack({
+    dialogsService,
+    userProfileService
   });
-  ipcMain.handle(
-    "app:get-dialogs-list",
-    () => dialogsService.getDialogsList()
-  );
-  ipcMain.handle(
-    "app:get-dialog-by-id",
-    (_event, dialogId) => dialogsService.getDialogById(
-      dialogId,
-      userProfileService.getUserProfile().activeDialogId ?? void 0
-    )
-  );
-  ipcMain.handle(
-    "app:create-dialog",
-    () => dialogsService.createDialog()
-  );
-  ipcMain.handle(
-    "app:rename-dialog",
-    (_event, dialogId, title) => dialogsService.renameDialog(
-      dialogId,
-      title,
-      userProfileService.getUserProfile().activeDialogId ?? void 0
-    )
-  );
-  ipcMain.handle(
-    "app:delete-dialog",
-    (_event, dialogId) => dialogsService.deleteDialog(dialogId)
-  );
-  ipcMain.handle(
-    "app:delete-message-from-dialog",
-    (_event, dialogId, messageId) => dialogsService.deleteMessageFromDialog(
-      dialogId,
-      messageId,
-      userProfileService.getUserProfile().activeDialogId ?? void 0
-    )
-  );
-  ipcMain.handle(
-    "app:truncate-dialog-from-message",
-    (_event, dialogId, messageId) => dialogsService.truncateDialogFromMessage(
-      dialogId,
-      messageId,
-      userProfileService.getUserProfile().activeDialogId ?? void 0
-    )
-  );
-  ipcMain.handle(
-    "app:save-dialog-snapshot",
-    (_event, dialog2) => dialogsService.saveDialogSnapshot(dialog2)
-  );
-  ipcMain.handle(
-    "app:get-projects-list",
-    () => projectsService.getProjectsList()
-  );
-  ipcMain.handle(
-    "app:get-default-projects-directory",
-    () => appPaths.defaultProjectsDirectory
-  );
-  ipcMain.handle("app:get-project-by-id", (_event, projectId) => {
-    const project = projectsService.getProjectById(projectId);
-    if (project) {
-      userProfileService.updateUserProfile({
-        activeProjectId: project.id,
-        activeScenarioId: null,
-        lastActiveTab: "projects"
-      });
-    } else {
-      userProfileService.updateUserProfile({
-        activeProjectId: null
-      });
-    }
-    return project;
+  registerIpcProjectsPack({
+    projectsService,
+    dialogsService,
+    fileStorageService,
+    userProfileService,
+    defaultProjectsDirectory: appPaths.defaultProjectsDirectory
   });
-  ipcMain.handle(
-    "app:create-project",
-    (_event, payload) => {
-      const projectId = `project_${randomUUID().replace(/-/g, "")}`;
-      const dialog2 = dialogsService.createDialog(projectId);
-      const nextTitle = payload.name.trim();
-      const selectedBaseDirectory = payload.directoryPath?.trim() || appPaths.defaultProjectsDirectory;
-      if (nextTitle) {
-        dialogsService.renameDialog(dialog2.id, nextTitle);
-      }
-      const project = projectsService.createProject({
-        ...payload,
-        directoryPath: selectedBaseDirectory,
-        dialogId: dialog2.id,
-        projectId
-      });
-      userProfileService.updateUserProfile({
-        activeScenarioId: null,
-        lastActiveTab: "projects"
-      });
-      return project;
-    }
-  );
-  ipcMain.handle("app:delete-project", (_event, projectId) => {
-    const deletedProject = projectsService.deleteProject(projectId);
-    if (deletedProject) {
-      fileStorageService.deleteFilesByIds(deletedProject.fileUUIDs);
-      dialogsService.deleteDialog(deletedProject.dialogId);
-      const profile = userProfileService.getUserProfile();
-      if (profile.activeProjectId === projectId) {
-        userProfileService.updateUserProfile({
-          activeProjectId: null,
-          activeScenarioId: null,
-          lastActiveTab: "dialogs"
-        });
-      }
-    }
-    return {
-      projects: projectsService.getProjectsList(),
-      deletedProjectId: projectId
-    };
+  registerIpcScenariosPack({
+    scenariosService,
+    userProfileService
   });
-  ipcMain.handle(
-    "app:get-scenarios-list",
-    () => scenariosService.getScenariosList()
-  );
-  ipcMain.handle(
-    "app:get-scenario-by-id",
-    (_event, scenarioId) => {
-      const scenario = scenariosService.getScenarioById(scenarioId);
-      if (scenario) {
-        userProfileService.updateUserProfile({
-          activeScenarioId: scenario.id,
-          lastActiveTab: "scenario",
-          activeDialogId: null,
-          activeProjectId: null
-        });
-      } else {
-        userProfileService.updateUserProfile({
-          activeScenarioId: null
-        });
-      }
-      return scenario;
-    }
-  );
-  ipcMain.handle(
-    "app:create-scenario",
-    (_event, payload) => {
-      const scenario = scenariosService.createScenario(payload);
-      userProfileService.updateUserProfile({
-        activeScenarioId: scenario.id,
-        lastActiveTab: "scenario",
-        activeDialogId: null,
-        activeProjectId: null
-      });
-      return scenario;
-    }
-  );
-  ipcMain.handle(
-    "app:update-scenario",
-    (_event, scenarioId, payload) => {
-      const scenario = scenariosService.updateScenario(
-        scenarioId,
-        payload
-      );
-      if (scenario) {
-        userProfileService.updateUserProfile({
-          activeScenarioId: scenario.id,
-          lastActiveTab: "scenario",
-          activeDialogId: null,
-          activeProjectId: null
-        });
-      }
-      return scenario;
-    }
-  );
-  ipcMain.handle("app:delete-scenario", (_event, scenarioId) => {
-    const deletedScenario = scenariosService.deleteScenario(scenarioId);
-    if (deletedScenario) {
-      const profile = userProfileService.getUserProfile();
-      if (profile.activeScenarioId === deletedScenario.id) {
-        userProfileService.updateUserProfile({
-          activeScenarioId: null,
-          lastActiveTab: "dialogs"
-        });
-      }
-    }
-    return {
-      scenarios: scenariosService.getScenariosList(),
-      deletedScenarioId: scenarioId
-    };
+  registerIpcStoragePack({
+    databaseService,
+    fileStorageService,
+    userProfileService,
+    lanceDbService,
+    ollamaService,
+    fSystemService,
+    vectorIndexPath: appPaths.vectorIndexPath
   });
-  ipcMain.handle(
-    "app:save-files",
-    (_event, files2) => fileStorageService.saveFiles(files2)
-  );
-  ipcMain.handle(
-    "app:get-files-by-ids",
-    (_event, fileIds) => fileStorageService.getFilesByIds(fileIds)
-  );
-  ipcMain.handle(
-    "app:get-all-files",
-    () => fileStorageService.getAllFiles()
-  );
-  ipcMain.handle(
-    "app:delete-file",
-    (_event, fileId) => fileStorageService.deleteFileById(fileId)
-  );
-  ipcMain.handle(
-    "app:get-vector-storages",
-    () => databaseService.getVectorStorages(
-      userProfileService.getCurrentUserId()
-    )
-  );
-  ipcMain.handle("app:create-vector-storage", () => {
-    const currentOwnerId = userProfileService.getCurrentUserId();
-    const vectorStorageName = `store_${randomUUID().replace(/-/g, "")}`;
-    const vectorStorageId = `vs_${randomUUID().replace(/-/g, "")}`;
-    const defaultDataPath = path.join(
-      appPaths.vectorIndexPath,
-      `${vectorStorageId}.lance`
-    );
-    return databaseService.createVectorStorage(
-      currentOwnerId,
-      vectorStorageName,
-      defaultDataPath,
-      vectorStorageId
-    );
+  registerIpcJobsPack({
+    jobService
   });
-  ipcMain.handle(
-    "app:get-vector-tags",
-    () => databaseService.getVectorTags(
-      userProfileService.getCurrentUserId()
-    )
-  );
-  ipcMain.handle(
-    "app:create-vector-tag",
-    (_event, name) => databaseService.createVectorTag(
-      userProfileService.getCurrentUserId(),
-      name
-    )
-  );
-  ipcMain.handle(
-    "app:delete-vector-storage",
-    (_event, vectorStorageId) => databaseService.deleteVectorStorage(
-      vectorStorageId,
-      userProfileService.getCurrentUserId()
-    )
-  );
-  ipcMain.handle(
-    "app:get-cache-entry",
-    (_event, key) => databaseService.getCacheEntry(key)
-  );
-  ipcMain.handle("app:get-jobs", () => jobService.getJobs());
-  ipcMain.handle(
-    "app:get-job-by-id",
-    (_event, jobId) => jobService.getJobById(jobId)
-  );
-  ipcMain.handle(
-    "app:get-job-events",
-    (_event, jobId) => jobService.getJobEvents(jobId)
-  );
-  ipcMain.handle(
-    "app:create-job",
-    (_event, payload) => jobService.createJob(payload)
-  );
-  ipcMain.handle(
-    "app:cancel-job",
-    (_event, jobId) => jobService.cancelJob(jobId)
-  );
-  ipcMain.handle(
-    "app:update-vector-storage",
-    async (_event, vectorStorageId, payload) => {
-      const normalizedDataPath = typeof payload.dataPath === "string" ? payload.dataPath.trim() : void 0;
-      if (normalizedDataPath !== void 0) {
-        const resolvedDataPathReference = normalizedDataPath ? await lanceDbService.resolveDataPathReference(
-          normalizedDataPath
-        ) : null;
-        if (normalizedDataPath && !resolvedDataPathReference) {
-          throw new Error(
-            "Путь должен указывать на папку таблицы .lance или директорию с единственной таблицей .lance"
-          );
-        }
-        const effectiveDataPath = normalizedDataPath ? resolvedDataPathReference.dataPath : "";
-        const sizeFromDataPath = effectiveDataPath ? await lanceDbService.getDataPathSizeBytes(
-          effectiveDataPath
-        ) : 0;
-        return databaseService.updateVectorStorage(
-          vectorStorageId,
-          {
-            ...payload,
-            dataPath: effectiveDataPath,
-            size: sizeFromDataPath,
-            lastActiveAt: (/* @__PURE__ */ new Date()).toISOString()
-          },
-          userProfileService.getCurrentUserId()
-        );
-      }
-      return databaseService.updateVectorStorage(
-        vectorStorageId,
-        payload,
-        userProfileService.getCurrentUserId()
-      );
-    }
-  );
-  ipcMain.handle(
-    "app:search-vector-storage",
-    async (_event, vectorStorageId, query, limit) => {
-      const normalizedStorageId = typeof vectorStorageId === "string" ? vectorStorageId.trim() : "";
-      const normalizedQuery = typeof query === "string" ? query.trim() : "";
-      if (!normalizedStorageId) {
-        throw new Error("Не передан идентификатор vector storage");
-      }
-      if (!normalizedQuery) {
-        throw new Error("Поисковый запрос пуст");
-      }
-      const storage = databaseService.getVectorStorageById(
-        normalizedStorageId,
-        userProfileService.getCurrentUserId()
-      );
-      if (!storage) {
-        throw new Error("Vector storage не найден");
-      }
-      const dataPath = storage.dataPath.trim();
-      if (!dataPath) {
-        throw new Error(
-          "Для векторного хранилища не задан путь к индексу"
-        );
-      }
-      const profile = userProfileService.getUserProfile();
-      const model = profile.ollamaEmbeddingModel.trim() || profile.ollamaModel.trim();
-      if (!model) {
-        throw new Error("Не задана embedding model");
-      }
-      const embedResult = await ollamaService.getEmbed(
-        {
-          model,
-          input: [normalizedQuery]
-        },
-        profile.ollamaToken
-      );
-      const queryEmbedding = embedResult.embeddings[0] && Array.isArray(embedResult.embeddings[0]) ? embedResult.embeddings[0] : [];
-      if (!queryEmbedding.length) {
-        throw new Error("Не удалось получить embedding запроса");
-      }
-      const rows = await lanceDbService.search(
-        dataPath,
-        queryEmbedding,
-        typeof limit === "number" ? limit : 5
-      );
-      return rows.map((row) => ({
-        id: row.id,
-        text: row.text,
-        fileId: row.fileId,
-        fileName: row.fileName,
-        chunkIndex: row.chunkIndex,
-        score: typeof row._distance === "number" ? row._distance : typeof row._score === "number" ? row._score : 0
-      }));
-    }
-  );
-  ipcMain.handle(
-    "app:set-cache-entry",
-    (_event, key, entry) => {
-      databaseService.setCacheEntry(key, entry);
-    }
-  );
-  ipcMain.handle(
-    "app:ollama-stream-chat",
-    async (_event, payload) => {
-      const token = userProfileService.getUserProfile().ollamaToken;
-      return ollamaService.streamChat(payload, token);
-    }
-  );
-  ipcMain.handle(
-    "app:proxy-http-request",
-    async (_event, payload) => {
-      const url2 = typeof payload?.url === "string" ? payload.url.trim() : "";
-      const method2 = typeof payload?.method === "string" ? payload.method.trim().toUpperCase() : "GET";
-      const headers2 = payload && typeof payload.headers === "object" ? payload.headers : void 0;
-      const requestBodyText = typeof payload?.bodyText === "string" ? payload.bodyText : void 0;
-      if (!url2) {
-        return {
-          ok: false,
-          status: 0,
-          statusText: "URL is required",
-          bodyText: ""
-        };
-      }
-      try {
-        const response = await fetch(url2, {
-          method: method2,
-          headers: {
-            Accept: "application/json, text/plain, */*",
-            ...headers2 || {}
-          },
-          ...requestBodyText && method2 !== "GET" && method2 !== "HEAD" ? { body: requestBodyText } : {}
-        });
-        const responseBodyText = await response.text();
-        return {
-          ok: response.ok,
-          status: response.status,
-          statusText: response.statusText,
-          bodyText: responseBodyText
-        };
-      } catch (error) {
-        return {
-          ok: false,
-          status: 0,
-          statusText: error instanceof Error ? error.message : "Network request failed",
-          bodyText: ""
-        };
-      }
-    }
-  );
-  ipcMain.handle(
-    "app:voice-transcription-start",
-    async (_event, payload) => {
-      return mistralService.startSession(payload);
-    }
-  );
-  ipcMain.handle(
-    "app:voice-transcription-push-chunk",
-    async (_event, sessionId, chunk) => {
-      await mistralService.pushChunk(sessionId, chunk);
-    }
-  );
-  ipcMain.handle(
-    "app:voice-transcription-stop",
-    async (_event, sessionId) => {
-      await mistralService.stopSession(sessionId);
-    }
-  );
-  ipcMain.handle(
-    "app:voice-synthesize-with-piper",
-    async (_event, text) => {
-      return piperService.synthesize(text);
-    }
-  );
-  ipcMain.handle(
-    "app:open-saved-file",
-    async (_event, fileId) => {
-      const file = fileStorageService.getFileById(fileId);
-      if (!file) {
-        return false;
-      }
-      const openResult = await shell.openPath(file.path);
-      return openResult === "";
-    }
-  );
-  ipcMain.handle("app:open-path", async (_event, targetPath) => {
-    if (!targetPath || typeof targetPath !== "string") {
-      return false;
-    }
-    const openResult = await shell.openPath(targetPath);
-    return openResult === "";
+  registerIpcAgentsPack({
+    ollamaService,
+    mistralService,
+    piperService,
+    userProfileService
   });
-  ipcMain.handle("app:open-external-url", async (_event, url2) => {
-    if (!url2 || typeof url2 !== "string") {
-      return false;
-    }
-    try {
-      await shell.openExternal(url2);
-      return true;
-    } catch {
-      return false;
-    }
+  registerIpcSystemPack({
+    commandExecService,
+    browserService,
+    fileStorageService,
+    fSystemService
   });
-  ipcMain.handle(
-    "app:save-image-from-source",
-    async (event, payload) => {
-      const source = typeof payload?.src === "string" ? payload.src.trim() : "";
-      if (!source) {
-        return null;
-      }
-      const preferredFileName = typeof payload.preferredFileName === "string" ? payload.preferredFileName.trim() : "";
-      let sourceKind = "local";
-      let buffer;
-      let mimeType = "application/octet-stream";
-      let fileName = preferredFileName || "image";
-      if (isDataUrl(source)) {
-        sourceKind = "data-url";
-        const parsed = parseDataUrl(source);
-        buffer = parsed.buffer;
-        mimeType = parsed.mimeType;
-        fileName = ensureImageExt(fileName, mimeType);
-      } else if (isRemoteUrl(source)) {
-        sourceKind = "remote";
-        const response = await fetch(source);
-        if (!response.ok) {
-          throw new Error(
-            `Failed to fetch image (${response.status})`
-          );
-        }
-        const arrayBuffer = await response.arrayBuffer();
-        buffer = Buffer.from(arrayBuffer);
-        mimeType = response.headers.get("content-type") || mimeType;
-        const remoteName = path.basename(
-          new URL(source).pathname || "image"
-        );
-        fileName = preferredFileName || remoteName || "image";
-        fileName = ensureImageExt(fileName, mimeType);
-      } else {
-        sourceKind = "local";
-        const localPath2 = isFileUrl(source) ? fileURLToPath(source) : source;
-        buffer = await fs$1.readFile(localPath2);
-        mimeType = getMimeTypeByExtension(localPath2);
-        fileName = preferredFileName || path.basename(localPath2);
-        fileName = ensureImageExt(fileName, mimeType);
-      }
-      const currentWindow = BrowserWindow.fromWebContents(
-        event.sender
-      );
-      const defaultPath = app.getPath("downloads");
-      const targetPathByDialog = currentWindow ? await dialog.showSaveDialog(currentWindow, {
-        title: "Сохранить изображение",
-        defaultPath: path.join(defaultPath, fileName),
-        filters: [
-          {
-            name: "Images",
-            extensions: imageExtensions
-          }
-        ]
-      }) : await dialog.showSaveDialog({
-        title: "Сохранить изображение",
-        defaultPath: path.join(defaultPath, fileName),
-        filters: [
-          {
-            name: "Images",
-            extensions: imageExtensions
-          }
-        ]
-      });
-      if (targetPathByDialog.canceled || !targetPathByDialog.filePath) {
-        return null;
-      }
-      await fs$1.writeFile(targetPathByDialog.filePath, buffer);
-      return {
-        savedPath: targetPathByDialog.filePath,
-        fileName: path.basename(targetPathByDialog.filePath),
-        mimeType,
-        size: buffer.byteLength,
-        sourceKind
-      };
-    }
-  );
-  ipcMain.handle(
-    "app:exec-shell-command",
-    (_event, command, cwd) => commandExecService.execute(command, cwd)
-  );
-  ipcMain.handle(
-    "app:browser-open-url",
-    (_event, url2, timeoutMs) => browserService.openUrl(url2, timeoutMs)
-  );
-  ipcMain.handle(
-    "app:browser-get-page-snapshot",
-    (_event, maxElements) => browserService.getPageSnapshot(maxElements)
-  );
-  ipcMain.handle(
-    "app:browser-interact-with",
-    (_event, params) => browserService.interactWith(params)
-  );
-  ipcMain.handle(
-    "app:browser-close-session",
-    () => browserService.closeSession()
-  );
-  ipcMain.handle(
-    "app:pick-files",
-    async (event, options) => {
-      const currentWindow = BrowserWindow.fromWebContents(
-        event.sender
-      );
-      const accept = options?.accept ?? [];
-      const filters = accept.length > 0 ? [
-        {
-          name: "Allowed files",
-          extensions: accept.flatMap(
-            (item) => item.split(",").map(
-              (part) => part.trim().toLowerCase()
-            )
-          ).flatMap(
-            (item) => item === "image/*" ? imageExtensions : [item]
-          ).map(
-            (item) => item.startsWith(".") ? item.slice(1) : item.replace(/^[*]/, "").replace(/^[.]/, "")
-          ).filter((item) => item && item !== "*")
-        }
-      ] : [];
-      const dialogProperties = ["openFile"];
-      if (options?.multiple) {
-        dialogProperties.push("multiSelections");
-      }
-      const openDialogOptions = {
-        properties: dialogProperties,
-        filters
-      };
-      const selection = currentWindow ? await dialog.showOpenDialog(
-        currentWindow,
-        openDialogOptions
-      ) : await dialog.showOpenDialog(openDialogOptions);
-      if (selection.canceled || selection.filePaths.length === 0) {
-        return [];
-      }
-      const files2 = await Promise.all(
-        selection.filePaths.map(
-          async (filePath) => {
-            const buffer = await readFile(filePath);
-            const mimeType = getMimeTypeByExtension(filePath);
-            return {
-              name: path.basename(filePath),
-              mimeType,
-              size: buffer.byteLength,
-              dataUrl: `data:${mimeType};base64,${buffer.toString("base64")}`
-            };
-          }
-        )
-      );
-      return files2;
-    }
-  );
-  ipcMain.handle(
-    "app:pick-path",
-    async (event, options) => {
-      const currentWindow = BrowserWindow.fromWebContents(
-        event.sender
-      );
-      const dialogProperties = [
-        options?.forFolders ? "openDirectory" : "openFile"
-      ];
-      const openDialogOptions = {
-        properties: dialogProperties
-      };
-      const selection = currentWindow ? await dialog.showOpenDialog(
-        currentWindow,
-        openDialogOptions
-      ) : await dialog.showOpenDialog(openDialogOptions);
-      if (selection.canceled || selection.filePaths.length === 0) {
-        return null;
-      }
-      return selection.filePaths[0] ?? null;
-    }
-  );
-  ipcMain.handle("app:fs-list-directory", async (_event, cwd) => {
-    const entries = await fs$1.readdir(cwd, { withFileTypes: true });
-    const result = await Promise.all(
-      entries.map(async (entry) => {
-        const entryPath = path.join(cwd, entry.name);
-        const stat = await fs$1.stat(entryPath);
-        return {
-          name: entry.name,
-          type: entry.isDirectory() ? "directory" : "file",
-          size: stat.size,
-          modifiedAt: stat.mtime.toISOString()
-        };
-      })
-    );
-    return { path: cwd, entries: result };
-  });
-  ipcMain.handle(
-    "app:fs-create-file",
-    async (_event, cwd, filename, content = "") => {
-      const filePath = path.join(cwd, filename);
-      await fs$1.mkdir(path.dirname(filePath), { recursive: true });
-      await fs$1.writeFile(filePath, content, "utf-8");
-      return { success: true, path: filePath };
-    }
-  );
-  ipcMain.handle(
-    "app:fs-create-dir",
-    async (_event, cwd, dirname) => {
-      const dirPath = path.join(cwd, dirname);
-      await fs$1.mkdir(dirPath, { recursive: true });
-      return { success: true, path: dirPath };
-    }
-  );
-  ipcMain.handle(
-    "app:fs-read-file",
-    async (_event, filePath, readAll, fromLine, toLine) => {
-      const raw = await fs$1.readFile(filePath, "utf-8");
-      const lines = raw.split("\n");
-      const totalLines = lines.length;
-      if (readAll) {
-        return {
-          path: filePath,
-          content: raw,
-          totalLines,
-          fromLine: 1,
-          toLine: totalLines
-        };
-      }
-      const from = Math.max(1, fromLine ?? 1);
-      const to = Math.min(totalLines, toLine ?? totalLines);
-      const content = lines.slice(from - 1, to).join("\n");
-      return {
-        path: filePath,
-        content,
-        totalLines,
-        fromLine: from,
-        toLine: to
-      };
-    }
-  );
   createWindow();
 }).catch((error) => {
   console.error("Failed to initialize Electron app", error);

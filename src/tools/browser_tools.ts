@@ -5,13 +5,13 @@ export const browserToolsPackage = () => {
     builder
         .addPackage({
             id: "browser-tools",
-            title: "Инструменты для работы с браузером",
+            title: "Браузерные инструменты",
             description: "Инструменты для взаимодействия модели с браузером",
         })
         .addTool({
             name: "open_url",
             description:
-                "Открывает URL во встроенном браузерном контуре Electron и возвращает итог навигации: финальный URL, редиректы, статус и возможные ошибки.",
+                "Открывает URL во встроенном браузерном контуре и возвращает итог навигации: финальный URL, редиректы, статус и возможные ошибки.",
             parameters: ToolsBuilder.objectSchema({
                 properties: {
                     url: ToolsBuilder.stringParam("URL для открытия"),
@@ -209,7 +209,7 @@ export const browserToolsPackage = () => {
         .addTool({
             name: "close_browser",
             description:
-                "Закрывает текущую браузерную сессию Electron и очищает состояние встроенного браузера.",
+                "Закрывает текущую браузерную сессию и очищает состояние встроенного браузера.",
             parameters: ToolsBuilder.objectSchema({
                 properties: {},
             }),

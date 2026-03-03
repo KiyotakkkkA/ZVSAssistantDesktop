@@ -1,12 +1,11 @@
 import path from "node:path";
-import fs from "node:fs/promises";
-import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import { app, BrowserWindow, dialog, shell } from "electron";
 import type { CommandExecService } from "../services/CommandExecService";
 import type { BrowserService } from "../services/BrowserService";
 import type { FileStorageService } from "../services/storage/FileStorageService";
+import type { FSystemService } from "../services/FSystemService";
 import type {
     SaveImageFromSourcePayload,
     UploadedFileData,
@@ -87,12 +86,14 @@ export type IpcSystemPackDeps = {
     commandExecService: CommandExecService;
     browserService: BrowserService;
     fileStorageService: FileStorageService;
+    fSystemService: FSystemService;
 };
 
 export const registerIpcSystemPack = ({
     commandExecService,
     browserService,
     fileStorageService,
+    fSystemService,
 }: IpcSystemPackDeps) => {
     handleManyIpc([
         [
@@ -207,7 +208,7 @@ export const registerIpcSystemPack = ({
                     ? fileURLToPath(source)
                     : source;
 
-                buffer = await fs.readFile(localPath);
+                buffer = await fSystemService.readFileBuffer(localPath);
                 mimeType = getMimeTypeByExtension(localPath);
                 fileName = preferredFileName || path.basename(localPath);
                 fileName = ensureImageExt(fileName, mimeType);
@@ -235,7 +236,10 @@ export const registerIpcSystemPack = ({
                 return null;
             }
 
-            await fs.writeFile(targetPathByDialog.filePath, buffer);
+            await fSystemService.writeFileBuffer(
+                targetPathByDialog.filePath,
+                buffer,
+            );
 
             return {
                 savedPath: targetPathByDialog.filePath,
@@ -307,7 +311,8 @@ export const registerIpcSystemPack = ({
             const files = await Promise.all(
                 selection.filePaths.map(
                     async (filePath): Promise<UploadedFileData> => {
-                        const buffer = await readFile(filePath);
+                        const buffer =
+                            await fSystemService.readFileBuffer(filePath);
                         const mimeType = getMimeTypeByExtension(filePath);
 
                         return {

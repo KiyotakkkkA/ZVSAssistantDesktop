@@ -21,6 +21,7 @@ import { MetaService } from "./services/storage/MetaService";
 import { FileStorageService } from "./services/storage/FileStorageService";
 import { ThemesService } from "./services/userData/ThemesService";
 import { UserProfileService } from "./services/userData/UserProfileService";
+import { FSystemService } from "./services/FSystemService";
 import { createElectronPaths } from "./paths";
 import { registerIpcCorePack } from "./ipc/ipcCorePack";
 import { registerIpcDialogsPack } from "./ipc/ipcDialogsPack";
@@ -136,6 +137,7 @@ app.whenReady()
     .then(() => {
         const appPaths = createElectronPaths(app.getPath("userData"));
         const initDirectoriesService = new InitService(appPaths);
+        const fSystemService = new FSystemService();
 
         initDirectoriesService.initialize();
         extensionsService = new ExtensionsService(appPaths.extensionsPath);
@@ -170,6 +172,7 @@ app.whenReady()
         const fileStorageService = new FileStorageService(
             appPaths.filesPath,
             databaseService,
+            fSystemService,
             currentUserId,
         );
 
@@ -257,6 +260,7 @@ app.whenReady()
             userProfileService,
             lanceDbService,
             ollamaService,
+            fSystemService,
             vectorIndexPath: appPaths.vectorIndexPath,
         });
         registerIpcJobsPack({
@@ -272,6 +276,7 @@ app.whenReady()
             commandExecService,
             browserService,
             fileStorageService,
+            fSystemService,
         });
 
         createWindow();

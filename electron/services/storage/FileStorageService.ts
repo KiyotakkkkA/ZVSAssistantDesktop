@@ -1,7 +1,7 @@
-import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { DatabaseService } from "./DatabaseService";
+import { FSystemService } from "../FSystemService";
 import type {
     SavedFileRecord,
     UploadedFileData,
@@ -11,6 +11,7 @@ export class FileStorageService {
     constructor(
         private readonly filesPath: string,
         private readonly databaseService: DatabaseService,
+        private readonly fSystemService: FSystemService,
         private readonly createdBy: string,
     ) {}
 
@@ -24,7 +25,7 @@ export class FileStorageService {
             const absolutePath = path.join(this.filesPath, encryptedName);
             const buffer = this.parseDataUrl(file.dataUrl);
 
-            fs.writeFileSync(absolutePath, buffer);
+            this.fSystemService.writeFileBufferSync(absolutePath, buffer);
 
             const entry = {
                 path: absolutePath,
@@ -69,9 +70,7 @@ export class FileStorageService {
             return false;
         }
 
-        if (fs.existsSync(file.path)) {
-            fs.unlinkSync(file.path);
-        }
+        this.fSystemService.deleteFileIfExistsSync(file.path);
 
         this.databaseService.deleteFilesByIds([fileId], this.createdBy);
         return true;
@@ -88,9 +87,7 @@ export class FileStorageService {
         );
 
         for (const entry of files) {
-            if (fs.existsSync(entry.path)) {
-                fs.unlinkSync(entry.path);
-            }
+            this.fSystemService.deleteFileIfExistsSync(entry.path);
         }
 
         this.databaseService.deleteFilesByIds(fileIds, this.createdBy);

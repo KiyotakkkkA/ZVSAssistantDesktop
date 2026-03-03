@@ -1,5 +1,4 @@
 import path from "node:path";
-import fs from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 
 import type { DatabaseService } from "../services/storage/DatabaseService";
@@ -7,6 +6,7 @@ import type { FileStorageService } from "../services/storage/FileStorageService"
 import type { UserProfileService } from "../services/userData/UserProfileService";
 import type { LanceDbService } from "../services/storage/LanceDbService";
 import type { OllamaService } from "../services/agents/OllamaService";
+import type { FSystemService } from "../services/FSystemService";
 import type {
     AppCacheEntry,
     UpdateVectorStoragePayload,
@@ -20,6 +20,7 @@ export type IpcStoragePackDeps = {
     userProfileService: UserProfileService;
     lanceDbService: LanceDbService;
     ollamaService: OllamaService;
+    fSystemService: FSystemService;
     vectorIndexPath: string;
 };
 
@@ -29,6 +30,7 @@ export const registerIpcStoragePack = ({
     userProfileService,
     lanceDbService,
     ollamaService,
+    fSystemService,
     vectorIndexPath,
 }: IpcStoragePackDeps) => {
     const getCurrentUserId = () => userProfileService.getCurrentUserId();
@@ -236,72 +238,33 @@ export const registerIpcStoragePack = ({
         },
     );
 
-    handleIpc("app:fs-list-directory", async (cwd: string) => {
-        const entries = await fs.readdir(cwd, { withFileTypes: true });
-        const result = await Promise.all(
-            entries.map(async (entry) => {
-                const entryPath = path.join(cwd, entry.name);
-                const stat = await fs.stat(entryPath);
-                return {
-                    name: entry.name,
-                    type: entry.isDirectory() ? "directory" : "file",
-                    size: stat.size,
-                    modifiedAt: stat.mtime.toISOString(),
-                };
-            }),
-        );
-        return { path: cwd, entries: result };
-    });
+    handleIpc("app:fs-list-directory", (cwd: string) =>
+        fSystemService.listDirectory(cwd),
+    );
 
     handleIpc(
         "app:fs-create-file",
-        async (cwd: string, filename: string, content: string = "") => {
-            const filePath = path.join(cwd, filename);
-            await fs.mkdir(path.dirname(filePath), { recursive: true });
-            await fs.writeFile(filePath, content, "utf-8");
-            return { success: true, path: filePath };
-        },
+        async (cwd: string, filename: string, content: string = "") =>
+            fSystemService.createFile(cwd, filename, content),
     );
 
-    handleIpc("app:fs-create-dir", async (cwd: string, dirname: string) => {
-        const dirPath = path.join(cwd, dirname);
-        await fs.mkdir(dirPath, { recursive: true });
-        return { success: true, path: dirPath };
-    });
+    handleIpc("app:fs-create-dir", (cwd: string, dirname: string) =>
+        fSystemService.createDir(cwd, dirname),
+    );
 
     handleIpc(
         "app:fs-read-file",
-        async (
+        (
             filePath: string,
             readAll: boolean,
             fromLine?: number,
             toLine?: number,
-        ) => {
-            const raw = await fs.readFile(filePath, "utf-8");
-            const lines = raw.split("\n");
-            const totalLines = lines.length;
-
-            if (readAll) {
-                return {
-                    path: filePath,
-                    content: raw,
-                    totalLines,
-                    fromLine: 1,
-                    toLine: totalLines,
-                };
-            }
-
-            const from = Math.max(1, fromLine ?? 1);
-            const to = Math.min(totalLines, toLine ?? totalLines);
-            const content = lines.slice(from - 1, to).join("\n");
-
-            return {
-                path: filePath,
-                content,
-                totalLines,
-                fromLine: from,
-                toLine: to,
-            };
-        },
+        ) =>
+            fSystemService.readTextFileRange(
+                filePath,
+                readAll,
+                fromLine,
+                toLine,
+            ),
     );
 };
