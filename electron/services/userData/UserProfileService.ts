@@ -157,6 +157,18 @@ export class UserProfileService {
             ...(typeof parsed.useSpeechSynthesis === "boolean"
                 ? { useSpeechSynthesis: parsed.useSpeechSynthesis }
                 : {}),
+            ...(typeof parsed.notifyOnJobCompleteToast === "boolean"
+                ? { notifyOnJobCompleteToast: parsed.notifyOnJobCompleteToast }
+                : {}),
+            ...(typeof parsed.notifyOnJobCompleteTelegram === "boolean"
+                ? {
+                      notifyOnJobCompleteTelegram:
+                          parsed.notifyOnJobCompleteTelegram,
+                  }
+                : {}),
+            ...(typeof parsed.notifyOnJobCompleteEmail === "boolean"
+                ? { notifyOnJobCompleteEmail: parsed.notifyOnJobCompleteEmail }
+                : {}),
             ...(typeof parsed.piperModelPath === "string"
                 ? { piperModelPath: parsed.piperModelPath }
                 : {}),

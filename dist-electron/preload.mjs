@@ -129,11 +129,44 @@ const appApi = {
   network: {
     proxyHttpRequest: (payload) => electron.ipcRenderer.invoke("app:proxy-http-request", payload)
   },
+  communications: {
+    sendTelegramMessage: (payload) => electron.ipcRenderer.invoke(
+      "app:communications-send-telegram-message",
+      payload
+    ),
+    getUnreadTelegramMessages: (payload) => electron.ipcRenderer.invoke(
+      "app:communications-get-unread-telegram-messages",
+      payload
+    )
+  },
   extensions: {
     getExtensionsState: () => electron.ipcRenderer.invoke("app:get-extensions-state")
   },
   llm: {
-    streamOllamaChat: (payload) => electron.ipcRenderer.invoke("app:ollama-stream-chat", payload)
+    runChatSession: (payload) => electron.ipcRenderer.invoke("app:chat-run-session", JSON.stringify(payload)),
+    cancelChatSession: (sessionId) => electron.ipcRenderer.invoke("app:chat-cancel-session", sessionId),
+    resolveCommandApproval: (payload) => electron.ipcRenderer.invoke(
+      "app:chat-resolve-command-approval",
+      JSON.stringify(payload)
+    ),
+    onChatEvent: (listener) => {
+      const handler = (_event, payload) => {
+        if (typeof payload !== "string") {
+          return;
+        }
+        try {
+          listener(
+            JSON.parse(payload)
+          );
+        } catch {
+          return;
+        }
+      };
+      electron.ipcRenderer.on("app:chat-session-event", handler);
+      return () => {
+        electron.ipcRenderer.off("app:chat-session-event", handler);
+      };
+    }
   },
   voice: {
     startMistralRealtimeTranscription: (payload) => electron.ipcRenderer.invoke("app:voice-transcription-start", payload),

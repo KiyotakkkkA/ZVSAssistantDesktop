@@ -1,5 +1,5 @@
 import type { AssistantStage, ChatMessage } from "../../types/Chat";
-import { appendAssistantStageChunk, splitTextChunk } from "./chatStream";
+import { appendAssistantStageChunk } from "./chatStream";
 
 type QueueStage = Extract<AssistantStage, "thinking" | "answering">;
 
@@ -83,9 +83,7 @@ export const createChatChunkQueueManager = ({
             return;
         }
 
-        splitTextChunk(chunkText).forEach((chunkPart) => {
-            queue.push({ stage, chunkText: chunkPart });
-        });
+        queue.push({ stage, chunkText });
 
         scheduleFlush();
     };

@@ -5,11 +5,11 @@ import {
     InputPath,
     InputSmall,
     Modal,
+    PrettyBR,
 } from "../../atoms";
 import { Icon } from "@iconify/react";
 import { useChatParams, useExtensions } from "../../../../hooks";
 import { SettingsChatOllamaModelsPickForm } from "../forms";
-import { PrettyBR } from "../../atoms/PrettyBR";
 import { Link, useNavigate } from "react-router-dom";
 
 export const SettingsChatPanel = () => {

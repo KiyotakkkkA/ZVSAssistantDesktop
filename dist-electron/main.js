@@ -1553,18 +1553,18 @@ var __publicField = (obj, key, value) => {
   return value;
 };
 let Ollama$1 = class Ollama {
-  constructor(config2) {
+  constructor(config) {
     __publicField(this, "config");
     __publicField(this, "fetch");
     __publicField(this, "ongoingStreamedRequests", []);
     this.config = {
       host: "",
-      headers: config2?.headers
+      headers: config?.headers
     };
-    if (!config2?.proxy) {
-      this.config.host = formatHost(config2?.host ?? defaultHost);
+    if (!config?.proxy) {
+      this.config.host = formatHost(config?.host ?? defaultHost);
     }
-    this.fetch = config2?.fetch ?? fetch;
+    this.fetch = config?.fetch ?? fetch;
   }
   // Abort any ongoing streamed requests to Ollama
   abort() {
@@ -1870,13 +1870,13 @@ class Ollama2 extends Ollama$1 {
   }
 }
 new Ollama2();
-class Config {
+let Config$1 = class Config {
   OLLAMA_BASE_URL = "https://ollama.com";
   MIREA_BASE_URL = "https://schedule-of.mirea.ru";
   MISTRAL_BASE_URL = "https://api.mistral.ai";
   TELEGRAM_BOT_BASE_URL = "https://api.telegram.org/bot";
-}
-const Config$1 = new Config();
+};
+const Config2 = new Config$1();
 const LOCAL_OLLAMA_HOST = "http://127.0.0.1:11434";
 class OllamaService {
   cachedHost = "";
@@ -1949,9 +1949,9 @@ class OllamaService {
     }
     throw new Error("Ollama auth failed: unknown error");
   }
-  async streamChat(payload, token) {
+  async *streamChat(payload, token) {
     const stream2 = await this.executeWithAuthFallback(
-      Config$1.OLLAMA_BASE_URL.trim(),
+      Config2.OLLAMA_BASE_URL.trim(),
       token,
       (client) => client.chat({
         model: payload.model,
@@ -1962,9 +1962,8 @@ class OllamaService {
         stream: true
       })
     );
-    const chunks = [];
     for await (const part of stream2) {
-      chunks.push({
+      yield {
         model: part.model,
         created_at: part.created_at instanceof Date ? part.created_at.toISOString() : String(part.created_at),
         message: {
@@ -1976,9 +1975,8 @@ class OllamaService {
         done: part.done,
         ...typeof part.prompt_eval_count === "number" ? { prompt_eval_count: part.prompt_eval_count } : {},
         ...typeof part.eval_count === "number" ? { eval_count: part.eval_count } : {}
-      });
+      };
     }
-    return chunks;
   }
   async getEmbed(payload, token) {
     const response = await this.executeWithAuthFallback(
@@ -2007,11 +2005,11 @@ function getDefaultExportFromCjs(x) {
   return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, "default") ? x["default"] : x;
 }
 var realtime = {};
-var audioencoding = {};
+var audioencoding$2 = {};
 var enums = {};
-var v3 = {};
+var v3$1 = {};
 var external$1 = {};
-var errors$4 = {};
+var errors$5 = {};
 var en = { exports: {} };
 var ZodError = {};
 var util$3 = {};
@@ -2053,10 +2051,10 @@ function requireUtil$3() {
           return obj[e];
         });
       };
-      util3.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object2) => {
+      util3.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object) => {
         const keys = [];
-        for (const key in object2) {
-          if (Object.prototype.hasOwnProperty.call(object2, key)) {
+        for (const key in object) {
+          if (Object.prototype.hasOwnProperty.call(object, key)) {
             keys.push(key);
           }
         }
@@ -2400,17 +2398,17 @@ function requireEn() {
 }
 var hasRequiredErrors$4;
 function requireErrors$4() {
-  if (hasRequiredErrors$4) return errors$4;
+  if (hasRequiredErrors$4) return errors$5;
   hasRequiredErrors$4 = 1;
-  var __importDefault = errors$4 && errors$4.__importDefault || function(mod) {
+  var __importDefault = errors$5 && errors$5.__importDefault || function(mod) {
     return mod && mod.__esModule ? mod : { "default": mod };
   };
-  Object.defineProperty(errors$4, "__esModule", { value: true });
-  errors$4.defaultErrorMap = void 0;
-  errors$4.setErrorMap = setErrorMap;
-  errors$4.getErrorMap = getErrorMap;
+  Object.defineProperty(errors$5, "__esModule", { value: true });
+  errors$5.defaultErrorMap = void 0;
+  errors$5.setErrorMap = setErrorMap;
+  errors$5.getErrorMap = getErrorMap;
   const en_js_1 = __importDefault(requireEn());
-  errors$4.defaultErrorMap = en_js_1.default;
+  errors$5.defaultErrorMap = en_js_1.default;
   let overrideErrorMap = en_js_1.default;
   function setErrorMap(map2) {
     overrideErrorMap = map2;
@@ -2418,7 +2416,7 @@ function requireErrors$4() {
   function getErrorMap() {
     return overrideErrorMap;
   }
-  return errors$4;
+  return errors$5;
 }
 var parseUtil = {};
 var hasRequiredParseUtil;
@@ -6150,10 +6148,10 @@ function requireExternal$1() {
 }
 var hasRequiredV3;
 function requireV3() {
-  if (hasRequiredV3) return v3;
+  if (hasRequiredV3) return v3$1;
   hasRequiredV3 = 1;
   (function(exports$1) {
-    var __createBinding = v3 && v3.__createBinding || (Object.create ? (function(o, m, k, k2) {
+    var __createBinding = v3$1 && v3$1.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
@@ -6166,12 +6164,12 @@ function requireV3() {
       if (k2 === void 0) k2 = k;
       o[k2] = m[k];
     }));
-    var __setModuleDefault = v3 && v3.__setModuleDefault || (Object.create ? (function(o, v) {
+    var __setModuleDefault = v3$1 && v3$1.__setModuleDefault || (Object.create ? (function(o, v) {
       Object.defineProperty(o, "default", { enumerable: true, value: v });
     }) : function(o, v) {
       o["default"] = v;
     });
-    var __importStar = v3 && v3.__importStar || function(mod) {
+    var __importStar = v3$1 && v3$1.__importStar || function(mod) {
       if (mod && mod.__esModule) return mod;
       var result = {};
       if (mod != null) {
@@ -6180,7 +6178,7 @@ function requireV3() {
       __setModuleDefault(result, mod);
       return result;
     };
-    var __exportStar = v3 && v3.__exportStar || function(m, exports$12) {
+    var __exportStar = v3$1 && v3$1.__exportStar || function(m, exports$12) {
       for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports$12, p)) __createBinding(exports$12, m, p);
     };
     Object.defineProperty(exports$1, "__esModule", { value: true });
@@ -6189,8 +6187,8 @@ function requireV3() {
     exports$1.z = z;
     __exportStar(requireExternal$1(), exports$1);
     exports$1.default = z;
-  })(v3);
-  return v3;
+  })(v3$1);
+  return v3$1;
 }
 var unrecognized = {};
 var hasRequiredUnrecognized;
@@ -6299,10 +6297,10 @@ function requireEnums() {
 }
 var hasRequiredAudioencoding;
 function requireAudioencoding() {
-  if (hasRequiredAudioencoding) return audioencoding;
+  if (hasRequiredAudioencoding) return audioencoding$2;
   hasRequiredAudioencoding = 1;
   (function(exports$1) {
-    var __createBinding = audioencoding && audioencoding.__createBinding || (Object.create ? (function(o, m, k, k2) {
+    var __createBinding = audioencoding$2 && audioencoding$2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
@@ -6315,12 +6313,12 @@ function requireAudioencoding() {
       if (k2 === void 0) k2 = k;
       o[k2] = m[k];
     }));
-    var __setModuleDefault = audioencoding && audioencoding.__setModuleDefault || (Object.create ? (function(o, v) {
+    var __setModuleDefault = audioencoding$2 && audioencoding$2.__setModuleDefault || (Object.create ? (function(o, v) {
       Object.defineProperty(o, "default", { enumerable: true, value: v });
     }) : function(o, v) {
       o["default"] = v;
     });
-    var __importStar = audioencoding && audioencoding.__importStar || /* @__PURE__ */ (function() {
+    var __importStar = audioencoding$2 && audioencoding$2.__importStar || /* @__PURE__ */ (function() {
       var ownKeys = function(o) {
         ownKeys = Object.getOwnPropertyNames || function(o2) {
           var ar = [];
@@ -6352,23 +6350,23 @@ function requireAudioencoding() {
     };
     exports$1.AudioEncoding$inboundSchema = openEnums.inboundSchema(exports$1.AudioEncoding);
     exports$1.AudioEncoding$outboundSchema = openEnums.outboundSchema(exports$1.AudioEncoding);
-  })(audioencoding);
-  return audioencoding;
+  })(audioencoding$2);
+  return audioencoding$2;
 }
-var connection = {};
+var connection$1 = {};
 var transcriptionstreamdone = {};
-var primitives = {};
+var primitives$1 = {};
 var hasRequiredPrimitives;
 function requirePrimitives() {
-  if (hasRequiredPrimitives) return primitives;
+  if (hasRequiredPrimitives) return primitives$1;
   hasRequiredPrimitives = 1;
-  Object.defineProperty(primitives, "__esModule", { value: true });
-  primitives.invariant = invariant;
-  primitives.remap = remap;
-  primitives.combineSignals = combineSignals;
-  primitives.abortSignalAny = abortSignalAny;
-  primitives.compactMap = compactMap;
-  primitives.allRequired = allRequired;
+  Object.defineProperty(primitives$1, "__esModule", { value: true });
+  primitives$1.invariant = invariant;
+  primitives$1.remap = remap;
+  primitives$1.combineSignals = combineSignals;
+  primitives$1.abortSignalAny = abortSignalAny;
+  primitives$1.compactMap = compactMap;
+  primitives$1.allRequired = allRequired;
   class InvariantError extends Error {
     constructor(message) {
       super(message);
@@ -6461,7 +6459,7 @@ function requirePrimitives() {
     }
     return v;
   }
-  return primitives;
+  return primitives$1;
 }
 var schemas = {};
 var sdkvalidationerror = {};
@@ -6600,16 +6598,16 @@ ${pre}${str}`;
   }
   return sdkvalidationerror;
 }
-var fp = {};
+var fp$1 = {};
 var hasRequiredFp;
 function requireFp() {
-  if (hasRequiredFp) return fp;
+  if (hasRequiredFp) return fp$1;
   hasRequiredFp = 1;
-  Object.defineProperty(fp, "__esModule", { value: true });
-  fp.OK = OK;
-  fp.ERR = ERR;
-  fp.unwrap = unwrap;
-  fp.unwrapAsync = unwrapAsync;
+  Object.defineProperty(fp$1, "__esModule", { value: true });
+  fp$1.OK = OK;
+  fp$1.ERR = ERR;
+  fp$1.unwrap = unwrap;
+  fp$1.unwrapAsync = unwrapAsync;
   function OK(value) {
     return { ok: true, value };
   }
@@ -6629,7 +6627,7 @@ function requireFp() {
     }
     return r.value;
   }
-  return fp;
+  return fp$1;
 }
 var hasRequiredSchemas;
 function requireSchemas() {
@@ -7624,12 +7622,12 @@ function requireRealtimetranscriptionsessionupdated() {
 }
 var hasRequiredConnection;
 function requireConnection() {
-  if (hasRequiredConnection) return connection;
+  if (hasRequiredConnection) return connection$1;
   hasRequiredConnection = 1;
-  Object.defineProperty(connection, "__esModule", { value: true });
-  connection.RealtimeConnection = void 0;
-  connection.isUnknownRealtimeEvent = isUnknownRealtimeEvent;
-  connection.parseRealtimeEventFromData = parseRealtimeEventFromData;
+  Object.defineProperty(connection$1, "__esModule", { value: true });
+  connection$1.RealtimeConnection = void 0;
+  connection$1.isUnknownRealtimeEvent = isUnknownRealtimeEvent;
+  connection$1.parseRealtimeEventFromData = parseRealtimeEventFromData;
   const node_buffer_1 = require$$0;
   const transcriptionstreamdone_js_1 = /* @__PURE__ */ requireTranscriptionstreamdone();
   const transcriptionstreamlanguage_js_1 = /* @__PURE__ */ requireTranscriptionstreamlanguage();
@@ -7814,7 +7812,7 @@ function requireConnection() {
       }
     }
   }
-  connection.RealtimeConnection = RealtimeConnection;
+  connection$1.RealtimeConnection = RealtimeConnection;
   function parseRealtimeEvent(payload) {
     if (!isRecord(payload)) {
       return unknownEvent("unknown", payload, new Error("Invalid websocket message payload (expected JSON object)."));
@@ -7900,10 +7898,10 @@ function requireConnection() {
   function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
   }
-  return connection;
+  return connection$1;
 }
-var transcription = {};
-var bufferUtil = { exports: {} };
+var transcription$1 = {};
+var bufferUtil$2 = { exports: {} };
 var constants$2;
 var hasRequiredConstants$2;
 function requireConstants$2() {
@@ -8146,7 +8144,7 @@ function requireBufferutil() {
 }
 var hasRequiredBufferUtil;
 function requireBufferUtil() {
-  if (hasRequiredBufferUtil) return bufferUtil.exports;
+  if (hasRequiredBufferUtil) return bufferUtil$2.exports;
   hasRequiredBufferUtil = 1;
   const { EMPTY_BUFFER } = requireConstants$2();
   const FastBuffer = Buffer[Symbol.species];
@@ -8195,7 +8193,7 @@ function requireBufferUtil() {
     }
     return buf;
   }
-  bufferUtil.exports = {
+  bufferUtil$2.exports = {
     concat,
     mask: _mask,
     toArrayBuffer,
@@ -8204,19 +8202,19 @@ function requireBufferUtil() {
   };
   if (!process.env.WS_NO_BUFFER_UTIL) {
     try {
-      const bufferUtil$1 = requireBufferutil();
-      bufferUtil.exports.mask = function(source, mask, output, offset, length) {
+      const bufferUtil = requireBufferutil();
+      bufferUtil$2.exports.mask = function(source, mask, output, offset, length) {
         if (length < 48) _mask(source, mask, output, offset, length);
-        else bufferUtil$1.mask(source, mask, output, offset, length);
+        else bufferUtil.mask(source, mask, output, offset, length);
       };
-      bufferUtil.exports.unmask = function(buffer, mask) {
+      bufferUtil$2.exports.unmask = function(buffer, mask) {
         if (buffer.length < 32) _unmask(buffer, mask);
-        else bufferUtil$1.unmask(buffer, mask);
+        else bufferUtil.unmask(buffer, mask);
       };
     } catch (e) {
     }
   }
-  return bufferUtil.exports;
+  return bufferUtil$2.exports;
 }
 var limiter;
 var hasRequiredLimiter;
@@ -8274,7 +8272,7 @@ function requirePermessageDeflate() {
   if (hasRequiredPermessageDeflate) return permessageDeflate;
   hasRequiredPermessageDeflate = 1;
   const zlib = require$$0$2;
-  const bufferUtil2 = requireBufferUtil();
+  const bufferUtil = requireBufferUtil();
   const Limiter = requireLimiter();
   const { kStatusCode } = requireConstants$2();
   const FastBuffer = Buffer[Symbol.species];
@@ -8562,7 +8560,7 @@ function requirePermessageDeflate() {
           callback(err);
           return;
         }
-        const data2 = bufferUtil2.concat(
+        const data2 = bufferUtil.concat(
           this._inflate[kBuffers],
           this._inflate[kTotalLength]
         );
@@ -8606,7 +8604,7 @@ function requirePermessageDeflate() {
         if (!this._deflate) {
           return;
         }
-        let data2 = bufferUtil2.concat(
+        let data2 = bufferUtil.concat(
           this._deflate[kBuffers],
           this._deflate[kTotalLength]
         );
@@ -10370,7 +10368,7 @@ function requireWebsocket() {
   hasRequiredWebsocket = 1;
   const EventEmitter = require$$0$5;
   const https = require$$1$2;
-  const http2 = require$$2$1;
+  const http = require$$2$1;
   const net = require$$3;
   const tls = require$$4;
   const { randomBytes: randomBytes2, createHash } = require$$1$1;
@@ -10904,7 +10902,7 @@ function requireWebsocket() {
     }
     const defaultPort2 = isSecure ? 443 : 80;
     const key = randomBytes2(16).toString("base64");
-    const request = isSecure ? https.request : http2.request;
+    const request = isSecure ? https.request : http.request;
     const protocolSet = /* @__PURE__ */ new Set();
     let perMessageDeflate;
     opts.createConnection = opts.createConnection || (isSecure ? tlsConnect : netConnect);
@@ -11398,7 +11396,7 @@ function requireWebsocketServer() {
   if (hasRequiredWebsocketServer) return websocketServer;
   hasRequiredWebsocketServer = 1;
   const EventEmitter = require$$0$5;
-  const http2 = require$$2$1;
+  const http = require$$2$1;
   const { Duplex } = require$$0$4;
   const { createHash } = require$$1$1;
   const extension2 = requireExtension();
@@ -11473,8 +11471,8 @@ function requireWebsocketServer() {
         );
       }
       if (options.port != null) {
-        this._server = http2.createServer((req, res) => {
-          const body = http2.STATUS_CODES[426];
+        this._server = http.createServer((req, res) => {
+          const body = http.STATUS_CODES[426];
           res.writeHead(426, {
             "Content-Length": body.length,
             "Content-Type": "text/plain"
@@ -11761,7 +11759,7 @@ function requireWebsocketServer() {
     this.destroy();
   }
   function abortHandshake(socket, code, message, headers2) {
-    message = message || http2.STATUS_CODES[code];
+    message = message || http.STATUS_CODES[code];
     headers2 = {
       Connection: "close",
       "Content-Type": "text/html",
@@ -11770,7 +11768,7 @@ function requireWebsocketServer() {
     };
     socket.once("finish", socket.destroy);
     socket.end(
-      `HTTP/1.1 ${code} ${http2.STATUS_CODES[code]}\r
+      `HTTP/1.1 ${code} ${http.STATUS_CODES[code]}\r
 ` + Object.keys(headers2).map((h) => `${h}: ${headers2[h]}`).join("\r\n") + "\r\n\r\n" + message
     );
   }
@@ -11800,7 +11798,7 @@ function requireWs() {
   ws = WebSocket;
   return ws;
 }
-var config = {};
+var config$2 = {};
 var url = {};
 var hasRequiredUrl;
 function requireUrl() {
@@ -11828,7 +11826,7 @@ function requireUrl() {
 }
 var hasRequiredConfig;
 function requireConfig() {
-  if (hasRequiredConfig) return config;
+  if (hasRequiredConfig) return config$2;
   hasRequiredConfig = 1;
   (function(exports$1) {
     Object.defineProperty(exports$1, "__esModule", { value: true });
@@ -11856,11 +11854,11 @@ function requireConfig() {
       genVersion: "2.797.1",
       userAgent: "speakeasy-sdk/typescript 1.14.0 2.797.1 1.0.0 @mistralai/mistralai"
     };
-  })(config);
-  return config;
+  })(config$2);
+  return config$2;
 }
 var sdks = {};
-var hooks = {};
+var hooks$1 = {};
 var registration = {};
 var custom_user_agent = {};
 var hasRequiredCustom_user_agent;
@@ -11914,20 +11912,20 @@ function requireRegistration() {
   registration.initHooks = initHooks;
   const custom_user_agent_1 = /* @__PURE__ */ requireCustom_user_agent();
   const deprecation_warning_1 = /* @__PURE__ */ requireDeprecation_warning();
-  function initHooks(hooks2) {
+  function initHooks(hooks) {
     const customUserAgentHook = new custom_user_agent_1.CustomUserAgentHook();
-    hooks2.registerBeforeRequestHook(customUserAgentHook);
+    hooks.registerBeforeRequestHook(customUserAgentHook);
     const deprecationWarningHook = new deprecation_warning_1.DeprecationWarningHook();
-    hooks2.registerAfterSuccessHook(deprecationWarningHook);
+    hooks.registerAfterSuccessHook(deprecationWarningHook);
   }
   return registration;
 }
 var hasRequiredHooks;
 function requireHooks() {
-  if (hasRequiredHooks) return hooks;
+  if (hasRequiredHooks) return hooks$1;
   hasRequiredHooks = 1;
-  Object.defineProperty(hooks, "__esModule", { value: true });
-  hooks.SDKHooks = void 0;
+  Object.defineProperty(hooks$1, "__esModule", { value: true });
+  hooks$1.SDKHooks = void 0;
   const registration_js_1 = /* @__PURE__ */ requireRegistration();
   class SDKHooks {
     constructor() {
@@ -12006,16 +12004,16 @@ function requireHooks() {
       return { response: res, error: err };
     }
   }
-  hooks.SDKHooks = SDKHooks;
-  return hooks;
+  hooks$1.SDKHooks = SDKHooks;
+  return hooks$1;
 }
-var httpclienterrors = {};
+var httpclienterrors$1 = {};
 var hasRequiredHttpclienterrors;
 function requireHttpclienterrors() {
-  if (hasRequiredHttpclienterrors) return httpclienterrors;
+  if (hasRequiredHttpclienterrors) return httpclienterrors$1;
   hasRequiredHttpclienterrors = 1;
-  Object.defineProperty(httpclienterrors, "__esModule", { value: true });
-  httpclienterrors.ConnectionError = httpclienterrors.RequestTimeoutError = httpclienterrors.RequestAbortedError = httpclienterrors.InvalidRequestError = httpclienterrors.UnexpectedClientError = httpclienterrors.HTTPClientError = void 0;
+  Object.defineProperty(httpclienterrors$1, "__esModule", { value: true });
+  httpclienterrors$1.ConnectionError = httpclienterrors$1.RequestTimeoutError = httpclienterrors$1.RequestAbortedError = httpclienterrors$1.InvalidRequestError = httpclienterrors$1.UnexpectedClientError = httpclienterrors$1.HTTPClientError = void 0;
   class HTTPClientError extends Error {
     constructor(message, opts) {
       let msg = message;
@@ -12029,50 +12027,50 @@ function requireHttpclienterrors() {
       }
     }
   }
-  httpclienterrors.HTTPClientError = HTTPClientError;
+  httpclienterrors$1.HTTPClientError = HTTPClientError;
   class UnexpectedClientError extends HTTPClientError {
     constructor() {
       super(...arguments);
       this.name = "UnexpectedClientError";
     }
   }
-  httpclienterrors.UnexpectedClientError = UnexpectedClientError;
+  httpclienterrors$1.UnexpectedClientError = UnexpectedClientError;
   class InvalidRequestError extends HTTPClientError {
     constructor() {
       super(...arguments);
       this.name = "InvalidRequestError";
     }
   }
-  httpclienterrors.InvalidRequestError = InvalidRequestError;
+  httpclienterrors$1.InvalidRequestError = InvalidRequestError;
   class RequestAbortedError extends HTTPClientError {
     constructor() {
       super(...arguments);
       this.name = "RequestAbortedError";
     }
   }
-  httpclienterrors.RequestAbortedError = RequestAbortedError;
+  httpclienterrors$1.RequestAbortedError = RequestAbortedError;
   class RequestTimeoutError extends HTTPClientError {
     constructor() {
       super(...arguments);
       this.name = "RequestTimeoutError";
     }
   }
-  httpclienterrors.RequestTimeoutError = RequestTimeoutError;
+  httpclienterrors$1.RequestTimeoutError = RequestTimeoutError;
   class ConnectionError extends HTTPClientError {
     constructor() {
       super(...arguments);
       this.name = "ConnectionError";
     }
   }
-  httpclienterrors.ConnectionError = ConnectionError;
-  return httpclienterrors;
+  httpclienterrors$1.ConnectionError = ConnectionError;
+  return httpclienterrors$1;
 }
-var base64$1 = {};
+var base64$2 = {};
 var hasRequiredBase64$1;
 function requireBase64$1() {
-  if (hasRequiredBase64$1) return base64$1;
+  if (hasRequiredBase64$1) return base64$2;
   hasRequiredBase64$1 = 1;
-  var __createBinding = base64$1 && base64$1.__createBinding || (Object.create ? (function(o, m, k, k2) {
+  var __createBinding = base64$2 && base64$2.__createBinding || (Object.create ? (function(o, m, k, k2) {
     if (k2 === void 0) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
     if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
@@ -12085,12 +12083,12 @@ function requireBase64$1() {
     if (k2 === void 0) k2 = k;
     o[k2] = m[k];
   }));
-  var __setModuleDefault = base64$1 && base64$1.__setModuleDefault || (Object.create ? (function(o, v) {
+  var __setModuleDefault = base64$2 && base64$2.__setModuleDefault || (Object.create ? (function(o, v) {
     Object.defineProperty(o, "default", { enumerable: true, value: v });
   }) : function(o, v) {
     o["default"] = v;
   });
-  var __importStar = base64$1 && base64$1.__importStar || /* @__PURE__ */ (function() {
+  var __importStar = base64$2 && base64$2.__importStar || /* @__PURE__ */ (function() {
     var ownKeys = function(o) {
       ownKeys = Object.getOwnPropertyNames || function(o2) {
         var ar = [];
@@ -12109,14 +12107,14 @@ function requireBase64$1() {
       return result;
     };
   })();
-  Object.defineProperty(base64$1, "__esModule", { value: true });
-  base64$1.zodInbound = base64$1.zodOutbound = void 0;
-  base64$1.bytesToBase64 = bytesToBase64;
-  base64$1.bytesFromBase64 = bytesFromBase64;
-  base64$1.stringToBytes = stringToBytes;
-  base64$1.stringFromBytes = stringFromBytes;
-  base64$1.stringToBase64 = stringToBase64;
-  base64$1.stringFromBase64 = stringFromBase64;
+  Object.defineProperty(base64$2, "__esModule", { value: true });
+  base64$2.zodInbound = base64$2.zodOutbound = void 0;
+  base64$2.bytesToBase64 = bytesToBase64;
+  base64$2.bytesFromBase64 = bytesFromBase64;
+  base64$2.stringToBytes = stringToBytes;
+  base64$2.stringFromBytes = stringFromBytes;
+  base64$2.stringToBase64 = stringToBase64;
+  base64$2.stringFromBase64 = stringFromBase64;
   const z = __importStar(/* @__PURE__ */ requireV3());
   function bytesToBase64(u8arr) {
     return btoa(String.fromCodePoint(...u8arr));
@@ -12136,9 +12134,9 @@ function requireBase64$1() {
   function stringFromBase64(b64str) {
     return stringFromBytes(bytesFromBase64(b64str));
   }
-  base64$1.zodOutbound = z.instanceof(Uint8Array).or(z.string().transform(stringToBytes));
-  base64$1.zodInbound = z.instanceof(Uint8Array).or(z.string().transform(bytesFromBase64));
-  return base64$1;
+  base64$2.zodOutbound = z.instanceof(Uint8Array).or(z.string().transform(stringToBytes));
+  base64$2.zodInbound = z.instanceof(Uint8Array).or(z.string().transform(bytesFromBase64));
+  return base64$2;
 }
 var encodings = {};
 var isPlainObject = {};
@@ -12592,19 +12590,19 @@ function requireEnv() {
   })(env);
   return env;
 }
-var http = {};
+var http$1 = {};
 var hasRequiredHttp;
 function requireHttp() {
-  if (hasRequiredHttp) return http;
+  if (hasRequiredHttp) return http$1;
   hasRequiredHttp = 1;
-  Object.defineProperty(http, "__esModule", { value: true });
-  http.HTTPClient = void 0;
-  http.matchContentType = matchContentType;
-  http.matchStatusCode = matchStatusCode;
-  http.matchResponse = matchResponse;
-  http.isConnectionError = isConnectionError;
-  http.isTimeoutError = isTimeoutError;
-  http.isAbortError = isAbortError;
+  Object.defineProperty(http$1, "__esModule", { value: true });
+  http$1.HTTPClient = void 0;
+  http$1.matchContentType = matchContentType;
+  http$1.matchStatusCode = matchStatusCode;
+  http$1.matchResponse = matchResponse;
+  http$1.isConnectionError = isConnectionError;
+  http$1.isTimeoutError = isTimeoutError;
+  http$1.isAbortError = isAbortError;
   const DEFAULT_FETCHER = (input, init) => {
     if (init == null) {
       return fetch(input);
@@ -12678,7 +12676,7 @@ function requireHttp() {
       return child;
     }
   }
-  http.HTTPClient = HTTPClient;
+  http$1.HTTPClient = HTTPClient;
   const mediaParamSeparator = /\s*;\s*/g;
   function matchContentType(response, pattern) {
     if (pattern === "*") {
@@ -12768,16 +12766,16 @@ function requireHttp() {
     const isGenericErr = "code" in err && typeof err.code === "string" && err.code.toLowerCase() === "econnaborted";
     return isNative || isLegacyNative || isGenericErr;
   }
-  return http;
+  return http$1;
 }
-var retries = {};
+var retries$1 = {};
 var hasRequiredRetries;
 function requireRetries() {
-  if (hasRequiredRetries) return retries;
+  if (hasRequiredRetries) return retries$1;
   hasRequiredRetries = 1;
-  Object.defineProperty(retries, "__esModule", { value: true });
-  retries.TemporaryError = retries.PermanentError = void 0;
-  retries.retry = retry;
+  Object.defineProperty(retries$1, "__esModule", { value: true });
+  retries$1.TemporaryError = retries$1.PermanentError = void 0;
+  retries$1.retry = retry;
   const http_js_1 = /* @__PURE__ */ requireHttp();
   const defaultBackoff = {
     initialInterval: 500,
@@ -12799,7 +12797,7 @@ function requireRetries() {
       Object.setPrototypeOf(this, PermanentError.prototype);
     }
   }
-  retries.PermanentError = PermanentError;
+  retries$1.PermanentError = PermanentError;
   class TemporaryError extends Error {
     constructor(message, response) {
       super(message);
@@ -12808,7 +12806,7 @@ function requireRetries() {
       Object.setPrototypeOf(this, TemporaryError.prototype);
     }
   }
-  retries.TemporaryError = TemporaryError;
+  retries$1.TemporaryError = TemporaryError;
   async function retry(fetchFn, options) {
     switch (options.config.strategy) {
       case "backoff":
@@ -12908,7 +12906,7 @@ function requireRetries() {
   async function delay(delay2) {
     return new Promise((resolve2) => setTimeout(resolve2, delay2));
   }
-  return retries;
+  return retries$1;
 }
 var hasRequiredSdks;
 function requireSdks() {
@@ -13306,20 +13304,20 @@ function requireSecurity() {
   }
   return security;
 }
-var errors$3 = {};
+var errors$4 = {};
 var hasRequiredErrors$3;
 function requireErrors$3() {
-  if (hasRequiredErrors$3) return errors$3;
+  if (hasRequiredErrors$3) return errors$4;
   hasRequiredErrors$3 = 1;
-  Object.defineProperty(errors$3, "__esModule", { value: true });
-  errors$3.RealtimeTranscriptionWSError = errors$3.RealtimeTranscriptionException = void 0;
+  Object.defineProperty(errors$4, "__esModule", { value: true });
+  errors$4.RealtimeTranscriptionWSError = errors$4.RealtimeTranscriptionException = void 0;
   class RealtimeTranscriptionException extends Error {
     constructor(message, options) {
       super(message, options);
       this.name = "RealtimeTranscriptionException";
     }
   }
-  errors$3.RealtimeTranscriptionException = RealtimeTranscriptionException;
+  errors$4.RealtimeTranscriptionException = RealtimeTranscriptionException;
   class RealtimeTranscriptionWSError extends RealtimeTranscriptionException {
     constructor(message, options) {
       super(message, { cause: options?.cause });
@@ -13329,18 +13327,18 @@ function requireErrors$3() {
       this.code = options?.code ?? options?.payload?.error?.code;
     }
   }
-  errors$3.RealtimeTranscriptionWSError = RealtimeTranscriptionWSError;
-  return errors$3;
+  errors$4.RealtimeTranscriptionWSError = RealtimeTranscriptionWSError;
+  return errors$4;
 }
 var hasRequiredTranscription;
 function requireTranscription() {
-  if (hasRequiredTranscription) return transcription;
+  if (hasRequiredTranscription) return transcription$1;
   hasRequiredTranscription = 1;
-  var __importDefault = transcription && transcription.__importDefault || function(mod) {
+  var __importDefault = transcription$1 && transcription$1.__importDefault || function(mod) {
     return mod && mod.__esModule ? mod : { "default": mod };
   };
-  Object.defineProperty(transcription, "__esModule", { value: true });
-  transcription.RealtimeTranscription = void 0;
+  Object.defineProperty(transcription$1, "__esModule", { value: true });
+  transcription$1.RealtimeTranscription = void 0;
   const ws_1 = __importDefault(requireWs());
   const config_js_1 = /* @__PURE__ */ requireConfig();
   const sdks_js_1 = /* @__PURE__ */ requireSdks();
@@ -13367,11 +13365,11 @@ function requireTranscription() {
       try {
         websocket2 = new ws_1.default(url2, { headers: headers2 });
         const { session, initialEvents } = await recvSession(websocket2, options.timeoutMs ?? this._options.timeoutMs);
-        const connection2 = new connection_js_1.RealtimeConnection(websocket2, session, initialEvents);
+        const connection = new connection_js_1.RealtimeConnection(websocket2, session, initialEvents);
         if (options.audioFormat) {
-          await connection2.updateSession(options.audioFormat);
+          await connection.updateSession(options.audioFormat);
         }
-        return connection2;
+        return connection;
       } catch (err) {
         if (err instanceof errors_js_1.RealtimeTranscriptionException) {
           throw err;
@@ -13383,22 +13381,22 @@ function requireTranscription() {
       }
     }
     async *transcribeStream(audioStream, model, options = {}) {
-      const connection2 = await this.connect(model, options);
+      const connection = await this.connect(model, options);
       let stopRequested = false;
       const sendAudioTask = (async () => {
         try {
           for await (const chunk of audioStream) {
-            if (stopRequested || connection2.isClosed) {
+            if (stopRequested || connection.isClosed) {
               break;
             }
-            await connection2.sendAudio(chunk);
+            await connection.sendAudio(chunk);
           }
         } finally {
-          await connection2.endAudio();
+          await connection.endAudio();
         }
       })();
       try {
-        for await (const event of connection2) {
+        for await (const event of connection) {
           yield event;
           if (event.type === "transcription.done") {
             break;
@@ -13409,7 +13407,7 @@ function requireTranscription() {
         }
       } finally {
         stopRequested = true;
-        await connection2.close();
+        await connection.close();
         await sendAudioTask;
         const maybeReturn = audioStream.return;
         if (typeof maybeReturn === "function") {
@@ -13433,7 +13431,7 @@ function requireTranscription() {
       return wsUrl.toString();
     }
   }
-  transcription.RealtimeTranscription = RealtimeTranscription;
+  transcription$1.RealtimeTranscription = RealtimeTranscription;
   async function recvSession(websocket2, timeoutMs) {
     let timeoutId;
     const initialEvents = [];
@@ -13518,7 +13516,7 @@ function requireTranscription() {
     url2.pathname = url2.pathname.replace(/\/+$/, "") + "/";
     return url2;
   }
-  return transcription;
+  return transcription$1;
 }
 var hasRequiredRealtime;
 function requireRealtime() {
@@ -13542,7 +13540,7 @@ function requireRealtime() {
   })(realtime);
   return realtime;
 }
-var realtimeExports = /* @__PURE__ */ requireRealtime();
+var realtimeExports = requireRealtime();
 const normalizeChunk = (chunk) => {
   if (chunk instanceof Uint8Array) {
     return chunk;
@@ -14102,13 +14100,13 @@ function requireConstants$1() {
   };
   return constants$1;
 }
-var errors$2 = {};
+var errors$3 = {};
 var hasRequiredErrors$2;
 function requireErrors$2() {
-  if (hasRequiredErrors$2) return errors$2;
+  if (hasRequiredErrors$2) return errors$3;
   hasRequiredErrors$2 = 1;
   (function(exports$1) {
-    const errors2 = {
+    const errors = {
       /* Header error messages */
       INVALID_LOC: "Invalid LOC header (bad signature)",
       INVALID_CEN: "Invalid CEN header (bad signature)",
@@ -14159,11 +14157,11 @@ function requireErrors$2() {
         return new Error("ADM-ZIP: " + message);
       };
     }
-    for (const msg of Object.keys(errors2)) {
-      exports$1[msg] = E(errors2[msg]);
+    for (const msg of Object.keys(errors)) {
+      exports$1[msg] = E(errors[msg]);
     }
-  })(errors$2);
-  return errors$2;
+  })(errors$3);
+  return errors$3;
 }
 var utils$1;
 var hasRequiredUtils$1;
@@ -14986,7 +14984,7 @@ function requireZipcrypto() {
     for (let i = 0; i < len; i++) salt[i] = Math.random() * 256 & 255;
     return salt;
   };
-  const config2 = {
+  const config = {
     genSalt
   };
   function Initkeys(pw) {
@@ -15045,20 +15043,20 @@ function requireZipcrypto() {
   }
   function _salter(data) {
     if (Buffer.isBuffer(data) && data.length >= 12) {
-      config2.genSalt = function() {
+      config.genSalt = function() {
         return data.slice(0, 12);
       };
     } else if (data === "node") {
-      config2.genSalt = genSalt.node;
+      config.genSalt = genSalt.node;
     } else {
-      config2.genSalt = genSalt;
+      config.genSalt = genSalt;
     }
   }
   function encrypt(data, header, pwd, oldlike = false) {
     if (data == null) data = Buffer.alloc(0);
     if (!Buffer.isBuffer(data)) data = Buffer.from(data.toString());
     const encrypter = make_encrypter(pwd);
-    const salt = config2.genSalt();
+    const salt = config.genSalt();
     salt[11] = header.crc >>> 24 & 255;
     if (oldlike) salt[10] = header.crc >>> 16 & 255;
     const result = Buffer.alloc(data.length + 12);
@@ -16747,6 +16745,9 @@ const defaultProfile = {
   chatDriver: "ollama",
   assistantName: "Чарли",
   useSpeechSynthesis: false,
+  notifyOnJobCompleteToast: true,
+  notifyOnJobCompleteTelegram: false,
+  notifyOnJobCompleteEmail: false,
   piperModelPath: "",
   maxToolCallsPerResponse: 10,
   userName: "Пользователь",
@@ -17348,6 +17349,1127 @@ class ScenariosService {
     };
   }
 }
+const CACHE_PREFIX = "zvs::mirea_schedule::";
+const MOSCOW_TZ = "Europe/Moscow";
+const DEFAULT_TTL_SECONDS = 1800;
+const WEEKDAYS_RU = {
+  0: "понедельник",
+  1: "вторник",
+  2: "среда",
+  3: "четверг",
+  4: "пятница",
+  5: "суббота",
+  6: "воскресенье"
+};
+const fetchMireaScheduleByDate = async (url2, targetDate) => {
+  const key = buildCacheKey(url2, targetDate);
+  const cached = await getCachedEntry(key);
+  if (cached && isCacheValid(cached, DEFAULT_TTL_SECONDS)) {
+    return cached.data;
+  }
+  try {
+    const html2 = await fetchHtml(url2);
+    const icalContent = extractIcalFromHtml(html2);
+    const grouped = parseSchedule(
+      icalContent,
+      targetDate,
+      DEFAULT_TTL_SECONDS
+    );
+    setCachedEntry(key, grouped.entry);
+    return grouped.data;
+  } catch (error) {
+    if (cached && isCacheValid(cached, DEFAULT_TTL_SECONDS)) {
+      return cached.data;
+    }
+    const message = error instanceof Error ? error.message : "unknown_error";
+    return {
+      error: `schedule_fetch_failed with exception: ${message}`
+    };
+  }
+};
+const buildCacheKey = (url2, targetDate) => {
+  return `${CACHE_PREFIX}${url2}::${targetDate || "all"}`;
+};
+const getCachedEntry = async (key) => {
+  if (typeof window === "undefined" || !window.appApi?.cache) {
+    return void 0;
+  }
+  const parsed = await window.appApi.cache.getCacheEntry(key);
+  if (!parsed) {
+    return void 0;
+  }
+  try {
+    if (typeof parsed !== "object" || parsed === null || typeof parsed.ttlSeconds !== "number" || typeof parsed.expiresAt !== "number" || typeof parsed.collectedAt !== "number") {
+      return void 0;
+    }
+    return parsed;
+  } catch {
+    return void 0;
+  }
+};
+const setCachedEntry = (key, entry) => {
+  if (typeof window === "undefined" || !window.appApi?.cache) {
+    return;
+  }
+  void window.appApi.cache.setCacheEntry(key, entry);
+};
+const isCacheValid = (cached, ttlSeconds) => {
+  if (cached.ttlSeconds !== ttlSeconds) {
+    return false;
+  }
+  return Date.now() / 1e3 < cached.expiresAt;
+};
+const buildCacheEntry = (data, ttlSeconds) => {
+  const collectedAt = Math.floor(Date.now() / 1e3);
+  return {
+    collectedAt,
+    ttlSeconds,
+    expiresAt: collectedAt + ttlSeconds,
+    data
+  };
+};
+const fetchHtml = async (url2) => {
+  if (typeof window !== "undefined" && window.appApi?.network) {
+    const response2 = await window.appApi.network.proxyHttpRequest({
+      url: url2,
+      method: "GET",
+      headers: {
+        "User-Agent": "Mozilla/5.0"
+      }
+    });
+    if (!response2.ok) {
+      throw new Error(`request_failed_${response2.status}`);
+    }
+    return response2.bodyText;
+  }
+  const response = await fetch(url2, {
+    method: "GET",
+    headers: {
+      "User-Agent": "Mozilla/5.0"
+    }
+  });
+  if (!response.ok) {
+    throw new Error(`request_failed_${response.status}`);
+  }
+  return response.text();
+};
+const extractIcalFromHtml = (htmlContent) => {
+  const match = htmlContent.match(
+    /<script id="__NEXT_DATA__".*?>(.*?)<\/script>/s
+  );
+  if (!match || !match[1]) {
+    throw new Error("next_data_not_found");
+  }
+  const data = JSON.parse(match[1]);
+  const icalContent = data.props?.pageProps?.scheduleLoadInfo?.[0]?.iCalContent;
+  if (!icalContent) {
+    throw new Error("ical_content_not_found");
+  }
+  return icalContent;
+};
+const parseSchedule = (icalContent, targetDate, ttlSeconds) => {
+  const now = /* @__PURE__ */ new Date();
+  const startDate = targetDate ? /* @__PURE__ */ new Date(`${targetDate}T00:00:00`) : now;
+  const endDate = targetDate ? new Date(startDate.getTime() + 24 * 60 * 60 * 1e3) : new Date(startDate.getTime() + 180 * 24 * 60 * 60 * 1e3);
+  const events = parseIcalEvents(icalContent, startDate, endDate);
+  const grouped = groupEventsByDay(events);
+  const data = targetDate && grouped[targetDate] ? { [targetDate]: grouped[targetDate] } : grouped;
+  return {
+    data,
+    entry: buildCacheEntry(data, ttlSeconds)
+  };
+};
+const parseIcalEvents = (icalContent, startDate, endDate) => {
+  const normalized = icalContent.replace(/\\r\\n/g, "\r\n").replace(/\\n/g, "\n");
+  const events = parseEventsFromIcs(normalized);
+  const startTimestamp = startDate.getTime();
+  const endTimestamp = endDate.getTime();
+  const result = [];
+  for (const event of events) {
+    const summary = readPropertyValue(event, "SUMMARY");
+    if (summary.toLowerCase().includes("неделя")) {
+      continue;
+    }
+    const startProp = readProperty(event, "DTSTART");
+    if (!startProp) {
+      continue;
+    }
+    const endProp = readProperty(event, "DTEND");
+    const start = parseIcsDate(startProp.value, startProp.params);
+    const end = endProp ? parseIcsDate(endProp.value, endProp.params) : null;
+    const baseItem = {
+      summary: cleanText(summary),
+      start,
+      end,
+      location: cleanText(readPropertyValue(event, "LOCATION")),
+      description: decodeEscapedText(
+        readPropertyValue(event, "DESCRIPTION")
+      ),
+      uid: readPropertyValue(event, "UID"),
+      categories: readPropertyValue(event, "CATEGORIES")
+    };
+    const exDates = readPropertyList(event, "EXDATE").flatMap(
+      (item) => item.value.split(",").map((value) => value.trim()).filter((value) => value.length > 0).map((value) => parseIcsDate(value, item.params))
+    );
+    const recurrence = readPropertyValue(event, "RRULE");
+    if (recurrence) {
+      const occurrences = expandRecurrence({
+        recurrence,
+        dtstart: start,
+        rangeStart: startDate,
+        rangeEnd: endDate
+      });
+      for (const occurrence of occurrences) {
+        if (hasExcludedDate(occurrence, exDates)) {
+          continue;
+        }
+        const occTs = occurrence.getTime();
+        if (occTs < startTimestamp || occTs > endTimestamp) {
+          continue;
+        }
+        const durationMs = baseItem.end && baseItem.start ? baseItem.end.getTime() - baseItem.start.getTime() : null;
+        result.push({
+          ...baseItem,
+          start: occurrence,
+          end: durationMs !== null ? new Date(occurrence.getTime() + durationMs) : null
+        });
+      }
+      continue;
+    }
+    const startTs = baseItem.start.getTime();
+    if (startTs >= startTimestamp && startTs <= endTimestamp) {
+      result.push(baseItem);
+    }
+  }
+  return result;
+};
+const parseEventsFromIcs = (ics) => {
+  const unfolded = unfoldIcs(ics);
+  const lines = unfolded.split(/\r?\n/);
+  const events = [];
+  let currentEvent = null;
+  for (const line of lines) {
+    if (line === "BEGIN:VEVENT") {
+      currentEvent = {};
+      continue;
+    }
+    if (line === "END:VEVENT") {
+      if (currentEvent) {
+        events.push(currentEvent);
+      }
+      currentEvent = null;
+      continue;
+    }
+    if (!currentEvent) {
+      continue;
+    }
+    const parsed = parsePropertyLine(line);
+    if (!parsed) {
+      continue;
+    }
+    const existing = currentEvent[parsed.name] || [];
+    existing.push(parsed);
+    currentEvent[parsed.name] = existing;
+  }
+  return events;
+};
+const unfoldIcs = (ics) => ics.replace(/\r?\n[ \t]/g, "");
+const parsePropertyLine = (line) => {
+  const separatorIndex = line.indexOf(":");
+  if (separatorIndex <= 0) {
+    return null;
+  }
+  const left = line.slice(0, separatorIndex);
+  const value = line.slice(separatorIndex + 1);
+  const [nameRaw, ...paramsRaw] = left.split(";");
+  const params = {};
+  for (const rawParam of paramsRaw) {
+    const [paramNameRaw, paramValueRaw] = rawParam.split("=");
+    if (!paramNameRaw || !paramValueRaw) {
+      continue;
+    }
+    params[paramNameRaw.toUpperCase()] = paramValueRaw.replace(
+      /^"|"$/g,
+      ""
+    );
+  }
+  return {
+    name: nameRaw.toUpperCase(),
+    params,
+    value
+  };
+};
+const readProperty = (event, name) => event[name]?.[0];
+const readPropertyList = (event, name) => event[name] || [];
+const readPropertyValue = (event, name) => readProperty(event, name)?.value || "";
+const cleanText = (value) => value.replace(/\r\n/g, " ").replace(/\n/g, " ").trim();
+const decodeEscapedText = (value) => value.replace(/\\n/g, "\n").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\").trim();
+const parseIcsDate = (value, params) => {
+  const clean = value.trim();
+  if (/^\d{8}$/.test(clean)) {
+    const year = Number(clean.slice(0, 4));
+    const month = Number(clean.slice(4, 6));
+    const day = Number(clean.slice(6, 8));
+    return zonedDateTimeToUtc(
+      { year, month, day, hour: 0, minute: 0, second: 0 },
+      MOSCOW_TZ
+    );
+  }
+  const zuluMatch = clean.match(
+    /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/
+  );
+  if (zuluMatch) {
+    return new Date(
+      Date.UTC(
+        Number(zuluMatch[1]),
+        Number(zuluMatch[2]) - 1,
+        Number(zuluMatch[3]),
+        Number(zuluMatch[4]),
+        Number(zuluMatch[5]),
+        Number(zuluMatch[6])
+      )
+    );
+  }
+  const localMatch = clean.match(
+    /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/
+  );
+  if (localMatch) {
+    const zone = params.TZID || MOSCOW_TZ;
+    return zonedDateTimeToUtc(
+      {
+        year: Number(localMatch[1]),
+        month: Number(localMatch[2]),
+        day: Number(localMatch[3]),
+        hour: Number(localMatch[4]),
+        minute: Number(localMatch[5]),
+        second: Number(localMatch[6])
+      },
+      zone
+    );
+  }
+  const fallback2 = new Date(clean);
+  if (!Number.isNaN(fallback2.getTime())) {
+    return fallback2;
+  }
+  return /* @__PURE__ */ new Date();
+};
+const zonedDateTimeToUtc = (value, timeZone) => {
+  const utcGuess = new Date(
+    Date.UTC(
+      value.year,
+      value.month - 1,
+      value.day,
+      value.hour,
+      value.minute,
+      value.second
+    )
+  );
+  const offset = getTimeZoneOffsetMs(utcGuess, timeZone);
+  return new Date(utcGuess.getTime() - offset);
+};
+const getTimeZoneOffsetMs = (date, timeZone) => {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+  const parts = dtf.formatToParts(date);
+  const get2 = (type) => {
+    const part = parts.find((item) => item.type === type);
+    return Number(part?.value || "0");
+  };
+  const asUtc = Date.UTC(
+    get2("year"),
+    get2("month") - 1,
+    get2("day"),
+    get2("hour"),
+    get2("minute"),
+    get2("second")
+  );
+  return asUtc - date.getTime();
+};
+const expandRecurrence = (params) => {
+  const parsed = parseRrule(params.recurrence);
+  const freq = parsed.FREQ || "";
+  const interval = Number(parsed.INTERVAL || "1");
+  const countLimit = parsed.COUNT ? Number(parsed.COUNT) : null;
+  const until = parsed.UNTIL ? parseIcsDate(parsed.UNTIL, {}) : null;
+  const byDays = (parsed.BYDAY || "").split(",").map((value) => value.trim()).filter((value) => value.length > 0);
+  if (!freq) {
+    return [params.dtstart];
+  }
+  const results2 = [];
+  let generated = 0;
+  const absoluteEnd = new Date(
+    Math.min(
+      params.rangeEnd.getTime(),
+      until?.getTime() ?? Number.POSITIVE_INFINITY
+    )
+  );
+  const pushOccurrence = (occurrence) => {
+    if (countLimit !== null && generated >= countLimit) {
+      return;
+    }
+    generated += 1;
+    if (occurrence >= params.rangeStart && occurrence <= absoluteEnd) {
+      results2.push(occurrence);
+    }
+  };
+  if (freq === "DAILY") {
+    let cursor = new Date(params.dtstart);
+    while (cursor <= absoluteEnd) {
+      pushOccurrence(new Date(cursor));
+      if (countLimit !== null && generated >= countLimit) {
+        break;
+      }
+      cursor = new Date(
+        cursor.getTime() + interval * 24 * 60 * 60 * 1e3
+      );
+    }
+    return results2;
+  }
+  if (freq === "WEEKLY") {
+    const dayCodes = byDays.length ? byDays : [toIcsWeekday(params.dtstart)];
+    const weekdaySet = new Set(dayCodes);
+    const anchorWeekStart = startOfWeek(params.dtstart);
+    let cursor = new Date(params.dtstart);
+    while (cursor <= absoluteEnd) {
+      const currentWeekStart = startOfWeek(cursor);
+      const weekDiff = Math.floor(
+        (currentWeekStart.getTime() - anchorWeekStart.getTime()) / (7 * 24 * 60 * 60 * 1e3)
+      );
+      if (weekDiff >= 0 && weekDiff % interval === 0) {
+        const currentCode = toIcsWeekday(cursor);
+        if (weekdaySet.has(currentCode)) {
+          const occurrence = cloneDateTime(cursor, params.dtstart);
+          pushOccurrence(occurrence);
+          if (countLimit !== null && generated >= countLimit) {
+            break;
+          }
+        }
+      }
+      cursor = new Date(cursor.getTime() + 24 * 60 * 60 * 1e3);
+    }
+    return results2;
+  }
+  if (params.dtstart <= absoluteEnd) {
+    pushOccurrence(params.dtstart);
+  }
+  return results2;
+};
+const parseRrule = (rruleValue) => {
+  const parts = rruleValue.split(";");
+  const parsed = {};
+  for (const part of parts) {
+    const [keyRaw, valueRaw] = part.split("=");
+    if (!keyRaw || !valueRaw) {
+      continue;
+    }
+    parsed[keyRaw.toUpperCase()] = valueRaw;
+  }
+  return parsed;
+};
+const toIcsWeekday = (date) => {
+  const day = date.getUTCDay();
+  switch (day) {
+    case 0:
+      return "SU";
+    case 1:
+      return "MO";
+    case 2:
+      return "TU";
+    case 3:
+      return "WE";
+    case 4:
+      return "TH";
+    case 5:
+      return "FR";
+    default:
+      return "SA";
+  }
+};
+const startOfWeek = (date) => {
+  const copy = new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      0,
+      0,
+      0,
+      0
+    )
+  );
+  const day = copy.getUTCDay();
+  const shift = day === 0 ? 6 : day - 1;
+  copy.setUTCDate(copy.getUTCDate() - shift);
+  return copy;
+};
+const cloneDateTime = (baseDate, timeSource) => {
+  return new Date(
+    Date.UTC(
+      baseDate.getUTCFullYear(),
+      baseDate.getUTCMonth(),
+      baseDate.getUTCDate(),
+      timeSource.getUTCHours(),
+      timeSource.getUTCMinutes(),
+      timeSource.getUTCSeconds(),
+      timeSource.getUTCMilliseconds()
+    )
+  );
+};
+const hasExcludedDate = (occurrence, exDates) => {
+  const occurrenceKey = dateKeyInZone(occurrence, MOSCOW_TZ);
+  return exDates.some(
+    (item) => dateKeyInZone(item, MOSCOW_TZ) === occurrenceKey
+  );
+};
+const dateKeyInZone = (date, timeZone) => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+  const read = (partName) => parts.find((part) => part.type === partName)?.value || "00";
+  return `${read("year")}-${read("month")}-${read("day")}`;
+};
+const timeInZone = (date, timeZone) => {
+  return new Intl.DateTimeFormat("ru-RU", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(date);
+};
+const weekdayRu = (date, timeZone) => {
+  const dayName = new Intl.DateTimeFormat("ru-RU", {
+    timeZone,
+    weekday: "long"
+  }).format(date);
+  const lower = dayName.toLowerCase();
+  const fallback2 = WEEKDAYS_RU[dayNumberInZone(date, timeZone)] || lower;
+  return lower || fallback2;
+};
+const dayNumberInZone = (date, timeZone) => {
+  const dayText = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "short"
+  }).format(date);
+  const map2 = {
+    Mon: 0,
+    Tue: 1,
+    Wed: 2,
+    Thu: 3,
+    Fri: 4,
+    Sat: 5,
+    Sun: 6
+  };
+  return map2[dayText] ?? 0;
+};
+const groupEventsByDay = (events) => {
+  const grouped = {};
+  for (const event of events) {
+    const dateKey = dateKeyInZone(event.start, MOSCOW_TZ);
+    const weekday = weekdayRu(event.start, MOSCOW_TZ);
+    if (!grouped[dateKey]) {
+      grouped[dateKey] = {
+        weekday,
+        lessons: []
+      };
+    }
+    const summary = event.summary;
+    const subject = summary.replace("ЛК ", "").replace("ПР ", "").trim();
+    const type = summary.includes("ЛК ") ? "ЛК" : summary.includes("ПР ") ? "ПР" : event.categories;
+    let teacher = "";
+    if (event.description) {
+      const lines = event.description.split("\n");
+      const teacherLine = lines.find(
+        (line) => line.includes("Преподаватель:")
+      );
+      if (teacherLine) {
+        teacher = teacherLine.replace("Преподаватель:", "").trim();
+      }
+    }
+    const startTime = timeInZone(event.start, MOSCOW_TZ);
+    const endTime = event.end ? timeInZone(event.end, MOSCOW_TZ) : "";
+    const time = endTime ? `${startTime} - ${endTime}` : startTime;
+    grouped[dateKey].lessons.push({
+      time,
+      subject,
+      type,
+      teacher,
+      location: event.location,
+      uid: event.uid
+    });
+  }
+  for (const value of Object.values(grouped)) {
+    value.lessons.sort(
+      (first, second) => first.time.localeCompare(second.time, "ru-RU")
+    );
+  }
+  return grouped;
+};
+const planStore = /* @__PURE__ */ new Map();
+const formatPlanResponse = (plan) => {
+  const completed = plan.steps.filter((step) => step.completed);
+  const pending = plan.steps.filter((step) => !step.completed);
+  return {
+    plan_id: plan.id,
+    title: plan.title,
+    progress: `${completed.length}/${plan.steps.length}`,
+    completed_steps: completed.map((step) => ({
+      id: step.id,
+      description: step.description
+    })),
+    pending_steps: pending.map((step) => ({
+      id: step.id,
+      description: step.description
+    })),
+    next_step: pending[0] ?? null,
+    is_complete: pending.length === 0
+  };
+};
+const toToolMessage = (value) => typeof value === "string" ? value : JSON.stringify(value);
+const commandMetaFromArgs = (args) => ({
+  command: typeof args.command === "string" ? args.command : "",
+  cwd: typeof args.cwd === "string" ? args.cwd : "",
+  isAdmin: false
+});
+class ChatSessionService {
+  constructor(deps) {
+    this.deps = deps;
+  }
+  pendingApprovals = /* @__PURE__ */ new Map();
+  sessions = /* @__PURE__ */ new Map();
+  async runSession(payload, emit) {
+    const sessionId = payload.sessionId.trim();
+    if (!sessionId) {
+      throw new Error("sessionId is required");
+    }
+    const state = { cancelled: false };
+    this.sessions.set(sessionId, state);
+    const allowedTools = new Set(
+      (payload.tools || []).map((tool) => tool.function.name)
+    );
+    const maxToolCalls = Math.max(1, payload.maxToolCalls || 1);
+    let toolCallsUsed = 0;
+    const messages2 = [...payload.messages || []];
+    try {
+      while (!state.cancelled) {
+        let roundContent = "";
+        let roundThinking = "";
+        const roundToolCalls = [];
+        let roundUsage = null;
+        for await (const chunk of this.deps.ollamaService.streamChat(
+          {
+            model: payload.model,
+            messages: messages2,
+            ...payload.tools ? { tools: payload.tools } : {},
+            ...payload.format ? { format: payload.format } : {},
+            ...payload.think !== void 0 ? { think: payload.think } : {}
+          },
+          this.deps.userProfileService.getUserProfile().ollamaToken
+        )) {
+          if (state.cancelled) {
+            break;
+          }
+          const thinkingChunk = chunk.message?.thinking || "";
+          const contentChunk = chunk.message?.content || "";
+          if (thinkingChunk) {
+            roundThinking += thinkingChunk;
+            emit({
+              sessionId,
+              type: "thinking.delta",
+              chunkText: thinkingChunk
+            });
+          }
+          if (contentChunk) {
+            roundContent += contentChunk;
+            emit({
+              sessionId,
+              type: "content.delta",
+              chunkText: contentChunk
+            });
+          }
+          if (chunk.message?.tool_calls?.length) {
+            roundToolCalls.push(...chunk.message.tool_calls);
+          }
+          if (chunk.done) {
+            const promptTokens = Math.max(
+              0,
+              Number(chunk.prompt_eval_count ?? 0)
+            );
+            const completionTokens = Math.max(
+              0,
+              Number(chunk.eval_count ?? 0)
+            );
+            const totalTokens = promptTokens + completionTokens;
+            if (totalTokens > 0) {
+              roundUsage = {
+                promptTokens,
+                completionTokens,
+                totalTokens
+              };
+            }
+          }
+        }
+        if (state.cancelled) {
+          break;
+        }
+        if (roundToolCalls.length === 0) {
+          if (roundUsage) {
+            emit({
+              sessionId,
+              type: "usage",
+              promptTokens: roundUsage.promptTokens,
+              completionTokens: roundUsage.completionTokens,
+              totalTokens: roundUsage.totalTokens
+            });
+          }
+          emit({ sessionId, type: "done" });
+          return;
+        }
+        messages2.push({
+          role: "assistant",
+          thinking: roundThinking,
+          content: roundContent,
+          tool_calls: roundToolCalls
+        });
+        for (const toolCall of roundToolCalls) {
+          if (state.cancelled) {
+            break;
+          }
+          if (toolCallsUsed >= maxToolCalls) {
+            throw new Error(
+              `Превышен лимит вызовов инструментов (${maxToolCalls})`
+            );
+          }
+          const toolName = toolCall.function.name;
+          const args = toolCall.function.arguments || {};
+          const callId = `${sessionId}:tool_call_${toolCallsUsed + 1}`;
+          if (!allowedTools.has(toolName)) {
+            throw new Error(
+              `Tool ${toolName} недоступен в текущем чате`
+            );
+          }
+          emit({
+            sessionId,
+            type: "tool.call",
+            callId,
+            toolName,
+            args
+          });
+          const result = await this.executeTool(
+            sessionId,
+            callId,
+            toolName,
+            args,
+            payload,
+            state
+          );
+          emit({
+            sessionId,
+            type: "tool.result",
+            callId,
+            toolName,
+            args,
+            result
+          });
+          messages2.push({
+            role: "tool",
+            tool_name: toolName,
+            content: toToolMessage(result)
+          });
+          toolCallsUsed += 1;
+        }
+      }
+      emit({ sessionId, type: "done" });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Не удалось получить ответ модели";
+      emit({
+        sessionId,
+        type: "error",
+        message: errorMessage
+      });
+      throw error;
+    } finally {
+      this.sessions.delete(sessionId);
+      for (const [callId, pending] of this.pendingApprovals.entries()) {
+        if (pending.sessionId !== sessionId) {
+          continue;
+        }
+        this.pendingApprovals.delete(callId);
+        pending.resolve(false);
+      }
+    }
+  }
+  cancelSession(sessionId) {
+    const state = this.sessions.get(sessionId);
+    if (!state) {
+      return false;
+    }
+    state.cancelled = true;
+    for (const [callId, pending] of this.pendingApprovals.entries()) {
+      if (pending.sessionId !== sessionId) {
+        continue;
+      }
+      this.pendingApprovals.delete(callId);
+      pending.resolve(false);
+    }
+    return true;
+  }
+  resolveCommandApproval(payload) {
+    const callId = typeof payload.callId === "string" ? payload.callId.trim() : "";
+    const pending = this.pendingApprovals.get(callId);
+    if (!pending) {
+      return false;
+    }
+    this.pendingApprovals.delete(callId);
+    pending.resolve(payload.accepted === true);
+    return true;
+  }
+  async executeTool(sessionId, callId, toolName, args, payload, state) {
+    if (toolName === "command_exec") {
+      const approved = await this.waitCommandApproval(sessionId, callId);
+      const { command, cwd, isAdmin } = commandMetaFromArgs(args);
+      if (!approved) {
+        return {
+          status: "cancelled",
+          command,
+          cwd,
+          isAdmin,
+          reason: "Пользователь отклонил выполнение"
+        };
+      }
+      return this.deps.commandExecService.execute(
+        command,
+        cwd || void 0
+      );
+    }
+    if (state.cancelled) {
+      return { status: "cancelled" };
+    }
+    if (toolName === "vector_store_search_tool") {
+      return this.searchVectorStore(args, payload);
+    }
+    if (toolName === "web_search") {
+      const request = typeof args.request === "string" ? args.request : "";
+      return this.postOllamaTool("web_search", {
+        query: request
+      });
+    }
+    if (toolName === "web_fetch") {
+      const url2 = typeof args.url === "string" ? args.url : "";
+      return this.postOllamaTool("web_fetch", { url: url2 });
+    }
+    if (toolName === "open_url") {
+      const url2 = typeof args.url === "string" ? args.url : "";
+      const timeoutMs = typeof args.timeoutMs === "number" ? args.timeoutMs : void 0;
+      return this.deps.browserService.openUrl(url2, timeoutMs);
+    }
+    if (toolName === "get_page_snapshot") {
+      const maxElements = typeof args.maxElements === "number" ? args.maxElements : void 0;
+      return this.deps.browserService.getPageSnapshot(maxElements);
+    }
+    if (toolName === "interract_with") {
+      const action = typeof args.action === "string" ? args.action : "click";
+      const selector = typeof args.selector === "string" ? args.selector : "";
+      const text = typeof args.text === "string" ? args.text : void 0;
+      const submit = typeof args.submit === "boolean" ? args.submit : void 0;
+      const waitForNavigationMs = typeof args.waitForNavigationMs === "number" ? args.waitForNavigationMs : void 0;
+      return this.deps.browserService.interactWith({
+        action,
+        selector,
+        text,
+        submit,
+        waitForNavigationMs
+      });
+    }
+    if (toolName === "close_browser") {
+      return this.deps.browserService.closeSession();
+    }
+    if (toolName === "send_telegram_msg") {
+      const profile = this.deps.userProfileService.getUserProfile();
+      const payloadToSend = {
+        telegramBotToken: profile.telegramBotToken,
+        telegramId: profile.telegramId,
+        message: typeof args.message === "string" ? args.message : "",
+        parseMode: args.parse_mode === "HTML" || args.parse_mode === "MarkdownV2" ? args.parse_mode : "Markdown"
+      };
+      if (!payloadToSend.telegramBotToken || !payloadToSend.telegramId) {
+        return {
+          success: false,
+          error: "missing_config",
+          message: "Telegram не настроен. Укажи Bot Token и ID пользователя в настройках."
+        };
+      }
+      return this.deps.telegramService.sendMessage(payloadToSend);
+    }
+    if (toolName === "get_telegram_unread_msgs") {
+      const profile = this.deps.userProfileService.getUserProfile();
+      if (!profile.telegramBotToken || !profile.telegramId) {
+        return {
+          success: false,
+          error: "missing_config",
+          message: "Telegram не настроен. Укажи Bot Token и ID пользователя в настройках."
+        };
+      }
+      return this.deps.telegramService.getUnreadMessages({
+        telegramBotToken: profile.telegramBotToken,
+        telegramId: profile.telegramId,
+        limit: typeof args.limit === "number" ? args.limit : void 0,
+        markAsRead: typeof args.mark_as_read === "boolean" ? args.mark_as_read : void 0
+      });
+    }
+    if (toolName === "list_directory") {
+      const cwd = typeof args.cwd === "string" ? args.cwd.trim() : "";
+      if (!cwd) {
+        return { error: "Необходимо указать параметр cwd." };
+      }
+      return this.deps.fSystemService.listDirectory(cwd);
+    }
+    if (toolName === "create_file") {
+      const cwd = typeof args.cwd === "string" ? args.cwd.trim() : "";
+      const filename = typeof args.filename === "string" ? args.filename.trim() : "";
+      const content = typeof args.content === "string" ? args.content : "";
+      if (!cwd || !filename) {
+        return { error: "Необходимо указать cwd и filename." };
+      }
+      return this.deps.fSystemService.createFile(cwd, filename, content);
+    }
+    if (toolName === "create_dir") {
+      const cwd = typeof args.cwd === "string" ? args.cwd.trim() : "";
+      const dirname = typeof args.dirname === "string" ? args.dirname.trim() : "";
+      if (!cwd || !dirname) {
+        return { error: "Необходимо указать cwd и dirname." };
+      }
+      return this.deps.fSystemService.createDir(cwd, dirname);
+    }
+    if (toolName === "read_file") {
+      const filePath = typeof args.filePath === "string" ? args.filePath.trim() : "";
+      const readAll = typeof args.readAll === "boolean" ? args.readAll : true;
+      const fromLine = typeof args.readFromRow === "number" ? args.readFromRow : void 0;
+      const toLine = typeof args.readToRow === "number" ? args.readToRow : void 0;
+      if (!filePath) {
+        return { error: "Необходимо указать filePath." };
+      }
+      return this.deps.fSystemService.readTextFileRange(
+        filePath,
+        readAll,
+        fromLine,
+        toLine
+      );
+    }
+    if (toolName === "qa_tool") {
+      const question = typeof args.question === "string" ? args.question : "";
+      const reason = typeof args.reason === "string" ? args.reason : "";
+      const selectAnswers = Array.isArray(args.selectAnswers) ? args.selectAnswers.filter(
+        (value) => typeof value === "string"
+      ) : [];
+      const userAnswer = typeof args.userAnswer === "string" ? args.userAnswer : "";
+      return {
+        status: "awaiting_user_response",
+        question,
+        reason,
+        selectAnswers,
+        userAnswer,
+        instruction: "Задай пользователю этот вопрос и дождись ответа в чате перед продолжением."
+      };
+    }
+    if (toolName === "planning_tool") {
+      return this.executePlanningTool(args);
+    }
+    if (toolName === "schedule_mirea_tool") {
+      const dateValue = typeof args.date_value === "string" ? args.date_value.trim() : "";
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+        throw new Error(
+          "Parameter date_value must be in YYYY-MM-DD format"
+        );
+      }
+      return fetchMireaScheduleByDate(
+        `${Config2.MIREA_BASE_URL}/?date=${dateValue}&s=1_778`,
+        dateValue
+      );
+    }
+    throw new Error(`Tool ${toolName} не поддерживается в main runtime`);
+  }
+  async searchVectorStore(args, payload) {
+    const query = typeof args.query === "string" ? args.query.trim() : "";
+    const rawLimit = typeof args.limit === "number" ? args.limit : 5;
+    const limit = Math.max(1, Math.min(10, Math.floor(rawLimit)));
+    if (!query) {
+      throw new Error("Поисковый запрос пуст");
+    }
+    const profile = this.deps.userProfileService.getUserProfile();
+    const currentUserId = this.deps.userProfileService.getCurrentUserId();
+    const activeProjectId = payload.runtimeContext?.activeProjectId || profile.activeProjectId || "";
+    if (!activeProjectId) {
+      throw new Error(
+        "vector_store_search_tool доступен только в чате проекта"
+      );
+    }
+    const vectorStorages = this.deps.databaseService.getVectorStorages(currentUserId);
+    const connectedStorage = vectorStorages.find(
+      (storage) => storage.usedByProjects.some(
+        (projectRef) => projectRef.id === activeProjectId
+      )
+    );
+    if (!connectedStorage) {
+      throw new Error(
+        "К текущему проекту не подключено векторное хранилище"
+      );
+    }
+    const model = profile.ollamaEmbeddingModel.trim() || profile.ollamaModel.trim();
+    if (!model) {
+      throw new Error("Не задана embedding model");
+    }
+    const embedResult = await this.deps.ollamaService.getEmbed(
+      {
+        model,
+        input: [query]
+      },
+      profile.ollamaToken
+    );
+    const queryEmbedding = embedResult.embeddings[0] && Array.isArray(embedResult.embeddings[0]) ? embedResult.embeddings[0] : [];
+    if (!queryEmbedding.length) {
+      throw new Error("Не удалось получить embedding запроса");
+    }
+    const rows = await this.deps.lanceDbService.search(
+      connectedStorage.dataPath,
+      queryEmbedding,
+      limit
+    );
+    return {
+      vectorStorageId: connectedStorage.id,
+      hits: rows.map((row) => ({
+        id: row.id,
+        text: row.text,
+        fileId: row.fileId,
+        fileName: row.fileName,
+        chunkIndex: row.chunkIndex,
+        score: typeof row._distance === "number" ? row._distance : typeof row._score === "number" ? row._score : 0
+      }))
+    };
+  }
+  async postOllamaTool(endpoint, payload) {
+    const profile = this.deps.userProfileService.getUserProfile();
+    const token = profile.ollamaToken.trim();
+    const baseUrl = Config2.OLLAMA_BASE_URL.trim().replace(/\/$/, "");
+    const response = await fetch(`${baseUrl}/api/${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...token ? { Authorization: `Bearer ${token}` } : {}
+      },
+      body: JSON.stringify(payload)
+    });
+    const bodyText = await response.text();
+    if (!response.ok) {
+      throw new Error(
+        bodyText || `${endpoint} failed (${response.status})`
+      );
+    }
+    if (!bodyText.trim()) {
+      return {};
+    }
+    try {
+      return JSON.parse(bodyText);
+    } catch {
+      return {
+        result: bodyText
+      };
+    }
+  }
+  waitCommandApproval(sessionId, callId) {
+    return new Promise((resolve2) => {
+      this.pendingApprovals.set(callId, {
+        sessionId,
+        resolve: resolve2
+      });
+    });
+  }
+  executePlanningTool(args) {
+    const action = typeof args.action === "string" ? args.action : "";
+    if (action === "create") {
+      const title = typeof args.title === "string" && args.title.trim() ? args.title.trim() : "Без названия";
+      const rawSteps = Array.isArray(args.steps) ? args.steps.filter(
+        (step) => typeof step === "string"
+      ) : [];
+      if (rawSteps.length === 0) {
+        return {
+          error: "Необходимо передать хотя бы один шаг в поле 'steps'."
+        };
+      }
+      const id = `plan_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      const plan = {
+        id,
+        title,
+        steps: rawSteps.map((description, index) => ({
+          id: index + 1,
+          description,
+          completed: false
+        }))
+      };
+      planStore.set(id, plan);
+      return {
+        ...formatPlanResponse(plan),
+        instruction: "План создан. Выполняй шаги строго по порядку. После каждого шага вызывай complete_step с соответствующим step_id."
+      };
+    }
+    if (action === "complete_step") {
+      const planId = typeof args.plan_id === "string" ? args.plan_id : "";
+      const stepId = typeof args.step_id === "number" ? args.step_id : null;
+      const plan = planStore.get(planId);
+      if (!plan) {
+        return {
+          error: `План с id '${planId}' не найден. Сначала создай план через action='create'.`
+        };
+      }
+      if (stepId === null) {
+        return {
+          error: "Необходимо указать step_id — номер выполненного шага."
+        };
+      }
+      const step = plan.steps.find((item) => item.id === stepId);
+      if (!step) {
+        return {
+          error: `Шаг с id=${stepId} не найден в плане '${plan.title}'.`
+        };
+      }
+      if (step.completed) {
+        return {
+          warning: `Шаг ${stepId} уже был отмечен как выполненный.`,
+          ...formatPlanResponse(plan)
+        };
+      }
+      step.completed = true;
+      const response = formatPlanResponse(plan);
+      return {
+        ...response,
+        instruction: response.is_complete ? "Все шаги выполнены. План завершён." : `Шаг ${stepId} отмечен выполненным. Следующий шаг: #${response.next_step?.id} — ${response.next_step?.description}`
+      };
+    }
+    if (action === "get_status") {
+      const planId = typeof args.plan_id === "string" ? args.plan_id : "";
+      const plan = planStore.get(planId);
+      if (!plan) {
+        return {
+          error: `План с id '${planId}' не найден.`
+        };
+      }
+      return formatPlanResponse(plan);
+    }
+    return {
+      error: `Неизвестное действие '${action}'. Используй: 'create', 'complete_step', 'get_status'.`
+    };
+  }
+}
 class LanceDbService {
   constructor(vectorIndexPath) {
     this.vectorIndexPath = vectorIndexPath;
@@ -17487,12 +18609,12 @@ class LanceDbService {
   }
 }
 var lib$5 = {};
-var underscoreNodeF = {};
+var underscoreNodeF$1 = {};
 var hasRequiredUnderscoreNodeF;
 function requireUnderscoreNodeF() {
-  if (hasRequiredUnderscoreNodeF) return underscoreNodeF;
+  if (hasRequiredUnderscoreNodeF) return underscoreNodeF$1;
   hasRequiredUnderscoreNodeF = 1;
-  Object.defineProperty(underscoreNodeF, "__esModule", { value: true });
+  Object.defineProperty(underscoreNodeF$1, "__esModule", { value: true });
   var VERSION = "1.13.8";
   var root = typeof self == "object" && self.self === self && self || typeof commonjsGlobal == "object" && commonjsGlobal.global === commonjsGlobal && commonjsGlobal || Function("return this")() || {};
   var ArrayProto = Array.prototype, ObjProto = Object.prototype;
@@ -17662,10 +18784,10 @@ function requireUnderscoreNodeF() {
     if (typeof length == "number" && (isArray(obj) || isString(obj) || isArguments$1(obj))) return length === 0;
     return getLength(keys(obj)) === 0;
   }
-  function isMatch(object3, attrs) {
+  function isMatch(object2, attrs) {
     var _keys = keys(attrs), length = _keys.length;
-    if (object3 == null) return !length;
-    var obj = Object(object3);
+    if (object2 == null) return !length;
+    var obj = Object(object2);
     for (var i = 0; i < length; i++) {
       var key = _keys[i];
       if (attrs[key] !== obj[key] || !(key in obj)) return false;
@@ -17907,8 +19029,8 @@ function requireUnderscoreNodeF() {
     }
     return length ? obj : void 0;
   }
-  function get2(object3, path2, defaultValue) {
-    var value = deepGet(object3, toPath(path2));
+  function get2(object2, path2, defaultValue) {
+    var value = deepGet(object2, toPath(path2));
     return isUndefined(value) ? defaultValue : value;
   }
   function has(obj, path2) {
@@ -18707,7 +19829,7 @@ function requireUnderscoreNodeF() {
     return result2;
   }
   var zip = restArguments(unzip2);
-  function object2(list, values2) {
+  function object(list, values2) {
     var result2 = {};
     for (var i = 0, length = getLength(list); i < length; i++) {
       if (values2) {
@@ -18920,7 +20042,7 @@ function requireUnderscoreNodeF() {
     unzip: unzip2,
     transpose: unzip2,
     zip,
-    object: object2,
+    object,
     range,
     chunk,
     mixin,
@@ -18928,141 +20050,141 @@ function requireUnderscoreNodeF() {
   };
   var _ = mixin(allExports);
   _._ = _;
-  underscoreNodeF.VERSION = VERSION;
-  underscoreNodeF._ = _;
-  underscoreNodeF._escape = _escape;
-  underscoreNodeF._unescape = _unescape;
-  underscoreNodeF.after = after;
-  underscoreNodeF.allKeys = allKeys;
-  underscoreNodeF.before = before;
-  underscoreNodeF.bind = bind2;
-  underscoreNodeF.bindAll = bindAll;
-  underscoreNodeF.chain = chain;
-  underscoreNodeF.chunk = chunk;
-  underscoreNodeF.clone = clone;
-  underscoreNodeF.compact = compact;
-  underscoreNodeF.compose = compose;
-  underscoreNodeF.constant = constant;
-  underscoreNodeF.contains = contains;
-  underscoreNodeF.countBy = countBy;
-  underscoreNodeF.create = create;
-  underscoreNodeF.debounce = debounce;
-  underscoreNodeF.defaults = defaults2;
-  underscoreNodeF.defer = defer;
-  underscoreNodeF.delay = delay;
-  underscoreNodeF.difference = difference;
-  underscoreNodeF.each = each2;
-  underscoreNodeF.every = every;
-  underscoreNodeF.extend = extend;
-  underscoreNodeF.extendOwn = extendOwn;
-  underscoreNodeF.filter = filter2;
-  underscoreNodeF.find = find;
-  underscoreNodeF.findIndex = findIndex;
-  underscoreNodeF.findKey = findKey;
-  underscoreNodeF.findLastIndex = findLastIndex;
-  underscoreNodeF.findWhere = findWhere;
-  underscoreNodeF.first = first;
-  underscoreNodeF.flatten = flatten;
-  underscoreNodeF.functions = functions;
-  underscoreNodeF.get = get2;
-  underscoreNodeF.groupBy = groupBy;
-  underscoreNodeF.has = has;
-  underscoreNodeF.identity = identity;
-  underscoreNodeF.indexBy = indexBy;
-  underscoreNodeF.indexOf = indexOf;
-  underscoreNodeF.initial = initial;
-  underscoreNodeF.intersection = intersection;
-  underscoreNodeF.invert = invert;
-  underscoreNodeF.invoke = invoke;
-  underscoreNodeF.isArguments = isArguments$1;
-  underscoreNodeF.isArray = isArray;
-  underscoreNodeF.isArrayBuffer = isArrayBuffer;
-  underscoreNodeF.isBoolean = isBoolean;
-  underscoreNodeF.isDataView = isDataView$1;
-  underscoreNodeF.isDate = isDate;
-  underscoreNodeF.isElement = isElement;
-  underscoreNodeF.isEmpty = isEmpty;
-  underscoreNodeF.isEqual = isEqual;
-  underscoreNodeF.isError = isError;
-  underscoreNodeF.isFinite = isFinite$1;
-  underscoreNodeF.isFunction = isFunction$1;
-  underscoreNodeF.isMap = isMap;
-  underscoreNodeF.isMatch = isMatch;
-  underscoreNodeF.isNaN = isNaN$1;
-  underscoreNodeF.isNull = isNull;
-  underscoreNodeF.isNumber = isNumber;
-  underscoreNodeF.isObject = isObject;
-  underscoreNodeF.isRegExp = isRegExp;
-  underscoreNodeF.isSet = isSet;
-  underscoreNodeF.isString = isString;
-  underscoreNodeF.isSymbol = isSymbol;
-  underscoreNodeF.isTypedArray = isTypedArray$1;
-  underscoreNodeF.isUndefined = isUndefined;
-  underscoreNodeF.isWeakMap = isWeakMap;
-  underscoreNodeF.isWeakSet = isWeakSet;
-  underscoreNodeF.iteratee = iteratee;
-  underscoreNodeF.keys = keys;
-  underscoreNodeF.last = last;
-  underscoreNodeF.lastIndexOf = lastIndexOf;
-  underscoreNodeF.map = map2;
-  underscoreNodeF.mapObject = mapObject;
-  underscoreNodeF.matcher = matcher;
-  underscoreNodeF.max = max;
-  underscoreNodeF.memoize = memoize;
-  underscoreNodeF.min = min;
-  underscoreNodeF.mixin = mixin;
-  underscoreNodeF.negate = negate;
-  underscoreNodeF.noop = noop;
-  underscoreNodeF.now = now;
-  underscoreNodeF.object = object2;
-  underscoreNodeF.omit = omit;
-  underscoreNodeF.once = once;
-  underscoreNodeF.pairs = pairs;
-  underscoreNodeF.partial = partial;
-  underscoreNodeF.partition = partition;
-  underscoreNodeF.pick = pick;
-  underscoreNodeF.pluck = pluck;
-  underscoreNodeF.property = property;
-  underscoreNodeF.propertyOf = propertyOf;
-  underscoreNodeF.random = random;
-  underscoreNodeF.range = range;
-  underscoreNodeF.reduce = reduce2;
-  underscoreNodeF.reduceRight = reduceRight;
-  underscoreNodeF.reject = reject;
-  underscoreNodeF.rest = rest;
-  underscoreNodeF.restArguments = restArguments;
-  underscoreNodeF.result = result;
-  underscoreNodeF.sample = sample;
-  underscoreNodeF.shuffle = shuffle;
-  underscoreNodeF.size = size;
-  underscoreNodeF.some = some2;
-  underscoreNodeF.sortBy = sortBy;
-  underscoreNodeF.sortedIndex = sortedIndex;
-  underscoreNodeF.tap = tap;
-  underscoreNodeF.template = template;
-  underscoreNodeF.templateSettings = templateSettings;
-  underscoreNodeF.throttle = throttle;
-  underscoreNodeF.times = times;
-  underscoreNodeF.toArray = toArray;
-  underscoreNodeF.toPath = toPath$1;
-  underscoreNodeF.union = union;
-  underscoreNodeF.uniq = uniq;
-  underscoreNodeF.uniqueId = uniqueId;
-  underscoreNodeF.unzip = unzip2;
-  underscoreNodeF.values = values;
-  underscoreNodeF.where = where;
-  underscoreNodeF.without = without;
-  underscoreNodeF.wrap = wrap;
-  underscoreNodeF.zip = zip;
-  return underscoreNodeF;
+  underscoreNodeF$1.VERSION = VERSION;
+  underscoreNodeF$1._ = _;
+  underscoreNodeF$1._escape = _escape;
+  underscoreNodeF$1._unescape = _unescape;
+  underscoreNodeF$1.after = after;
+  underscoreNodeF$1.allKeys = allKeys;
+  underscoreNodeF$1.before = before;
+  underscoreNodeF$1.bind = bind2;
+  underscoreNodeF$1.bindAll = bindAll;
+  underscoreNodeF$1.chain = chain;
+  underscoreNodeF$1.chunk = chunk;
+  underscoreNodeF$1.clone = clone;
+  underscoreNodeF$1.compact = compact;
+  underscoreNodeF$1.compose = compose;
+  underscoreNodeF$1.constant = constant;
+  underscoreNodeF$1.contains = contains;
+  underscoreNodeF$1.countBy = countBy;
+  underscoreNodeF$1.create = create;
+  underscoreNodeF$1.debounce = debounce;
+  underscoreNodeF$1.defaults = defaults2;
+  underscoreNodeF$1.defer = defer;
+  underscoreNodeF$1.delay = delay;
+  underscoreNodeF$1.difference = difference;
+  underscoreNodeF$1.each = each2;
+  underscoreNodeF$1.every = every;
+  underscoreNodeF$1.extend = extend;
+  underscoreNodeF$1.extendOwn = extendOwn;
+  underscoreNodeF$1.filter = filter2;
+  underscoreNodeF$1.find = find;
+  underscoreNodeF$1.findIndex = findIndex;
+  underscoreNodeF$1.findKey = findKey;
+  underscoreNodeF$1.findLastIndex = findLastIndex;
+  underscoreNodeF$1.findWhere = findWhere;
+  underscoreNodeF$1.first = first;
+  underscoreNodeF$1.flatten = flatten;
+  underscoreNodeF$1.functions = functions;
+  underscoreNodeF$1.get = get2;
+  underscoreNodeF$1.groupBy = groupBy;
+  underscoreNodeF$1.has = has;
+  underscoreNodeF$1.identity = identity;
+  underscoreNodeF$1.indexBy = indexBy;
+  underscoreNodeF$1.indexOf = indexOf;
+  underscoreNodeF$1.initial = initial;
+  underscoreNodeF$1.intersection = intersection;
+  underscoreNodeF$1.invert = invert;
+  underscoreNodeF$1.invoke = invoke;
+  underscoreNodeF$1.isArguments = isArguments$1;
+  underscoreNodeF$1.isArray = isArray;
+  underscoreNodeF$1.isArrayBuffer = isArrayBuffer;
+  underscoreNodeF$1.isBoolean = isBoolean;
+  underscoreNodeF$1.isDataView = isDataView$1;
+  underscoreNodeF$1.isDate = isDate;
+  underscoreNodeF$1.isElement = isElement;
+  underscoreNodeF$1.isEmpty = isEmpty;
+  underscoreNodeF$1.isEqual = isEqual;
+  underscoreNodeF$1.isError = isError;
+  underscoreNodeF$1.isFinite = isFinite$1;
+  underscoreNodeF$1.isFunction = isFunction$1;
+  underscoreNodeF$1.isMap = isMap;
+  underscoreNodeF$1.isMatch = isMatch;
+  underscoreNodeF$1.isNaN = isNaN$1;
+  underscoreNodeF$1.isNull = isNull;
+  underscoreNodeF$1.isNumber = isNumber;
+  underscoreNodeF$1.isObject = isObject;
+  underscoreNodeF$1.isRegExp = isRegExp;
+  underscoreNodeF$1.isSet = isSet;
+  underscoreNodeF$1.isString = isString;
+  underscoreNodeF$1.isSymbol = isSymbol;
+  underscoreNodeF$1.isTypedArray = isTypedArray$1;
+  underscoreNodeF$1.isUndefined = isUndefined;
+  underscoreNodeF$1.isWeakMap = isWeakMap;
+  underscoreNodeF$1.isWeakSet = isWeakSet;
+  underscoreNodeF$1.iteratee = iteratee;
+  underscoreNodeF$1.keys = keys;
+  underscoreNodeF$1.last = last;
+  underscoreNodeF$1.lastIndexOf = lastIndexOf;
+  underscoreNodeF$1.map = map2;
+  underscoreNodeF$1.mapObject = mapObject;
+  underscoreNodeF$1.matcher = matcher;
+  underscoreNodeF$1.max = max;
+  underscoreNodeF$1.memoize = memoize;
+  underscoreNodeF$1.min = min;
+  underscoreNodeF$1.mixin = mixin;
+  underscoreNodeF$1.negate = negate;
+  underscoreNodeF$1.noop = noop;
+  underscoreNodeF$1.now = now;
+  underscoreNodeF$1.object = object;
+  underscoreNodeF$1.omit = omit;
+  underscoreNodeF$1.once = once;
+  underscoreNodeF$1.pairs = pairs;
+  underscoreNodeF$1.partial = partial;
+  underscoreNodeF$1.partition = partition;
+  underscoreNodeF$1.pick = pick;
+  underscoreNodeF$1.pluck = pluck;
+  underscoreNodeF$1.property = property;
+  underscoreNodeF$1.propertyOf = propertyOf;
+  underscoreNodeF$1.random = random;
+  underscoreNodeF$1.range = range;
+  underscoreNodeF$1.reduce = reduce2;
+  underscoreNodeF$1.reduceRight = reduceRight;
+  underscoreNodeF$1.reject = reject;
+  underscoreNodeF$1.rest = rest;
+  underscoreNodeF$1.restArguments = restArguments;
+  underscoreNodeF$1.result = result;
+  underscoreNodeF$1.sample = sample;
+  underscoreNodeF$1.shuffle = shuffle;
+  underscoreNodeF$1.size = size;
+  underscoreNodeF$1.some = some2;
+  underscoreNodeF$1.sortBy = sortBy;
+  underscoreNodeF$1.sortedIndex = sortedIndex;
+  underscoreNodeF$1.tap = tap;
+  underscoreNodeF$1.template = template;
+  underscoreNodeF$1.templateSettings = templateSettings;
+  underscoreNodeF$1.throttle = throttle;
+  underscoreNodeF$1.times = times;
+  underscoreNodeF$1.toArray = toArray;
+  underscoreNodeF$1.toPath = toPath$1;
+  underscoreNodeF$1.union = union;
+  underscoreNodeF$1.uniq = uniq;
+  underscoreNodeF$1.uniqueId = uniqueId;
+  underscoreNodeF$1.unzip = unzip2;
+  underscoreNodeF$1.values = values;
+  underscoreNodeF$1.where = where;
+  underscoreNodeF$1.without = without;
+  underscoreNodeF$1.wrap = wrap;
+  underscoreNodeF$1.zip = zip;
+  return underscoreNodeF$1;
 }
 var underscoreNode;
 var hasRequiredUnderscoreNode;
 function requireUnderscoreNode() {
   if (hasRequiredUnderscoreNode) return underscoreNode;
   hasRequiredUnderscoreNode = 1;
-  var underscoreNodeF2 = requireUnderscoreNodeF();
-  underscoreNode = underscoreNodeF2._;
+  var underscoreNodeF = requireUnderscoreNodeF();
+  underscoreNode = underscoreNodeF._;
   return underscoreNode;
 }
 var docxReader = {};
@@ -19751,10 +20873,10 @@ function requireAsync() {
   async.exports.firstLineError = firstLineError;
   return async.exports;
 }
-var errors$1;
+var errors$2;
 var hasRequiredErrors$1;
 function requireErrors$1() {
-  if (hasRequiredErrors$1) return errors$1;
+  if (hasRequiredErrors$1) return errors$2;
   hasRequiredErrors$1 = 1;
   var es52 = requireEs5();
   var Objectfreeze = es52.freeze;
@@ -19853,7 +20975,7 @@ function requireErrors$1() {
       configurable: false
     });
   }
-  errors$1 = {
+  errors$2 = {
     Error,
     TypeError: _TypeError,
     RangeError: _RangeError,
@@ -19863,7 +20985,7 @@ function requireErrors$1() {
     AggregateError: errorTypes.AggregateError,
     Warning
   };
-  return errors$1;
+  return errors$2;
 }
 var thenables;
 var hasRequiredThenables;
@@ -20288,22 +21410,22 @@ function requireDebuggability() {
     var disableLongStackTraces = function() {
     };
     Promise2.longStackTraces = function() {
-      if (async2.haveItemsQueued() && !config2.longStackTraces) {
+      if (async2.haveItemsQueued() && !config.longStackTraces) {
         throw new Error("cannot enable long stack traces after promises have been created\n\n    See http://goo.gl/MqrFmX\n");
       }
-      if (!config2.longStackTraces && longStackTracesIsSupported()) {
+      if (!config.longStackTraces && longStackTracesIsSupported()) {
         var Promise_captureStackTrace = Promise2.prototype._captureStackTrace;
         var Promise_attachExtraTrace = Promise2.prototype._attachExtraTrace;
-        config2.longStackTraces = true;
+        config.longStackTraces = true;
         disableLongStackTraces = function() {
-          if (async2.haveItemsQueued() && !config2.longStackTraces) {
+          if (async2.haveItemsQueued() && !config.longStackTraces) {
             throw new Error("cannot enable long stack traces after promises have been created\n\n    See http://goo.gl/MqrFmX\n");
           }
           Promise2.prototype._captureStackTrace = Promise_captureStackTrace;
           Promise2.prototype._attachExtraTrace = Promise_attachExtraTrace;
           Context.deactivateLongStackTraces();
           async2.enableTrampoline();
-          config2.longStackTraces = false;
+          config.longStackTraces = false;
         };
         Promise2.prototype._captureStackTrace = longStackTracesCaptureStackTrace;
         Promise2.prototype._attachExtraTrace = longStackTracesAttachExtraTrace;
@@ -20312,7 +21434,7 @@ function requireDebuggability() {
       }
     };
     Promise2.hasLongStackTraces = function() {
-      return config2.longStackTraces && longStackTracesIsSupported();
+      return config.longStackTraces && longStackTracesIsSupported();
     };
     var fireDomEvent = (function() {
       try {
@@ -20428,15 +21550,15 @@ function requireDebuggability() {
       }
       if ("warnings" in opts) {
         var warningsOption = opts.warnings;
-        config2.warnings = !!warningsOption;
-        wForgottenReturn = config2.warnings;
+        config.warnings = !!warningsOption;
+        wForgottenReturn = config.warnings;
         if (util2.isObject(warningsOption)) {
           if ("wForgottenReturn" in warningsOption) {
             wForgottenReturn = !!warningsOption.wForgottenReturn;
           }
         }
       }
-      if ("cancellation" in opts && opts.cancellation && !config2.cancellation) {
+      if ("cancellation" in opts && opts.cancellation && !config.cancellation) {
         if (async2.haveItemsQueued()) {
           throw new Error(
             "cannot enable cancellation after promises are in use"
@@ -20449,14 +21571,14 @@ function requireDebuggability() {
         Promise2.prototype._attachCancellationCallback = cancellationAttachCancellationCallback;
         Promise2.prototype._execute = cancellationExecute;
         propagateFromFunction = cancellationPropagateFrom;
-        config2.cancellation = true;
+        config.cancellation = true;
       }
       if ("monitoring" in opts) {
-        if (opts.monitoring && !config2.monitoring) {
-          config2.monitoring = true;
+        if (opts.monitoring && !config.monitoring) {
+          config.monitoring = true;
           Promise2.prototype._fireEvent = activeFireEvent;
-        } else if (!opts.monitoring && config2.monitoring) {
-          config2.monitoring = false;
+        } else if (!opts.monitoring && config.monitoring) {
+          config.monitoring = false;
           Promise2.prototype._fireEvent = defaultFireEvent;
         }
       }
@@ -20619,12 +21741,12 @@ function requireDebuggability() {
       return warn(message);
     }
     function warn(message, shouldUseOwnTrace, promise2) {
-      if (!config2.warnings) return;
+      if (!config.warnings) return;
       var warning = new Warning(message);
       var ctx;
       if (shouldUseOwnTrace) {
         promise2._attachExtraTrace(warning);
-      } else if (config2.longStackTraces && (ctx = Promise2._peekContext())) {
+      } else if (config.longStackTraces && (ctx = Promise2._peekContext())) {
         ctx.attachExtraTrace(warning);
       } else {
         var parsed = parseStackAndMessage(warning);
@@ -20980,7 +22102,7 @@ function requireDebuggability() {
         };
       }
     }
-    var config2 = {
+    var config = {
       warnings,
       longStackTraces: false,
       cancellation: false,
@@ -20989,16 +22111,16 @@ function requireDebuggability() {
     if (longStackTraces) Promise2.longStackTraces();
     return {
       longStackTraces: function() {
-        return config2.longStackTraces;
+        return config.longStackTraces;
       },
       warnings: function() {
-        return config2.warnings;
+        return config.warnings;
       },
       cancellation: function() {
-        return config2.cancellation;
+        return config.cancellation;
       },
       monitoring: function() {
-        return config2.monitoring;
+        return config.monitoring;
       },
       propagateFromFunction: function() {
         return propagateFromFunction;
@@ -21179,8 +22301,8 @@ function requireNodeback() {
   hasRequiredNodeback = 1;
   var util2 = requireUtil$1();
   var maybeWrapAsError = util2.maybeWrapAsError;
-  var errors2 = requireErrors$1();
-  var OperationalError = errors2.OperationalError;
+  var errors = requireErrors$1();
+  var OperationalError = errors.OperationalError;
   var es52 = requireEs5();
   function isUntypedError(obj) {
     return obj instanceof Error && es52.getPrototypeOf(obj) === Error.prototype;
@@ -22327,8 +23449,8 @@ function requireGenerators() {
   if (hasRequiredGenerators) return generators;
   hasRequiredGenerators = 1;
   generators = function(Promise2, apiRejection, INTERNAL, tryConvertToPromise, Proxyable, debug) {
-    var errors2 = requireErrors$1();
-    var TypeError2 = errors2.TypeError;
+    var errors = requireErrors$1();
+    var TypeError2 = errors.TypeError;
     var util2 = requireUtil$1();
     var errorObj = util2.errorObj;
     var tryCatch = util2.tryCatch;
@@ -23454,14 +24576,14 @@ function requirePromise() {
       var Async = requireAsync();
       var async2 = new Async();
       es52.defineProperty(Promise2, "_async", { value: async2 });
-      var errors2 = requireErrors$1();
-      var TypeError2 = Promise2.TypeError = errors2.TypeError;
-      Promise2.RangeError = errors2.RangeError;
-      var CancellationError = Promise2.CancellationError = errors2.CancellationError;
-      Promise2.TimeoutError = errors2.TimeoutError;
-      Promise2.OperationalError = errors2.OperationalError;
-      Promise2.RejectionError = errors2.OperationalError;
-      Promise2.AggregateError = errors2.AggregateError;
+      var errors = requireErrors$1();
+      var TypeError2 = Promise2.TypeError = errors.TypeError;
+      Promise2.RangeError = errors.RangeError;
+      var CancellationError = Promise2.CancellationError = errors.CancellationError;
+      Promise2.TimeoutError = errors.TimeoutError;
+      Promise2.OperationalError = errors.OperationalError;
+      Promise2.RejectionError = errors.OperationalError;
+      Promise2.AggregateError = errors.AggregateError;
       var INTERNAL = function() {
       };
       var APPLY = {};
@@ -24547,7 +25669,7 @@ function requireBase64Js() {
 var utf8 = {};
 var utils = {};
 var support = {};
-var readable = { exports: {} };
+var readable$1 = { exports: {} };
 var processNextickArgs = { exports: {} };
 var hasRequiredProcessNextickArgs;
 function requireProcessNextickArgs() {
@@ -25047,15 +26169,15 @@ function require_stream_writable() {
   if (typeof Symbol === "function" && Symbol.hasInstance && typeof Function.prototype[Symbol.hasInstance] === "function") {
     realHasInstance = Function.prototype[Symbol.hasInstance];
     Object.defineProperty(Writable, Symbol.hasInstance, {
-      value: function(object2) {
-        if (realHasInstance.call(this, object2)) return true;
+      value: function(object) {
+        if (realHasInstance.call(this, object)) return true;
         if (this !== Writable) return false;
-        return object2 && object2._writableState instanceof WritableState;
+        return object && object._writableState instanceof WritableState;
       }
     });
   } else {
-    realHasInstance = function(object2) {
-      return object2 instanceof this;
+    realHasInstance = function(object) {
+      return object instanceof this;
     };
   }
   function Writable(options) {
@@ -26048,9 +27170,9 @@ function require_stream_readable() {
     if (state.endEmitted) pna.nextTick(endFn);
     else src.once("end", endFn);
     dest.on("unpipe", onunpipe);
-    function onunpipe(readable2, unpipeInfo) {
+    function onunpipe(readable, unpipeInfo) {
       debug("onunpipe");
-      if (readable2 === src) {
+      if (readable === src) {
         if (unpipeInfo && unpipeInfo.hasUnpiped === false) {
           unpipeInfo.hasUnpiped = true;
           cleanup();
@@ -26506,7 +27628,7 @@ function require_stream_passthrough() {
 }
 var hasRequiredReadable;
 function requireReadable() {
-  if (hasRequiredReadable) return readable.exports;
+  if (hasRequiredReadable) return readable$1.exports;
   hasRequiredReadable = 1;
   (function(module, exports$1) {
     var Stream = require$$0$4;
@@ -26528,8 +27650,8 @@ function requireReadable() {
       exports$1.Transform = require_stream_transform();
       exports$1.PassThrough = require_stream_passthrough();
     }
-  })(readable, readable.exports);
-  return readable.exports;
+  })(readable$1, readable$1.exports);
+  return readable$1.exports;
 }
 var hasRequiredSupport;
 function requireSupport() {
@@ -29843,7 +30965,7 @@ function requireDeflate$1() {
     }
     return BS_BLOCK_DONE;
   }
-  function Config2(good_length, max_lazy, nice_length, max_chain, func) {
+  function Config3(good_length, max_lazy, nice_length, max_chain, func) {
     this.good_length = good_length;
     this.max_lazy = max_lazy;
     this.nice_length = nice_length;
@@ -29853,25 +30975,25 @@ function requireDeflate$1() {
   var configuration_table;
   configuration_table = [
     /*      good lazy nice chain */
-    new Config2(0, 0, 0, 0, deflate_stored),
+    new Config3(0, 0, 0, 0, deflate_stored),
     /* 0 store only */
-    new Config2(4, 4, 8, 4, deflate_fast),
+    new Config3(4, 4, 8, 4, deflate_fast),
     /* 1 max speed, no lazy matches */
-    new Config2(4, 5, 16, 8, deflate_fast),
+    new Config3(4, 5, 16, 8, deflate_fast),
     /* 2 */
-    new Config2(4, 6, 32, 32, deflate_fast),
+    new Config3(4, 6, 32, 32, deflate_fast),
     /* 3 */
-    new Config2(4, 4, 16, 16, deflate_slow),
+    new Config3(4, 4, 16, 16, deflate_slow),
     /* 4 lazy matches */
-    new Config2(8, 16, 32, 32, deflate_slow),
+    new Config3(8, 16, 32, 32, deflate_slow),
     /* 5 */
-    new Config2(8, 16, 128, 128, deflate_slow),
+    new Config3(8, 16, 128, 128, deflate_slow),
     /* 6 */
-    new Config2(8, 32, 128, 256, deflate_slow),
+    new Config3(8, 32, 128, 256, deflate_slow),
     /* 7 */
-    new Config2(32, 128, 258, 1024, deflate_slow),
+    new Config3(32, 128, 258, 1024, deflate_slow),
     /* 8 */
-    new Config2(32, 258, 258, 4096, deflate_slow)
+    new Config3(32, 258, 258, 4096, deflate_slow)
     /* 9 max compression */
   ];
   function lm_init(s) {
@@ -33208,10 +34330,10 @@ function requireNodejsStreamInputAdapter() {
   NodejsStreamInputAdapter_1 = NodejsStreamInputAdapter;
   return NodejsStreamInputAdapter_1;
 }
-var object;
+var object$1;
 var hasRequiredObject;
 function requireObject() {
-  if (hasRequiredObject) return object;
+  if (hasRequiredObject) return object$1;
   hasRequiredObject = 1;
   var utf82 = requireUtf8();
   var utils2 = requireUtils();
@@ -33265,8 +34387,8 @@ function requireObject() {
     } else {
       zipObjectContent = utils2.prepareContent(name, data, o.binary, o.optimizedBinaryString, o.base64);
     }
-    var object2 = new ZipObject(name, zipObjectContent, o);
-    this.files[name] = object2;
+    var object = new ZipObject(name, zipObjectContent, o);
+    this.files[name] = object;
   };
   var parentFolder = function(path2) {
     if (path2.slice(-1) === "/") {
@@ -33292,8 +34414,8 @@ function requireObject() {
     }
     return this.files[name];
   };
-  function isRegExp(object2) {
-    return Object.prototype.toString.call(object2) === "[object RegExp]";
+  function isRegExp(object) {
+    return Object.prototype.toString.call(object) === "[object RegExp]";
   }
   var out = {
     /**
@@ -33478,8 +34600,8 @@ function requireObject() {
       return this.generateInternalStream(options).toNodejsStream(onUpdate);
     }
   };
-  object = out;
-  return object;
+  object$1 = out;
+  return object$1;
 }
 var DataReader_1;
 var hasRequiredDataReader;
@@ -34436,11 +35558,11 @@ function requireConventions() {
       }
     }
   }
-  function freeze(object2, oc) {
+  function freeze(object, oc) {
     if (oc === void 0) {
       oc = Object;
     }
-    return oc && typeof oc.freeze === "function" ? oc.freeze(object2) : object2;
+    return oc && typeof oc.freeze === "function" ? oc.freeze(object) : object;
   }
   function assign(target, source) {
     if (target === null || typeof target !== "object") {
@@ -35918,8 +37040,8 @@ function requireDom() {
     }
     return node22;
   }
-  function __set__(object2, key, value) {
-    object2[key] = value;
+  function __set__(object, key, value) {
+    object[key] = value;
   }
   try {
     if (Object.defineProperty) {
@@ -35968,8 +37090,8 @@ function requireDom() {
           }
         }
       });
-      __set__ = function(object2, key, value) {
-        object2["$$" + key] = value;
+      __set__ = function(object, key, value) {
+        object["$$" + key] = value;
       };
     }
   } catch (e) {
@@ -38233,21 +39355,21 @@ function requireSax() {
           case "/":
             var end = source.indexOf(">", tagStart + 3);
             var tagName = source.substring(tagStart + 2, end).replace(/[ \t\n\r]+$/g, "");
-            var config2 = parseStack.pop();
+            var config = parseStack.pop();
             if (end < 0) {
               tagName = source.substring(tagStart + 2).replace(/[\s<].*/, "");
-              errorHandler.error("end tag name: " + tagName + " is not complete:" + config2.tagName);
+              errorHandler.error("end tag name: " + tagName + " is not complete:" + config.tagName);
               end = tagStart + 1 + tagName.length;
             } else if (tagName.match(/\s</)) {
               tagName = tagName.replace(/[\s<].*/, "");
               errorHandler.error("end tag name: " + tagName + " maybe not complete");
               end = tagStart + 1 + tagName.length;
             }
-            var localNSMap = config2.localNSMap;
-            var endMatch = config2.tagName == tagName;
-            var endIgnoreCaseMach = endMatch || config2.tagName && config2.tagName.toLowerCase() == tagName.toLowerCase();
+            var localNSMap = config.localNSMap;
+            var endMatch = config.tagName == tagName;
+            var endIgnoreCaseMach = endMatch || config.tagName && config.tagName.toLowerCase() == tagName.toLowerCase();
             if (endIgnoreCaseMach) {
-              domBuilder.endElement(config2.uri, config2.localName, tagName);
+              domBuilder.endElement(config.uri, config.localName, tagName);
               if (localNSMap) {
                 for (var prefix in localNSMap) {
                   if (Object.prototype.hasOwnProperty.call(localNSMap, prefix)) {
@@ -38256,10 +39378,10 @@ function requireSax() {
                 }
               }
               if (!endMatch) {
-                errorHandler.fatalError("end tag name: " + tagName + " is not match the current start tagName:" + config2.tagName);
+                errorHandler.fatalError("end tag name: " + tagName + " is not match the current start tagName:" + config.tagName);
               }
             } else {
-              parseStack.push(config2);
+              parseStack.push(config);
             }
             end++;
             break;
@@ -45411,24 +46533,24 @@ function requireParsingResults() {
   if (hasRequiredParsingResults) return parsingResults;
   hasRequiredParsingResults = 1;
   parsingResults = {
-    failure: function(errors2, remaining) {
-      if (errors2.length < 1) {
+    failure: function(errors, remaining) {
+      if (errors.length < 1) {
         throw new Error("Failure must have errors");
       }
       return new Result({
         status: "failure",
         remaining,
-        errors: errors2
+        errors
       });
     },
-    error: function(errors2, remaining) {
-      if (errors2.length < 1) {
+    error: function(errors, remaining) {
+      if (errors.length < 1) {
         throw new Error("Failure must have errors");
       }
       return new Result({
         status: "error",
         remaining,
-        errors: errors2
+        errors
       });
     },
     success: function(value, remaining, source) {
@@ -45504,12 +46626,12 @@ function requireParsingResults() {
   };
   return parsingResults;
 }
-var errors = {};
+var errors$1 = {};
 var hasRequiredErrors;
 function requireErrors() {
-  if (hasRequiredErrors) return errors;
+  if (hasRequiredErrors) return errors$1;
   hasRequiredErrors = 1;
-  errors.error = function(options) {
+  errors$1.error = function(options) {
     return new Error2(options);
   };
   var Error2 = function(options) {
@@ -45527,7 +46649,7 @@ function requireErrors() {
   Error2.prototype.characterNumber = function() {
     return this._location.characterNumber();
   };
-  return errors;
+  return errors$1;
 }
 var lazyIterators = {};
 var hasRequiredLazyIterators;
@@ -45618,7 +46740,7 @@ function requireRules() {
     var _ = requireUnderscoreNode();
     var options = requireOption();
     var results2 = requireParsingResults();
-    var errors2 = requireErrors();
+    var errors = requireErrors();
     var lazyIterators2 = requireLazyIterators();
     exports$1.token = function(tokenType, value) {
       var matchValue = value !== void 0;
@@ -45881,13 +47003,13 @@ function requireRules() {
       var error;
       var token = input.head();
       if (token) {
-        error = errors2.error({
+        error = errors.error({
           expected,
           actual: describeToken(token),
           location: token.source
         });
       } else {
-        error = errors2.error({
+        error = errors.error({
           expected,
           actual: "end of tokens"
         });
@@ -48761,6 +49883,11 @@ class UserProfileService {
       ...isChatDriver(parsed.chatDriver) ? { chatDriver: parsed.chatDriver } : {},
       ...typeof parsed.assistantName === "string" ? { assistantName: parsed.assistantName } : {},
       ...typeof parsed.useSpeechSynthesis === "boolean" ? { useSpeechSynthesis: parsed.useSpeechSynthesis } : {},
+      ...typeof parsed.notifyOnJobCompleteToast === "boolean" ? { notifyOnJobCompleteToast: parsed.notifyOnJobCompleteToast } : {},
+      ...typeof parsed.notifyOnJobCompleteTelegram === "boolean" ? {
+        notifyOnJobCompleteTelegram: parsed.notifyOnJobCompleteTelegram
+      } : {},
+      ...typeof parsed.notifyOnJobCompleteEmail === "boolean" ? { notifyOnJobCompleteEmail: parsed.notifyOnJobCompleteEmail } : {},
       ...typeof parsed.piperModelPath === "string" ? { piperModelPath: parsed.piperModelPath } : {},
       ...typeof parsed.maxToolCallsPerResponse === "number" && Number.isFinite(parsed.maxToolCallsPerResponse) ? {
         maxToolCallsPerResponse: parsed.maxToolCallsPerResponse
@@ -48874,6 +50001,151 @@ class FSystemService {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
+  }
+}
+const TELEGRAM_BOT_BASE_URL = "https://api.telegram.org/bot";
+class TelegramService {
+  escapeMarkdownV2(text) {
+    return text.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, "\\$&");
+  }
+  clampLimit(value) {
+    if (!Number.isFinite(value)) {
+      return 20;
+    }
+    const safeValue = Math.floor(value);
+    if (safeValue < 1) {
+      return 1;
+    }
+    if (safeValue > 100) {
+      return 100;
+    }
+    return safeValue;
+  }
+  async request(telegramBotToken, methodName, payload) {
+    const response = await fetch(
+      `${TELEGRAM_BOT_BASE_URL}${telegramBotToken}/${methodName}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+    if (!response.ok) {
+      throw new Error(`request_failed_${response.status}`);
+    }
+    let parsed;
+    try {
+      parsed = await response.json();
+    } catch {
+      throw new Error("invalid_telegram_response");
+    }
+    return parsed;
+  }
+  async sendMessage({
+    telegramBotToken,
+    telegramId,
+    message,
+    parseMode
+  }) {
+    const formattedMessage = parseMode === "MarkdownV2" ? this.escapeMarkdownV2(message) : message;
+    const response = await this.request(
+      telegramBotToken,
+      "sendMessage",
+      {
+        chat_id: telegramId,
+        text: formattedMessage,
+        parse_mode: parseMode
+      }
+    );
+    if (!response.ok) {
+      return {
+        success: false,
+        error: response.description ?? "unknown",
+        message: "failed"
+      };
+    }
+    return {
+      success: true,
+      message: "sent",
+      message_id: response.result?.message_id
+    };
+  }
+  async getUnreadMessages({
+    telegramBotToken,
+    telegramId,
+    limit,
+    markAsRead
+  }) {
+    const safeLimit = this.clampLimit(limit);
+    const shouldMarkAsRead = markAsRead !== false;
+    const offset = 0;
+    const response = await this.request(
+      telegramBotToken,
+      "getUpdates",
+      {
+        offset,
+        limit: safeLimit,
+        timeout: 0,
+        allowed_updates: ["message"]
+      }
+    );
+    if (!response.ok) {
+      return {
+        success: false,
+        error: response.description ?? "unknown",
+        message: "failed"
+      };
+    }
+    const updates = Array.isArray(response.result) ? response.result : [];
+    const nextOffset = updates.length > 0 ? Math.max(...updates.map((item) => item.update_id)) + 1 : offset;
+    if (shouldMarkAsRead && nextOffset > 0) {
+      await this.request(
+        telegramBotToken,
+        "getUpdates",
+        {
+          offset: nextOffset,
+          limit: 1,
+          timeout: 0,
+          allowed_updates: ["message"]
+        }
+      );
+    }
+    const userMessages = updates.filter((update) => {
+      const chatId = update.message?.chat?.id;
+      return String(chatId ?? "") === String(telegramId);
+    }).map((update) => ({
+      update_id: update.update_id,
+      message_id: update.message?.message_id,
+      date: update.message?.date,
+      text: update.message?.text ?? "",
+      chat: {
+        id: update.message?.chat?.id,
+        type: update.message?.chat?.type,
+        title: update.message?.chat?.title,
+        username: update.message?.chat?.username,
+        first_name: update.message?.chat?.first_name,
+        last_name: update.message?.chat?.last_name
+      },
+      from: {
+        id: update.message?.from?.id,
+        is_bot: update.message?.from?.is_bot,
+        first_name: update.message?.from?.first_name,
+        last_name: update.message?.from?.last_name,
+        username: update.message?.from?.username,
+        language_code: update.message?.from?.language_code
+      }
+    }));
+    return {
+      success: true,
+      message: "ok",
+      unread_count: userMessages.length,
+      updates_count: updates.length,
+      offset_used: offset,
+      next_offset: shouldMarkAsRead ? nextOffset : offset,
+      messages: userMessages
+    };
   }
 }
 const createElectronPaths = (basePath) => {
@@ -49317,17 +50589,31 @@ const registerIpcJobsPack = ({ jobService: jobService2 }) => {
     ["app:cancel-job", (jobId) => jobService2.cancelJob(jobId)]
   ]);
 };
+const parseJson = (raw) => JSON.parse(raw);
+const toJson = (value) => JSON.stringify(value);
 const registerIpcAgentsPack = ({
-  ollamaService: ollamaService2,
+  chatSessionService: chatSessionService2,
   mistralService: mistralService2,
-  piperService: piperService2,
-  userProfileService
+  piperService: piperService2
 }) => {
+  handleIpcWithEvent(
+    "app:chat-run-session",
+    async (event, payloadRaw) => {
+      const payload = parseJson(payloadRaw);
+      await chatSessionService2.runSession(payload, (chatEvent) => {
+        event.sender.send("app:chat-session-event", toJson(chatEvent));
+      });
+    }
+  );
+  handleIpc("app:chat-cancel-session", async (sessionId) => {
+    return chatSessionService2.cancelSession(sessionId);
+  });
   handleIpc(
-    "app:ollama-stream-chat",
-    async (payload) => {
-      const token = userProfileService.getUserProfile().ollamaToken;
-      return ollamaService2.streamChat(payload, token);
+    "app:chat-resolve-command-approval",
+    async (payloadRaw) => {
+      return chatSessionService2.resolveCommandApproval(
+        parseJson(payloadRaw)
+      );
     }
   );
   handleIpc(
@@ -49391,6 +50677,20 @@ const registerIpcAgentsPack = ({
     [
       "app:voice-synthesize-with-piper",
       (text) => piperService2.synthesize(text)
+    ]
+  ]);
+};
+const registerIpcCommunicationsPack = ({
+  telegramService
+}) => {
+  handleManyIpc([
+    [
+      "app:communications-send-telegram-message",
+      (payload) => telegramService.sendMessage(payload)
+    ],
+    [
+      "app:communications-get-unread-telegram-messages",
+      (payload) => telegramService.getUnreadMessages(payload)
     ]
   ]);
 };
@@ -49658,6 +50958,7 @@ let mistralService;
 let piperService;
 let jobService;
 let extensionsService;
+let chatSessionService;
 app.setAppUserModelId(APP_ID);
 const singleInstanceLock = app.requestSingleInstanceLock();
 if (!singleInstanceLock) {
@@ -49716,6 +51017,7 @@ app.whenReady().then(() => {
   const appPaths = createElectronPaths(app.getPath("userData"));
   const initDirectoriesService = new InitService(appPaths);
   const fSystemService = new FSystemService();
+  const telegramService = new TelegramService();
   initDirectoriesService.initialize();
   extensionsService = new ExtensionsService(appPaths.extensionsPath);
   const databaseService = new DatabaseService(appPaths.databasePath);
@@ -49802,6 +51104,16 @@ app.whenReady().then(() => {
       return Promise.resolve(configuredPath?.trim() || "");
     }
   });
+  chatSessionService = new ChatSessionService({
+    ollamaService,
+    commandExecService,
+    browserService,
+    fSystemService,
+    telegramService,
+    userProfileService,
+    databaseService,
+    lanceDbService
+  });
   registerIpcCorePack({
     getBootData,
     extensionsService,
@@ -49836,10 +51148,12 @@ app.whenReady().then(() => {
     jobService
   });
   registerIpcAgentsPack({
-    ollamaService,
+    chatSessionService,
     mistralService,
-    piperService,
-    userProfileService
+    piperService
+  });
+  registerIpcCommunicationsPack({
+    telegramService
   });
   registerIpcSystemPack({
     commandExecService,

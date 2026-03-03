@@ -14,3 +14,4 @@ export * from "./InputFile";
 export * from "./InputPath";
 export * from "./TreeView";
 export * from "./Switcher";
+export * from "./PrettyBR";

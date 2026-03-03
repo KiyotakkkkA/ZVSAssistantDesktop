@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
 import { chatsStore } from "../../stores/chatsStore";
-import { commandExecApprovalService } from "../../services/commandExecApproval";
 import { useToasts } from "../useToasts";
 import type { ChatDialog } from "../../types/Chat";
 
@@ -292,7 +291,20 @@ export const useMessages = ({ sendMessage }: UseMessagesParams) => {
     const approveCommandExec = useCallback(
         (messageId: string) => {
             setToolTraceStatus(messageId, "accepted");
-            commandExecApprovalService.resolve(messageId, true);
+            const dialog = chatsStore.activeDialog;
+            const message = dialog?.messages.find(
+                (item) => item.id === messageId,
+            );
+            const callId = message?.toolTrace?.callId;
+
+            if (!callId) {
+                return;
+            }
+
+            void window.appApi?.llm?.resolveCommandApproval({
+                callId,
+                accepted: true,
+            });
         },
         [setToolTraceStatus],
     );
@@ -300,7 +312,20 @@ export const useMessages = ({ sendMessage }: UseMessagesParams) => {
     const rejectCommandExec = useCallback(
         (messageId: string) => {
             setToolTraceStatus(messageId, "cancelled");
-            commandExecApprovalService.resolve(messageId, false);
+            const dialog = chatsStore.activeDialog;
+            const message = dialog?.messages.find(
+                (item) => item.id === messageId,
+            );
+            const callId = message?.toolTrace?.callId;
+
+            if (!callId) {
+                return;
+            }
+
+            void window.appApi?.llm?.resolveCommandApproval({
+                callId,
+                accepted: false,
+            });
         },
         [setToolTraceStatus],
     );

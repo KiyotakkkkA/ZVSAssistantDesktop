@@ -29,6 +29,9 @@ export type UserProfile = {
     chatDriver: ChatDriver;
     assistantName: string;
     useSpeechSynthesis: boolean;
+    notifyOnJobCompleteToast: boolean;
+    notifyOnJobCompleteTelegram: boolean;
+    notifyOnJobCompleteEmail: boolean;
     piperModelPath: string;
     maxToolCallsPerResponse: number;
     userName: string;

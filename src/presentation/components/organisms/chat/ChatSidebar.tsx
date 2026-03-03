@@ -3,14 +3,20 @@ import { observer } from "mobx-react-lite";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useDialogs, useProjects, useToasts } from "../../../../hooks";
 import { useScenario } from "../../../../hooks/agents";
-import { Button, Dropdown, InputBig, InputSmall, Modal } from "../../atoms";
+import {
+    Button,
+    Dropdown,
+    InputBig,
+    InputSmall,
+    Modal,
+    PrettyBR,
+} from "../../atoms";
 import {
     ConversationItem,
     ProjectsItem,
     ScenarioItem,
 } from "../../molecules/cards/workspace";
 import { Icon } from "@iconify/react";
-import { PrettyBR } from "../../atoms/PrettyBR";
 
 export const ChatSidebar = observer(function ChatSidebar() {
     const navigate = useNavigate();

@@ -3,15 +3,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useChatParams } from "../useChatParams";
 import { useToasts } from "../useToasts";
 import { useUserProfile } from "../useUserProfile";
-import type { ChatDriver } from "../../types/App";
 import type { AssistantStage, ChatDialog, ChatMessage } from "../../types/Chat";
 import type { TokenUsage } from "../../types/Chat";
-import { createOllamaAdapter } from "./adapters/ollamaAdapter";
-import type { ChatProviderAdapter } from "../../types/AIRequests";
+import type {
+    ChatSessionEvent,
+    RunChatSessionPayload,
+} from "../../types/ElectronApi";
 import { chatsStore } from "../../stores/chatsStore";
 import { toolsStore } from "../../stores/toolsStore";
 import { projectsStore } from "../../stores/projectsStore";
-import { commandExecApprovalService } from "../../services/commandExecApproval";
 import { parseScenarioLaunchPayload } from "../../utils/scenario/scenarioLaunchEnvelope";
 import {
     buildScenarioRuntimeEnvText,
@@ -26,6 +26,7 @@ import {
     getUserPrompt,
     getProjectPrompt,
 } from "../../prompts/base";
+import { toOllamaMessages } from "../../utils/chat/ollamaChat";
 
 const TOOL_STAGE_BY_NAME: Record<string, AssistantStage> = {
     planning_tool: "planning",
@@ -38,7 +39,7 @@ const resolveToolStage = (toolName: string): AssistantStage => {
 
 export function useChat() {
     const { userProfile: chatParamsProfile } = useChatParams();
-    const { chatDriver, ollamaModel, ollamaToken } = chatParamsProfile;
+    const { chatDriver, ollamaModel } = chatParamsProfile;
     const { userProfile } = useUserProfile();
     const toasts = useToasts();
 
@@ -58,20 +59,9 @@ export function useChat() {
     );
     const messagesRef = useRef<ChatMessage[]>(messages);
     const activeDialogRef = useRef<ChatDialog | null>(null);
-    const abortControllerRef = useRef<AbortController | null>(null);
+    const chatSessionIdRef = useRef<string | null>(null);
     const cancellationRequestedRef = useRef(false);
     const isSendInFlightRef = useRef(false);
-
-    const providers = useMemo<
-        Partial<Record<Exclude<ChatDriver, "">, ChatProviderAdapter>>
-    >(
-        () => ({
-            ollama: createOllamaAdapter({
-                model: ollamaModel,
-            }),
-        }),
-        [ollamaModel],
-    );
 
     const commitMessages = (nextMessages: ChatMessage[]) => {
         messagesRef.current = nextMessages;
@@ -159,9 +149,7 @@ export function useChat() {
                     return;
                 }
 
-                const adapter =
-                    providers[chatDriver as Exclude<ChatDriver, "">];
-                if (!adapter) {
+                if (chatDriver !== "ollama") {
                     toasts.danger({
                         title: "Провайдер не поддерживается",
                         description:
@@ -212,9 +200,6 @@ export function useChat() {
                     : toolsStore.getToolDefinitions([
                           "vector_store_search_tool",
                       ]);
-                const allowedToolNames = new Set(
-                    requestTools.map((tool) => tool.function.name),
-                );
                 const requiredToolsInstruction =
                     toolsStore.requiredPromptInstruction;
 
@@ -321,8 +306,6 @@ export function useChat() {
                 setActiveResponseToId(userMessage.id);
                 setActiveStage("thinking");
                 cancellationRequestedRef.current = false;
-                const abortController = new AbortController();
-                abortControllerRef.current = abortController;
                 const toolTraceMessageIds = new Map<string, string>();
                 const isCurrentAnswerMessage = (message: ChatMessage) =>
                     message.author === "assistant" &&
@@ -345,108 +328,55 @@ export function useChat() {
                 };
 
                 try {
-                    await adapter.send({
-                        history: historyForRequest,
-                        tools: requestTools,
-                        ...(scenarioFormatHint
-                            ? { format: scenarioFormatHint }
-                            : {}),
-                        maxToolCalls:
-                            userProfile.maxToolCallsPerResponse > 0
-                                ? userProfile.maxToolCallsPerResponse
-                                : 1,
-                        executeTool: async (toolName, args, meta) => {
-                            if (!allowedToolNames.has(toolName)) {
-                                throw new Error(
-                                    `Tool ${toolName} недоступен в текущем чате`,
-                                );
+                    const sessionId = `chat_${crypto.randomUUID().replace(/-/g, "")}`;
+                    const llmApi = window.appApi.llm;
+
+                    chatSessionIdRef.current = sessionId;
+                    let sessionError: Error | null = null;
+
+                    const handleChatEvent = (event: ChatSessionEvent) => {
+                        if (event.sessionId !== sessionId) {
+                            return;
+                        }
+
+                        if (event.type === "thinking.delta") {
+                            if (!event.chunkText) {
+                                return;
                             }
 
-                            if (toolName !== "command_exec") {
-                                return toolsStore.executeTool(toolName, args, {
-                                    ollamaToken: ollamaToken,
-                                    telegramId: userProfile.telegramId,
-                                    telegramBotToken:
-                                        userProfile.telegramBotToken,
-                                    scenarioRuntimeEnv: {
-                                        current_date: new Date().toISOString(),
-                                        project_directory:
-                                            projectsStore.activeProject
-                                                ?.directoryPath ?? "",
-                                    },
-                                });
-                            }
-
-                            const messageId = toolTraceMessageIds.get(
-                                meta.callId,
+                            setStreamStage("thinking");
+                            markFirstActivity();
+                            chunkQueueManager.enqueue(
+                                "thinking",
+                                event.chunkText,
                             );
-                            const { command, cwd, isAdmin } =
-                                getCommandRequestMeta(args);
+                            return;
+                        }
 
-                            if (!messageId) {
-                                return {
-                                    status: "cancelled",
-                                    command,
-                                    cwd,
-                                    isAdmin,
-                                    reason: "Не найдена карточка подтверждения",
-                                };
+                        if (event.type === "content.delta") {
+                            if (!event.chunkText) {
+                                return;
                             }
 
-                            const approved =
-                                await commandExecApprovalService.waitForDecision(
-                                    messageId,
-                                );
-
-                            updateMessages((prev) =>
-                                prev.map((message) =>
-                                    message.id === messageId &&
-                                    message.toolTrace
-                                        ? {
-                                              ...message,
-                                              toolTrace: {
-                                                  ...message.toolTrace,
-                                                  status: approved
-                                                      ? "accepted"
-                                                      : "cancelled",
-                                              },
-                                          }
-                                        : message,
-                                ),
+                            setStreamStage("answering");
+                            markFirstActivity();
+                            chunkQueueManager.enqueue(
+                                "answering",
+                                event.chunkText,
                             );
+                            return;
+                        }
 
-                            if (!approved) {
-                                return {
-                                    status: "cancelled",
-                                    command,
-                                    cwd,
-                                    isAdmin,
-                                    reason: "Пользователь отклонил выполнение",
-                                };
-                            }
-
-                            return toolsStore.executeTool(toolName, args, {
-                                ollamaToken: ollamaToken,
-                                telegramId: userProfile.telegramId,
-                                telegramBotToken: userProfile.telegramBotToken,
-                                scenarioRuntimeEnv: {
-                                    current_date: new Date().toISOString(),
-                                    project_directory:
-                                        projectsStore.activeProject
-                                            ?.directoryPath ?? "",
-                                },
-                            });
-                        },
-                        onToolCall: ({ callId, toolName, args }) => {
+                        if (event.type === "tool.call") {
                             chunkQueueManager.flushImmediate();
-                            const toolStage = resolveToolStage(toolName);
+                            const toolStage = resolveToolStage(event.toolName);
                             setStreamStage(toolStage);
                             markFirstActivity();
                             const messageId = createMessageId();
-                            toolTraceMessageIds.set(callId, messageId);
+                            toolTraceMessageIds.set(event.callId, messageId);
                             const commandMeta =
-                                toolName === "command_exec"
-                                    ? getCommandRequestMeta(args)
+                                event.toolName === "command_exec"
+                                    ? getCommandRequestMeta(event.args)
                                     : null;
 
                             updateMessages((prev) => [
@@ -457,11 +387,11 @@ export function useChat() {
                                     assistantStage: toolStage,
                                     answeringAt: userMessage.id,
                                     toolTrace: {
-                                        callId,
-                                        toolName,
-                                        args,
+                                        callId: event.callId,
+                                        toolName: event.toolName,
+                                        args: event.args,
                                         result: null,
-                                        ...(toolName === "command_exec"
+                                        ...(event.toolName === "command_exec"
                                             ? {
                                                   status: "pending" as const,
                                                   command: commandMeta?.command,
@@ -474,12 +404,26 @@ export function useChat() {
                                     timestamp: getTimeStamp(),
                                 },
                             ]);
-                        },
-                        onToolResult: ({ callId, toolName, args, result }) => {
+                            return;
+                        }
+
+                        if (event.type === "tool.result") {
                             chunkQueueManager.flushImmediate();
-                            const toolStage = resolveToolStage(toolName);
+                            const toolStage = resolveToolStage(event.toolName);
                             setStreamStage(toolStage);
-                            const messageId = toolTraceMessageIds.get(callId);
+                            const messageId = toolTraceMessageIds.get(
+                                event.callId,
+                            );
+                            const commandResult =
+                                event.result && typeof event.result === "object"
+                                    ? (event.result as { status?: string })
+                                    : null;
+                            const inferredStatus =
+                                event.toolName === "command_exec"
+                                    ? commandResult?.status === "cancelled"
+                                        ? "cancelled"
+                                        : "accepted"
+                                    : "accepted";
 
                             updateMessages((prev) => {
                                 if (!messageId) {
@@ -491,17 +435,15 @@ export function useChat() {
                                             assistantStage: toolStage,
                                             answeringAt: userMessage.id,
                                             toolTrace: {
-                                                callId,
-                                                toolName,
-                                                args,
-                                                result,
-                                                status:
-                                                    toolName === "command_exec"
-                                                        ? "cancelled"
-                                                        : "accepted",
-                                                ...(toolName === "command_exec"
+                                                callId: event.callId,
+                                                toolName: event.toolName,
+                                                args: event.args,
+                                                result: event.result,
+                                                status: inferredStatus,
+                                                ...(event.toolName ===
+                                                "command_exec"
                                                     ? getCommandRequestMeta(
-                                                          args,
+                                                          event.args,
                                                       )
                                                     : {}),
                                             },
@@ -517,21 +459,18 @@ export function useChat() {
                                               ...message,
                                               assistantStage: toolStage,
                                               toolTrace: {
-                                                  callId,
-                                                  toolName,
-                                                  args,
-                                                  result,
+                                                  callId: event.callId,
+                                                  toolName: event.toolName,
+                                                  args: event.args,
+                                                  result: event.result,
                                                   status:
                                                       message.toolTrace
                                                           ?.status ||
-                                                      (toolName ===
-                                                      "command_exec"
-                                                          ? "cancelled"
-                                                          : "accepted"),
-                                                  ...(toolName ===
+                                                      inferredStatus,
+                                                  ...(event.toolName ===
                                                   "command_exec"
                                                       ? getCommandRequestMeta(
-                                                            args,
+                                                            event.args,
                                                         )
                                                       : {}),
                                               },
@@ -540,41 +479,64 @@ export function useChat() {
                                         : message,
                                 );
                             });
-                        },
-                        onThinkingChunk: (chunkText) => {
-                            if (!chunkText) {
-                                return;
-                            }
+                            return;
+                        }
 
-                            setStreamStage("thinking");
-                            markFirstActivity();
-                            chunkQueueManager.enqueue("thinking", chunkText);
-                        },
-                        signal: abortController.signal,
-                        onUsage: (usage) => {
+                        if (event.type === "usage") {
                             responseUsage = {
-                                promptTokens: Math.max(0, usage.promptTokens),
+                                promptTokens: Math.max(0, event.promptTokens),
                                 completionTokens: Math.max(
                                     0,
-                                    usage.completionTokens,
+                                    event.completionTokens,
                                 ),
-                                totalTokens: Math.max(0, usage.totalTokens),
+                                totalTokens: Math.max(0, event.totalTokens),
                             };
-                        },
-                        onChunk: (chunkText, done) => {
-                            if (!chunkText) {
-                                if (done) {
-                                    setIsAwaitingFirstChunk(false);
-                                }
-                                return;
-                            }
+                            return;
+                        }
 
-                            setStreamStage("answering");
-                            markFirstActivity();
+                        if (event.type === "done") {
+                            setIsAwaitingFirstChunk(false);
+                            return;
+                        }
 
-                            chunkQueueManager.enqueue("answering", chunkText);
-                        },
-                    });
+                        if (event.type === "error") {
+                            sessionError = new Error(event.message);
+                        }
+                    };
+
+                    const stopChatEvents = llmApi.onChatEvent(handleChatEvent);
+
+                    try {
+                        const payload: RunChatSessionPayload = {
+                            sessionId,
+                            model: ollamaModel,
+                            messages: toOllamaMessages(historyForRequest),
+                            tools: JSON.parse(JSON.stringify(requestTools)),
+                            think: true,
+                            ...(scenarioFormatHint
+                                ? { format: scenarioFormatHint }
+                                : {}),
+                            maxToolCalls:
+                                userProfile.maxToolCallsPerResponse > 0
+                                    ? userProfile.maxToolCallsPerResponse
+                                    : 1,
+                            runtimeContext: {
+                                activeProjectId,
+                                projectDirectory:
+                                    projectsStore.activeProject
+                                        ?.directoryPath || "",
+                                currentDate: new Date().toISOString(),
+                            },
+                        };
+
+                        await llmApi.runChatSession(payload);
+                    } finally {
+                        stopChatEvents();
+                    }
+
+                    if (sessionError) {
+                        throw sessionError;
+                    }
 
                     await chunkQueueManager.waitForDrain();
 
@@ -606,11 +568,7 @@ export function useChat() {
                     activeDialogRef.current = savedDialog;
                     commitMessages(savedDialog.messages);
                 } catch (error) {
-                    if (
-                        cancellationRequestedRef.current &&
-                        error instanceof Error &&
-                        error.name === "AbortError"
-                    ) {
+                    if (cancellationRequestedRef.current) {
                         chunkQueueManager.reset();
                         commitMessages(requestBaseHistory);
                         return;
@@ -652,7 +610,7 @@ export function useChat() {
                     });
                 } finally {
                     chunkQueueManager.reset();
-                    abortControllerRef.current = null;
+                    chatSessionIdRef.current = null;
                     cancellationRequestedRef.current = false;
                     setIsAwaitingFirstChunk(false);
                     setIsStreaming(false);
@@ -666,14 +624,14 @@ export function useChat() {
     });
 
     const cancelGeneration = () => {
-        const controller = abortControllerRef.current;
+        const sessionId = chatSessionIdRef.current;
 
-        if (!controller) {
+        if (!sessionId) {
             return;
         }
 
         cancellationRequestedRef.current = true;
-        controller.abort();
+        void window.appApi?.llm?.cancelChatSession(sessionId);
     };
 
     return {

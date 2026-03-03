@@ -1,36 +1,4 @@
-import { streamOllamaChat } from "../../services/api";
-import type {
-    ChatMessage,
-    OllamaMessage,
-    StreamChatParams,
-} from "../../types/Chat";
-
-export const streamChatOllama = async ({
-    model,
-    messages,
-    tools,
-    format,
-    signal,
-    onChunk,
-}: Omit<StreamChatParams, "token">) => {
-    if (signal?.aborted) {
-        throw new DOMException("Request was aborted", "AbortError");
-    }
-
-    await streamOllamaChat(
-        {
-            model,
-            messages,
-            think: true,
-            ...(tools && tools.length > 0 ? { tools } : {}),
-            ...(format ? { format } : {}),
-        },
-        {
-            signal,
-            onChunk: onChunk ?? (() => {}),
-        },
-    );
-};
+import type { ChatMessage, OllamaMessage } from "../../types/Chat";
 
 export const toOllamaMessages = (messages: ChatMessage[]): OllamaMessage[] =>
     messages

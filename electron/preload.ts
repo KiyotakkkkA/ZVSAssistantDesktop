@@ -6,7 +6,14 @@ import type {
     UserProfile,
 } from "../src/types/App";
 import type { ChatDialog } from "../src/types/Chat";
-import type { AppApi, AppCacheEntry } from "../src/types/ElectronApi";
+import type {
+    AppApi,
+    AppCacheEntry,
+    GetUnreadTelegramMessagesPayload,
+    GetUnreadTelegramMessagesResult,
+    SendTelegramMessagePayload,
+    SendTelegramMessageResult,
+} from "../src/types/ElectronApi";
 import type { CreateProjectPayload } from "../src/types/Project";
 import type {
     CreateScenarioPayload,
@@ -192,13 +199,57 @@ const appApi: AppApi = {
         proxyHttpRequest: (payload) =>
             ipcRenderer.invoke("app:proxy-http-request", payload),
     },
+    communications: {
+        sendTelegramMessage: (
+            payload: SendTelegramMessagePayload,
+        ): Promise<SendTelegramMessageResult> =>
+            ipcRenderer.invoke(
+                "app:communications-send-telegram-message",
+                payload,
+            ),
+        getUnreadTelegramMessages: (
+            payload: GetUnreadTelegramMessagesPayload,
+        ): Promise<GetUnreadTelegramMessagesResult> =>
+            ipcRenderer.invoke(
+                "app:communications-get-unread-telegram-messages",
+                payload,
+            ),
+    },
     extensions: {
         getExtensionsState: () =>
             ipcRenderer.invoke("app:get-extensions-state"),
     },
     llm: {
-        streamOllamaChat: (payload) =>
-            ipcRenderer.invoke("app:ollama-stream-chat", payload),
+        runChatSession: (payload) =>
+            ipcRenderer.invoke("app:chat-run-session", JSON.stringify(payload)),
+        cancelChatSession: (sessionId) =>
+            ipcRenderer.invoke("app:chat-cancel-session", sessionId),
+        resolveCommandApproval: (payload) =>
+            ipcRenderer.invoke(
+                "app:chat-resolve-command-approval",
+                JSON.stringify(payload),
+            ),
+        onChatEvent: (listener) => {
+            const handler = (_event: unknown, payload: unknown) => {
+                if (typeof payload !== "string") {
+                    return;
+                }
+
+                try {
+                    listener(
+                        JSON.parse(payload) as Parameters<typeof listener>[0],
+                    );
+                } catch {
+                    return;
+                }
+            };
+
+            ipcRenderer.on("app:chat-session-event", handler);
+
+            return () => {
+                ipcRenderer.off("app:chat-session-event", handler);
+            };
+        },
     },
     voice: {
         startMistralRealtimeTranscription: (payload) =>

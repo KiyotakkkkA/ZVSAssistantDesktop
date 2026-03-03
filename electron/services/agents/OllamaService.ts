@@ -120,10 +120,10 @@ export class OllamaService {
         throw new Error("Ollama auth failed: unknown error");
     }
 
-    async streamChat(
+    async *streamChat(
         payload: StreamOllamaChatPayload,
         token: string,
-    ): Promise<OllamaChatChunk[]> {
+    ): AsyncGenerator<OllamaChatChunk> {
         const stream = await this.executeWithAuthFallback(
             Config.OLLAMA_BASE_URL.trim(),
             token,
@@ -140,10 +140,8 @@ export class OllamaService {
                 }),
         );
 
-        const chunks: OllamaChatChunk[] = [];
-
         for await (const part of stream) {
-            chunks.push({
+            yield {
                 model: part.model,
                 created_at:
                     part.created_at instanceof Date
@@ -162,10 +160,8 @@ export class OllamaService {
                 ...(typeof part.eval_count === "number"
                     ? { eval_count: part.eval_count }
                     : {}),
-            });
+            };
         }
-
-        return chunks;
     }
 
     async getEmbed(payload: GetEmbedPayload, token: string) {

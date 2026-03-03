@@ -12,6 +12,7 @@ import { ExtensionsService } from "./services/extensions/ExtensionsService";
 import { DialogsService } from "./services/chat/DialogsService";
 import { ProjectsService } from "./services/chat/ProjectsService";
 import { ScenariosService } from "./services/chat/ScenariosService";
+import { ChatSessionService } from "./services/chat/ChatSessionService";
 import { LanceDbService } from "./services/storage/LanceDbService";
 import { VectorizationService } from "./services/storage/VectorizationService";
 import { JobsStorage } from "./services/jobs/JobsStorage";
@@ -22,6 +23,7 @@ import { FileStorageService } from "./services/storage/FileStorageService";
 import { ThemesService } from "./services/userData/ThemesService";
 import { UserProfileService } from "./services/userData/UserProfileService";
 import { FSystemService } from "./services/FSystemService";
+import { TelegramService } from "./services/communications/TelegramService";
 import { createElectronPaths } from "./paths";
 import { registerIpcCorePack } from "./ipc/ipcCorePack";
 import { registerIpcDialogsPack } from "./ipc/ipcDialogsPack";
@@ -30,6 +32,7 @@ import { registerIpcScenariosPack } from "./ipc/ipcScenariosPack";
 import { registerIpcStoragePack } from "./ipc/ipcStoragePack";
 import { registerIpcJobsPack } from "./ipc/ipcJobsPack";
 import { registerIpcAgentsPack } from "./ipc/ipcAgentsPack";
+import { registerIpcCommunicationsPack } from "./ipc/ipcCommunicationsPack";
 import { registerIpcSystemPack } from "./ipc/ipcSystemPack";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -64,6 +67,7 @@ let mistralService: MistralService;
 let piperService: PiperService;
 let jobService: JobService;
 let extensionsService: ExtensionsService;
+let chatSessionService: ChatSessionService;
 
 app.setAppUserModelId(APP_ID);
 
@@ -138,6 +142,7 @@ app.whenReady()
         const appPaths = createElectronPaths(app.getPath("userData"));
         const initDirectoriesService = new InitService(appPaths);
         const fSystemService = new FSystemService();
+        const telegramService = new TelegramService();
 
         initDirectoriesService.initialize();
         extensionsService = new ExtensionsService(appPaths.extensionsPath);
@@ -232,6 +237,16 @@ app.whenReady()
                 return Promise.resolve(configuredPath?.trim() || "");
             },
         });
+        chatSessionService = new ChatSessionService({
+            ollamaService,
+            commandExecService,
+            browserService,
+            fSystemService,
+            telegramService,
+            userProfileService,
+            databaseService,
+            lanceDbService,
+        });
 
         registerIpcCorePack({
             getBootData,
@@ -267,10 +282,12 @@ app.whenReady()
             jobService,
         });
         registerIpcAgentsPack({
-            ollamaService,
+            chatSessionService,
             mistralService,
             piperService,
-            userProfileService,
+        });
+        registerIpcCommunicationsPack({
+            telegramService,
         });
         registerIpcSystemPack({
             commandExecService,

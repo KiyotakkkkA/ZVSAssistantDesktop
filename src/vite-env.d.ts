@@ -10,7 +10,7 @@ interface ImportMeta {
 
 declare global {
     interface Window {
-        appApi?: AppApi;
+        appApi: AppApi;
     }
 }
 

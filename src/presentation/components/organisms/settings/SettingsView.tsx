@@ -10,9 +10,10 @@ import { Icon } from "@iconify/react";
 import { useTheme, useUserProfile } from "../../../../hooks";
 import { SettingsChatPanel } from "./SettingsChatPanel";
 import { SettingsInterfacePanel } from "./SettingsInterfacePanel";
+import { SettingsNotificationPanel } from "./SettingsNotificationPanel";
 import { SettingsProfilePanel } from "./SettingsProfilePanel";
 
-type SettingsRoute = "interface" | "chat" | "profile";
+type SettingsRoute = "interface" | "chat" | "notifications" | "profile";
 
 export type SettingsViewHandle = {
     save: () => Promise<{
@@ -40,6 +41,12 @@ const settingsRoutes: SettingsRouteItem[] = [
         title: "Чат",
         icon: "mdi:message-outline",
         description: "Параметры диалога и истории",
+    },
+    {
+        key: "notifications",
+        title: "Уведомления",
+        icon: "mdi:bell-outline",
+        description: "Оповещения о завершении задач",
     },
     {
         key: "profile",
@@ -112,6 +119,7 @@ export const SettingsView = forwardRef<SettingsViewHandle>((_, ref) => {
                 />
             ),
             chat: <SettingsChatPanel />,
+            notifications: <SettingsNotificationPanel />,
             profile: (
                 <SettingsProfilePanel
                     userProfile={profileDraft}

@@ -1,33 +1,49 @@
-import type { OllamaService } from "../services/agents/OllamaService";
 import type { MistralService } from "../services/agents/MistralService";
 import type { PiperService } from "../services/agents/PiperService";
-import type { UserProfileService } from "../services/userData/UserProfileService";
+import type { ChatSessionService } from "../services/chat/ChatSessionService";
 import type {
     ProxyHttpRequestPayload,
+    ResolveCommandApprovalPayload,
     StartMistralRealtimeTranscriptionPayload,
-    StreamOllamaChatPayload,
+    RunChatSessionPayload,
 } from "../../src/types/ElectronApi";
-import { handleIpc, handleManyIpc } from "./ipcUtils";
+import { handleIpc, handleIpcWithEvent, handleManyIpc } from "./ipcUtils";
+
+const parseJson = <T>(raw: string): T => JSON.parse(raw) as T;
+const toJson = (value: unknown): string => JSON.stringify(value);
 
 export type IpcAgentsPackDeps = {
-    ollamaService: OllamaService;
+    chatSessionService: ChatSessionService;
     mistralService: MistralService;
     piperService: PiperService;
-    userProfileService: UserProfileService;
 };
 
 export const registerIpcAgentsPack = ({
-    ollamaService,
+    chatSessionService,
     mistralService,
     piperService,
-    userProfileService,
 }: IpcAgentsPackDeps) => {
-    handleIpc(
-        "app:ollama-stream-chat",
-        async (payload: StreamOllamaChatPayload) => {
-            const token = userProfileService.getUserProfile().ollamaToken;
+    handleIpcWithEvent(
+        "app:chat-run-session",
+        async (event, payloadRaw: string) => {
+            const payload = parseJson<RunChatSessionPayload>(payloadRaw);
 
-            return ollamaService.streamChat(payload, token);
+            await chatSessionService.runSession(payload, (chatEvent) => {
+                event.sender.send("app:chat-session-event", toJson(chatEvent));
+            });
+        },
+    );
+
+    handleIpc("app:chat-cancel-session", async (sessionId: string) => {
+        return chatSessionService.cancelSession(sessionId);
+    });
+
+    handleIpc(
+        "app:chat-resolve-command-approval",
+        async (payloadRaw: string) => {
+            return chatSessionService.resolveCommandApproval(
+                parseJson<ResolveCommandApprovalPayload>(payloadRaw),
+            );
         },
     );
 
