@@ -215,7 +215,6 @@ pub async fn stream_chat(
     serde_json::to_string(&chunks).map_err(|error| Error::from_reason(error.to_string()))
 }
 
-/// True streaming: pushes each parsed NDJSON chunk to the JS callback immediately.
 async fn stream_post_with_callback(
     endpoint_url: &str,
     token: &str,
@@ -287,7 +286,6 @@ async fn stream_post_with_callback(
             }
         }
 
-        // Flush remaining data in buffer
         let rest = buffer.trim().to_string();
         if !rest.is_empty() {
             if let Ok(parsed) = serde_json::from_str::<Value>(&rest) {
@@ -300,7 +298,6 @@ async fn stream_post_with_callback(
             }
         }
 
-        // Fallback to non-streaming if no "done" chunk received
         if !got_done {
             let mut fallback_payload = body_value.clone();
             if let Value::Object(object) = &mut fallback_payload {
