@@ -8,10 +8,7 @@ import {
     systemToolsPackage,
 } from "../tools";
 import type { OllamaToolDefinition } from "../types/Chat";
-import type {
-    ToolExecutionContext,
-    ToolPackageDescriptor,
-} from "../utils/ToolsBuilder";
+import type { ToolPackageDescriptor } from "../utils/ToolsBuilder";
 
 class ToolsStore {
     readonly packages: ToolPackageDescriptor[];
@@ -156,31 +153,6 @@ class ToolsStore {
             .filter((pkg) => pkg.tools.length > 0);
     }
 
-    private get activeTools() {
-        const userTools = this.packages.flatMap((pkg) =>
-            pkg.tools.filter((tool) =>
-                this.enabledToolNames.has(tool.schema.function.name),
-            ),
-        );
-
-        return [...userTools];
-    }
-
-    async executeTool(
-        toolName: string,
-        args: Record<string, unknown>,
-        context: ToolExecutionContext,
-    ): Promise<unknown> {
-        const descriptor = this.activeTools.find(
-            (tool) => tool.schema.function.name === toolName,
-        );
-
-        if (!descriptor) {
-            throw new Error(`Tool ${toolName} не зарегистрирован`);
-        }
-
-        return descriptor.execute(args, context);
-    }
 }
 
 export const toolsStore = new ToolsStore();

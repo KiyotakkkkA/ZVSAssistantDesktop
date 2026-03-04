@@ -459,7 +459,7 @@ export type RunChatSessionPayload = {
     sessionId: string;
     model: string;
     messages: OllamaMessage[];
-    tools?: OllamaToolDefinition[];
+    enabledToolNames?: string[];
     format?: OllamaResponseFormat;
     think?: boolean;
     maxToolCalls?: number;

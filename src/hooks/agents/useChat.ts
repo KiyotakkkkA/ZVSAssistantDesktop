@@ -200,6 +200,9 @@ export function useChat() {
                     : toolsStore.getToolDefinitions([
                           "vector_store_search_tool",
                       ]);
+                const enabledToolNames = requestTools.map(
+                    (tool) => tool.function.name,
+                );
                 const requiredToolsInstruction =
                     toolsStore.requiredPromptInstruction;
 
@@ -511,7 +514,7 @@ export function useChat() {
                             sessionId,
                             model: ollamaModel,
                             messages: toOllamaMessages(historyForRequest),
-                            tools: JSON.parse(JSON.stringify(requestTools)),
+                            enabledToolNames,
                             think: true,
                             ...(scenarioFormatHint
                                 ? { format: scenarioFormatHint }

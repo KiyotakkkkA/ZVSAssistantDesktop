@@ -1,0 +1,26 @@
+[package]
+name = "core"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "assistant_core"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[build-dependencies]
+napi-build = "2"
+
+[dependencies]
+async-trait = "0.1"
+futures = "0.3"
+napi = { version = "2", default-features = false, features = ["napi4", "tokio_rt"] }
+napi-derive = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["sync", "rt-multi-thread", "macros"] }
+uuid = { version = "1", features = ["v4"] }
+regex = "1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+futures-util = "0.3"

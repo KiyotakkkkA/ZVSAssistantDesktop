@@ -15,6 +15,8 @@ import type { TelegramService } from "../communications/TelegramService";
 import type { UserProfileService } from "../userData/UserProfileService";
 import type { DatabaseService } from "../storage/DatabaseService";
 import type { LanceDbService } from "../storage/LanceDbService";
+import type { OllamaToolDefinition } from "../../../src/types/Chat";
+import { getNativeCoreAddon } from "../core/nativeCoreAddon";
 
 type ChatSessionServiceDeps = {
     ollamaService: OllamaService;
@@ -46,6 +48,10 @@ type PendingApproval = {
 
 type SessionState = {
     cancelled: boolean;
+};
+
+type RunChatSessionPayloadWithEnabledNames = RunChatSessionPayload & {
+    enabledToolNames?: string[];
 };
 
 const planStore = new Map<string, Plan>();
@@ -80,6 +86,18 @@ const commandMetaFromArgs = (args: Record<string, unknown>) => ({
     isAdmin: false,
 });
 
+const coreAddon = getNativeCoreAddon();
+
+const getBuiltinToolDefinitions = (): OllamaToolDefinition[] => {
+    const raw = coreAddon.getBuiltinToolDefinitions();
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as OllamaToolDefinition[]) : [];
+};
+
+const getBuiltinToolNames = (): string[] => {
+    return getBuiltinToolDefinitions().map((tool) => tool.function.name);
+};
+
 export class ChatSessionService {
     private readonly pendingApprovals = new Map<string, PendingApproval>();
     private readonly sessions = new Map<string, SessionState>();
@@ -87,7 +105,7 @@ export class ChatSessionService {
     constructor(private readonly deps: ChatSessionServiceDeps) {}
 
     async runSession(
-        payload: RunChatSessionPayload,
+        payload: RunChatSessionPayloadWithEnabledNames,
         emit: (event: ChatSessionEvent) => void,
     ): Promise<void> {
         const sessionId = payload.sessionId.trim();
@@ -99,9 +117,21 @@ export class ChatSessionService {
         const state: SessionState = { cancelled: false };
         this.sessions.set(sessionId, state);
 
+        const builtInToolDefinitions = getBuiltinToolDefinitions();
+        const builtInToolNames = new Set(getBuiltinToolNames());
+        const requestedToolNames =
+            payload.enabledToolNames && payload.enabledToolNames.length > 0
+                ? payload.enabledToolNames
+                : getBuiltinToolNames();
         const allowedTools = new Set(
-            (payload.tools || []).map((tool) => tool.function.name),
+            requestedToolNames.filter((toolName) =>
+                builtInToolNames.has(toolName),
+            ),
         );
+        const effectiveToolDefinitions = builtInToolDefinitions.filter((tool) =>
+            allowedTools.has(tool.function.name),
+        );
+
         const maxToolCalls = Math.max(1, payload.maxToolCalls || 1);
         let toolCallsUsed = 0;
 
@@ -130,7 +160,9 @@ export class ChatSessionService {
                     {
                         model: payload.model,
                         messages,
-                        ...(payload.tools ? { tools: payload.tools } : {}),
+                        ...(effectiveToolDefinitions.length > 0
+                            ? { tools: effectiveToolDefinitions }
+                            : {}),
                         ...(payload.format ? { format: payload.format } : {}),
                         ...(payload.think !== undefined
                             ? { think: payload.think }
@@ -398,7 +430,7 @@ export class ChatSessionService {
             return this.deps.browserService.getPageSnapshot(maxElements);
         }
 
-        if (toolName === "interract_with") {
+        if (toolName === "interact_with") {
             const action =
                 typeof args.action === "string"
                     ? (args.action as "click" | "type")
@@ -636,11 +668,7 @@ export class ChatSessionService {
             profile.ollamaToken,
         );
 
-        const queryEmbedding =
-            embedResult.embeddings[0] &&
-            Array.isArray(embedResult.embeddings[0])
-                ? embedResult.embeddings[0]
-                : [];
+        const queryEmbedding = embedResult?.embeddings?.[0] ?? [];
 
         if (!queryEmbedding.length) {
             throw new Error("Не удалось получить embedding запроса");

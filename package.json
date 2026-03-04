@@ -7,8 +7,9 @@
     "type": "module",
     "scripts": {
         "dev": "vite --host",
+        "build:core": "npx @napi-rs/cli build --cargo-cwd core --cargo-name assistant_core --platform --release --target x86_64-pc-windows-msvc native/core && node -e \"const fs=require('fs'); if(fs.existsSync('native/core/index.js')) fs.copyFileSync('native/core/index.js','native/core/index.cjs');\"",
         "typecheck": "tsc --noEmit && tsc --project tsconfig.node.json --noEmit",
-        "build:app": "vite build",
+        "build:app": "npm run build:core && vite build",
         "build": "npm run typecheck && npm run build:app && electron-builder",
         "release:win": "npm run typecheck && npm run build:app && electron-builder --win --x64",
         "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
@@ -44,6 +45,7 @@
         "@types/react-dom": "^18.2.21",
         "@typescript-eslint/eslint-plugin": "^7.1.1",
         "@typescript-eslint/parser": "^7.1.1",
+        "@napi-rs/cli": "^2.18.4",
         "@vitejs/plugin-react": "^4.2.1",
         "adm-zip": "^0.5.16",
         "electron": "^40.4.1",

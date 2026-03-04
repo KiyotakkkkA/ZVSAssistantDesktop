@@ -123,7 +123,7 @@ export const browserToolsPackage = () => {
             },
         })
         .addTool({
-            name: "interract_with",
+            name: "interact_with",
             description:
                 "Выполняет действие на странице: click (нажать) или type (ввести текст) по CSS selector.",
             parameters: ToolsBuilder.objectSchema({

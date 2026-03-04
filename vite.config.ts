@@ -18,6 +18,7 @@ export default defineConfig({
                                 "better-sqlite3",
                                 "@lancedb/lancedb",
                                 "pdf-parse",
+                                "../native/core/index.cjs",
                             ],
                         },
                     },

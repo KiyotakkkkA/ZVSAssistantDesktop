@@ -289,9 +289,6 @@ app.whenReady()
         registerIpcCommunicationsPack({
             telegramService,
         });
-        registerIpcCommunicationsPack({
-            telegramService,
-        });
         registerIpcSystemPack({
             commandExecService,
             browserService,
