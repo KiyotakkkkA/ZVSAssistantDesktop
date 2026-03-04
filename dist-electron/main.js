@@ -51155,6 +51155,9 @@ app.whenReady().then(() => {
   registerIpcCommunicationsPack({
     telegramService
   });
+  registerIpcCommunicationsPack({
+    telegramService
+  });
   registerIpcSystemPack({
     commandExecService,
     browserService,
