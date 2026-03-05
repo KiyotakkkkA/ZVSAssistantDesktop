@@ -31,11 +31,6 @@ const resolveLoaderPath = () => {
         return cjsPath;
     }
 
-    const jsPath = path.join(basePath, "index.js");
-    if (fs.existsSync(jsPath)) {
-        return jsPath;
-    }
-
     throw new Error(
         `Native core loader not found in ${basePath}. Run npm run build:core`,
     );

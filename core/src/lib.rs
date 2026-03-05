@@ -4,6 +4,7 @@ pub mod application;
 pub mod domain;
 pub mod napi_ollama;
 pub mod tools;
+pub mod utils;
 
 pub use application::services::chat_core_service::ChatCoreService;
 pub use application::services::tool_registry_service::ToolRegistryService;

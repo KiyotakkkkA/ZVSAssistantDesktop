@@ -1,4 +1,3 @@
-import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useChatParams } from "../useChatParams";
 import { useToasts } from "../useToasts";
@@ -108,8 +107,8 @@ export function useChat() {
     messagesRef.current = chatsStore.messages;
     activeDialogRef.current = chatsStore.activeDialog;
 
-    const sendMessageMutation = useMutation({
-        mutationFn: async (rawContent: string) => {
+    const sendMessage = (rawContent: string) => {
+        void (async () => {
             if (isSendInFlightRef.current) {
                 return;
             }
@@ -623,8 +622,8 @@ export function useChat() {
             } finally {
                 isSendInFlightRef.current = false;
             }
-        },
-    });
+        })();
+    };
 
     const cancelGeneration = () => {
         const sessionId = chatSessionIdRef.current;
@@ -639,7 +638,7 @@ export function useChat() {
 
     return {
         messages: visibleMessages,
-        sendMessage: sendMessageMutation.mutate,
+        sendMessage,
         cancelGeneration,
         isStreaming,
         isAwaitingFirstChunk,
