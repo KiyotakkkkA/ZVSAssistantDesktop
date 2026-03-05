@@ -64,11 +64,8 @@ export const ChatSidebar = observer(function ChatSidebar() {
     const [scenarioName, setScenarioName] = useState("");
     const [scenarioDescription, setScenarioDescription] = useState("");
 
-    const editModalTitle = useMemo(
-        () =>
-            editMode === "create" ? "Создать диалог" : "Переименовать диалог",
-        [editMode],
-    );
+    const editModalTitle =
+        editMode === "create" ? "Создать диалог" : "Переименовать диалог";
 
     const activeSection = useMemo<"dialogs" | "projects" | "scenario">(() => {
         const pathname = location.pathname;
@@ -487,7 +484,6 @@ export const ChatSidebar = observer(function ChatSidebar() {
                         value={dialogName}
                         onChange={(event) => setDialogName(event.target.value)}
                         placeholder="Введите название"
-                        autoFocus
                         onKeyDown={(event) => {
                             if (event.key === "Enter") {
                                 event.preventDefault();

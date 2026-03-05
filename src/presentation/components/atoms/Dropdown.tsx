@@ -223,11 +223,11 @@ export function Dropdown({
                             </p>
                         ) : null}
 
-                        {filteredOptions.map((option, index) => {
+                        {filteredOptions.map((option) => {
                             const active = option.value === value;
                             return (
                                 <Button
-                                    key={`${option.value}-${index}`}
+                                    key={option.value}
                                     role="option"
                                     aria-selected={active}
                                     onClick={() => onSelect(option.value)}

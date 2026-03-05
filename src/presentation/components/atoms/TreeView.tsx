@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Icon } from "@iconify/react";
 
 type TreeViewProps = {
@@ -36,7 +36,8 @@ const TreeViewCatalog = ({
     defaultOpen = false,
     className = "",
 }: TreeViewCatalogProps) => {
-    const [isOpen, setIsOpen] = useState(defaultOpen);
+    const initialOpenRef = useRef(defaultOpen);
+    const [isOpen, setIsOpen] = useState(initialOpenRef.current);
 
     return (
         <div className={`rounded-xl  ${className}`}>

@@ -24,6 +24,8 @@ type ToolSchemaField = {
     schemaDefaultValue?: string;
 };
 
+const EMPTY_AVAILABLE_VARIABLES: Array<{ key: string; label: string }> = [];
+
 const stringifySchemaValue = (value: unknown): string => {
     if (typeof value === "string") {
         return value;
@@ -86,7 +88,7 @@ interface ScenarioBlockSettingsFormProps {
 export function ScenarioBlockSettingsForm({
     block,
     connectedInputNames,
-    availableVariables = [],
+    availableVariables = EMPTY_AVAILABLE_VARIABLES,
     onSave,
     onClose,
 }: ScenarioBlockSettingsFormProps) {

@@ -146,6 +146,7 @@ function AssistantResponseBlock({
                 <div className="relative space-y-3 pl-5">
                     <div className="pointer-events-none absolute left-1.5 top-1 bottom-1 w-px bg-main-700/70" />
                     {stageBlocks.map((block, blockIndex) => {
+                        const stageBlockKey = `${block.stage}_${block.messages[0]?.id || blockIndex}`;
                         const stageKey = normalizeAssistantStage(block.stage);
                         const isStageActive =
                             normalizedActiveStage === stageKey &&
@@ -153,10 +154,7 @@ function AssistantResponseBlock({
 
                         if (block.stage === "thinking") {
                             return (
-                                <div
-                                    key={`thinking_${blockIndex}`}
-                                    className="relative"
-                                >
+                                <div key={stageBlockKey} className="relative">
                                     {buildStageLineIcon({
                                         isStageActive,
                                         icon: stageMeta[stageKey].icon,
@@ -282,10 +280,7 @@ function AssistantResponseBlock({
                             }
 
                             return (
-                                <div
-                                    key={`tool_${blockIndex}`}
-                                    className="relative"
-                                >
+                                <div key={stageBlockKey} className="relative">
                                     {buildStageLineIcon({
                                         isStageActive,
                                         icon: stageMeta[stageKey].icon,
@@ -313,10 +308,7 @@ function AssistantResponseBlock({
                                 ?.timestamp;
 
                         return (
-                            <div
-                                key={`answer_${blockIndex}`}
-                                className="relative"
-                            >
+                            <div key={stageBlockKey} className="relative">
                                 {buildStageLineIcon({
                                     isStageActive,
                                     icon: stageMeta[stageKey].icon,

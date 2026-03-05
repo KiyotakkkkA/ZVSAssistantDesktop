@@ -35,6 +35,12 @@ const getHighlighter = () => {
                 "sql",
                 "xml",
                 "lua",
+                "go",
+                "cpp",
+                "rust",
+                "php",
+                "ruby",
+                "kotlin",
                 "powershell",
             ],
         });

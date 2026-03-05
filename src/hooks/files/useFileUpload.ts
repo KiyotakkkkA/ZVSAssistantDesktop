@@ -57,5 +57,3 @@ export const useFileUpload = () => {
         pickPath,
     };
 };
-
-export const useUpload = useFileUpload;

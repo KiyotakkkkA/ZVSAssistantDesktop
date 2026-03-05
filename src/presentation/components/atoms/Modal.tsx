@@ -2,6 +2,7 @@ import {
     useEffect,
     type PropsWithChildren,
     type ReactNode,
+    type KeyboardEvent as ReactKeyboardEvent,
     type MouseEvent,
 } from "react";
 import { createPortal } from "react-dom";
@@ -31,7 +32,7 @@ export function Modal({
             return;
         }
 
-        const onEscape = (event: KeyboardEvent) => {
+        const onEscape = (event: globalThis.KeyboardEvent) => {
             if (event.key === "Escape") {
                 onClose();
             }
@@ -51,10 +52,25 @@ export function Modal({
         }
     };
 
+    const onOverlayKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+        if (!closeOnOverlayClick) {
+            return;
+        }
+
+        if (event.key === "Enter" || event.key === " ") {
+            if (event.target === event.currentTarget) {
+                event.preventDefault();
+                onClose();
+            }
+        }
+    };
+
     return createPortal(
         <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm animate-in fade-in duration-200"
             onClick={onOverlayClick}
+            onKeyDown={onOverlayKeyDown}
+            tabIndex={-1}
             aria-modal
             role="dialog"
         >

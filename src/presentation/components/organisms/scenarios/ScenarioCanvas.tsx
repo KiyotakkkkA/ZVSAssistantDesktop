@@ -756,6 +756,7 @@ export function ScenarioCanvas({
 
                 <div
                     ref={viewportRef}
+                    role="presentation"
                     className={`relative h-full w-full overflow-hidden ${isPanning ? "cursor-grabbing" : "cursor-grab"}`}
                     onMouseDown={(event) => {
                         setConnectionMenu(null);
@@ -912,13 +913,13 @@ export function ScenarioCanvas({
 
                     {connectionMenu ? (
                         <div
+                            role="presentation"
                             className="absolute z-30"
                             style={{
                                 left: connectionMenu.x,
                                 top: connectionMenu.y,
                             }}
                             onMouseDown={(event) => event.stopPropagation()}
-                            onClick={(event) => event.stopPropagation()}
                         >
                             <Dropdown
                                 key={connectionMenu.token}
@@ -987,13 +988,13 @@ export function ScenarioCanvas({
 
                     {blockMenu ? (
                         <div
+                            role="presentation"
                             className="absolute z-30"
                             style={{
                                 left: blockMenu.x,
                                 top: blockMenu.y,
                             }}
                             onMouseDown={(event) => event.stopPropagation()}
-                            onClick={(event) => event.stopPropagation()}
                         >
                             <Dropdown
                                 key={blockMenu.token}

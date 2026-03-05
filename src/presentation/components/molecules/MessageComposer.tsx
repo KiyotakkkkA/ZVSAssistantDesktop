@@ -17,6 +17,10 @@ import { RequiredToolsPickForm } from "../organisms/forms";
 const MISTRAL_SAMPLE_RATE = 16000;
 const VOICE_EQUALIZER_BARS_COUNT = 12;
 const VOICE_SILENCE_TIMEOUT_MS = 1000;
+const VOICE_EQUALIZER_BAR_IDS = Array.from(
+    { length: VOICE_EQUALIZER_BARS_COUNT },
+    (_, index) => `voice-eq-${index}`,
+);
 
 type PcmRealtimeCapture = {
     audioStream: AsyncGenerator<Uint8Array, void, unknown>;
@@ -815,9 +819,11 @@ export const MessageComposer = observer(function MessageComposer({
                 })();
 
                 await waitForCompletion;
-                await capture.stop();
-                await pushAudioPromise;
-                await voiceApi.stopRealtimeTranscription(sessionId);
+                await Promise.all([
+                    capture.stop(),
+                    pushAudioPromise,
+                    voiceApi.stopRealtimeTranscription(sessionId),
+                ]);
             } catch (error) {
                 hasVoiceError = true;
                 toasts.danger({
@@ -1071,7 +1077,7 @@ export const MessageComposer = observer(function MessageComposer({
                         <div className="mb-3 flex max-w-full items-center gap-2 overflow-x-auto pb-1">
                             {attachedImages.map((file, index) => (
                                 <div
-                                    key={`${file.name}-${index}`}
+                                    key={`${file.name}-${file.size}-${file.dataUrl}`}
                                     className="flex min-w-56 items-center gap-2 rounded-2xl border border-main-700/70 bg-main-900/70 p-2"
                                 >
                                     <div className="h-10 w-10 overflow-hidden rounded-md bg-main-700/70">
@@ -1396,15 +1402,20 @@ export const MessageComposer = observer(function MessageComposer({
 
                         {isVoiceListening ? (
                             <div className="mt-2 flex h-12 w-full items-end gap-1 rounded-xl border border-main-700/70 bg-main-900/70 px-2 py-1">
-                                {voiceEqualizerBars.map((height, index) => (
+                                {VOICE_EQUALIZER_BAR_IDS.map((barId, index) => (
                                     <span
-                                        key={`voice-eq-${index}`}
+                                        key={barId}
                                         className="w-full rounded-sm bg-main-300 transition-all duration-75"
                                         style={{
-                                            height: `${Math.max(8, Math.round(height))}%`,
+                                            height: `${Math.max(8, Math.round(voiceEqualizerBars[index] ?? 0))}%`,
                                             opacity: Math.max(
                                                 0.35,
-                                                Math.min(1, height / 100),
+                                                Math.min(
+                                                    1,
+                                                    (voiceEqualizerBars[
+                                                        index
+                                                    ] ?? 0) / 100,
+                                                ),
                                             ),
                                         }}
                                     />

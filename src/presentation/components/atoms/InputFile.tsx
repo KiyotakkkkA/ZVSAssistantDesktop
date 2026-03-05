@@ -1,6 +1,6 @@
 import { Icon } from "@iconify/react";
 import { useMemo, useState } from "react";
-import { useUpload } from "../../../hooks";
+import { useFileUpload } from "../../../hooks";
 import type { UploadedFileData } from "../../../types/ElectronApi";
 import { Button } from "./Button";
 
@@ -56,7 +56,7 @@ export function InputFile({
 }: InputFileProps) {
     const [internalFiles, setInternalFiles] = useState<UploadedFileData[]>([]);
     const files = value ?? internalFiles;
-    const { isUploading, pickFiles } = useUpload();
+    const { isUploading, pickFiles } = useFileUpload();
 
     const acceptLabel = useMemo(() => {
         if (!accept || accept.length === 0) {
@@ -129,12 +129,12 @@ export function InputFile({
 
                 {files.length > 0 ? (
                     <div className="mt-3 grid gap-2">
-                        {files.map((file, index) => {
+                        {files.map((file) => {
                             const isImage = file.mimeType.startsWith("image/");
 
                             return (
                                 <div
-                                    key={`${file.name}-${file.size}-${index}`}
+                                    key={`${file.name}-${file.size}-${file.dataUrl}`}
                                     className="flex items-center gap-3 rounded-lg border border-main-700/70 bg-main-800/60 p-2"
                                 >
                                     <div className="h-10 w-10 overflow-hidden rounded-md bg-main-700/60">

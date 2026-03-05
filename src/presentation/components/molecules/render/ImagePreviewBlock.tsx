@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type PointerEventHandler } from "react";
+import {
+    useEffect,
+    useRef,
+    useState,
+    type PointerEventHandler,
+    type WheelEventHandler,
+} from "react";
 import { Icon } from "@iconify/react";
 import { Button } from "../../atoms";
 import { useToasts } from "../../../../hooks";
@@ -44,7 +50,9 @@ export function ImagePreviewBlock({
     const [scale, setScale] = useState(1);
     const [offsetX, setOffsetX] = useState(0);
     const [offsetY, setOffsetY] = useState(0);
-    const previewRef = useRef<HTMLDivElement | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [isZooming, setIsZooming] = useState(false);
+    const wheelStopTimerRef = useRef<number | null>(null);
     const dragState = useRef({
         active: false,
         startX: 0,
@@ -111,6 +119,7 @@ export function ImagePreviewBlock({
             startX: event.clientX,
             startY: event.clientY,
         };
+        setIsDragging(true);
 
         event.currentTarget.setPointerCapture(event.pointerId);
     };
@@ -132,35 +141,39 @@ export function ImagePreviewBlock({
 
     const onPointerUp: PointerEventHandler<HTMLDivElement> = (event) => {
         dragState.current.active = false;
+        setIsDragging(false);
 
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId);
         }
     };
 
-    useEffect(() => {
-        const node = previewRef.current;
+    const onWheel: WheelEventHandler<HTMLDivElement> = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
 
-        if (!node) {
-            return;
+        setIsZooming(true);
+
+        if (wheelStopTimerRef.current !== null) {
+            window.clearTimeout(wheelStopTimerRef.current);
         }
 
-        const onNativeWheel = (event: WheelEvent) => {
-            event.preventDefault();
-            event.stopPropagation();
+        wheelStopTimerRef.current = window.setTimeout(() => {
+            setIsZooming(false);
+            wheelStopTimerRef.current = null;
+        }, 140);
 
-            setScale((current) => {
-                const next = event.deltaY < 0 ? current * 1.08 : current / 1.08;
-                return Math.min(2.6, Math.max(0.35, next));
-            });
-        };
-
-        node.addEventListener("wheel", onNativeWheel, {
-            passive: false,
+        setScale((current) => {
+            const next = event.deltaY < 0 ? current * 1.08 : current / 1.08;
+            return Math.min(2.6, Math.max(0.35, next));
         });
+    };
 
+    useEffect(() => {
         return () => {
-            node.removeEventListener("wheel", onNativeWheel);
+            if (wheelStopTimerRef.current !== null) {
+                window.clearTimeout(wheelStopTimerRef.current);
+            }
         };
     }, []);
 
@@ -225,14 +238,14 @@ export function ImagePreviewBlock({
                 </div>
 
                 <div
-                    ref={previewRef}
                     className={`${isExpanded ? "h-[80vh]" : "h-112"} relative overflow-hidden bg-main-950/70 p-2`}
                     onPointerDown={onPointerDown}
                     onPointerMove={onPointerMove}
                     onPointerUp={onPointerUp}
                     onPointerCancel={onPointerUp}
+                    onWheel={onWheel}
                     style={{
-                        cursor: dragState.current.active ? "grabbing" : "grab",
+                        cursor: isDragging ? "grabbing" : "grab",
                     }}
                 >
                     <div
@@ -240,7 +253,8 @@ export function ImagePreviewBlock({
                         style={{
                             transform: `translate3d(${offsetX}px, ${offsetY}px, 0) scale(${scale})`,
                             transformOrigin: "center center",
-                            willChange: "transform",
+                            willChange:
+                                isDragging || isZooming ? "transform" : "auto",
                         }}
                     >
                         <img

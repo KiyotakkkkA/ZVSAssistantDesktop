@@ -204,7 +204,7 @@ export function PlanningToolBubbleCard({
                                 const result = readPlanResult(trace.result);
 
                                 return (
-                                    <p key={trace.callId || `${index}`}>
+                                    <p key={trace.callId}>
                                         {index + 1}.{" "}
                                         {actionTitle[action] || action}
                                         {result?.progress

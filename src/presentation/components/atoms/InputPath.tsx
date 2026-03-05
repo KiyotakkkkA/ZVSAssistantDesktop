@@ -1,6 +1,6 @@
 import { Icon } from "@iconify/react";
 import { useState } from "react";
-import { useUpload } from "../../../hooks";
+import { useFileUpload } from "../../../hooks";
 import { Button } from "./Button";
 
 type InputPathProps = {
@@ -24,7 +24,7 @@ export function InputPath({
 }: InputPathProps) {
     const [internalPath, setInternalPath] = useState("");
     const selectedPath = value ?? internalPath;
-    const { isPickingPath, pickPath } = useUpload();
+    const { isPickingPath, pickPath } = useFileUpload();
 
     const handlePickPath = async () => {
         const selected = await pickPath({ forFolders });

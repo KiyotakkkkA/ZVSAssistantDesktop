@@ -19,12 +19,14 @@ type AutoFillSelectorProps = Omit<
     disabled?: boolean;
 };
 
+const EMPTY_VALUE: string[] = [];
+
 export const AutoFillSelector = ({
     options,
     placeholder,
     className,
     disabled,
-    value = [],
+    value = EMPTY_VALUE,
     onChange,
     ...props
 }: AutoFillSelectorProps) => {
@@ -100,6 +102,10 @@ export const AutoFillSelector = ({
                 className={`flex min-h-10 w-full flex-wrap items-center gap-2 rounded-xl border border-main-700/70 bg-main-800/70 px-3 py-2 text-sm text-main-100 transition-colors duration-200 focus-within:border-main-500/70 ${
                     disabled ? "cursor-not-allowed opacity-60" : "cursor-text"
                 }`}
+                role="button"
+                tabIndex={disabled ? -1 : 0}
+                aria-expanded={isOpen}
+                aria-disabled={disabled}
                 onClick={() => {
                     if (disabled) {
                         return;
@@ -107,6 +113,17 @@ export const AutoFillSelector = ({
 
                     setIsOpen(true);
                     inputRef.current?.focus();
+                }}
+                onKeyDown={(event) => {
+                    if (disabled) {
+                        return;
+                    }
+
+                    if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setIsOpen(true);
+                        inputRef.current?.focus();
+                    }
                 }}
             >
                 {value.map((item) => {

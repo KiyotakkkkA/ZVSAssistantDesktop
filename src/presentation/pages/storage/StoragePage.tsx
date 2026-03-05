@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { observer } from "mobx-react-lite";
 import { Icon } from "@iconify/react";
 import { useJobs, useToasts, useVectorStorage } from "../../../hooks";
-import { useFileSave, useUpload } from "../../../hooks/files";
+import { useFileSave, useFileUpload } from "../../../hooks/files";
 import {
     AutoFillSelector,
     Button,
@@ -39,7 +39,7 @@ export const StoragePage = observer(function StoragePage() {
     const { createJob } = useJobs();
     const { createVectorStorage, createVectorTag, deleteVectorStorage } =
         useVectorStorage();
-    const { pickFiles, pickPath, isUploading, isPickingPath } = useUpload();
+    const { pickFiles, pickPath, isUploading, isPickingPath } = useFileUpload();
     const { openFile, deleteFile, openPath } = useFileSave();
     const navigate = useNavigate();
     const [activeView, setActiveView] = useState<StorageView>("files");
@@ -265,8 +265,10 @@ export const StoragePage = observer(function StoragePage() {
             return;
         }
 
-        await storageStore.loadFilesData();
-        await storageStore.loadVectorStoragesData();
+        await Promise.all([
+            storageStore.loadFilesData(),
+            storageStore.loadVectorStoragesData(),
+        ]);
 
         toasts.success({
             title: "Файл удалён",
@@ -398,8 +400,10 @@ export const StoragePage = observer(function StoragePage() {
 
         setPreparedVectorFiles([]);
         setPickedStorageFileIds([]);
-        await storageStore.loadFilesData();
-        await storageStore.loadVectorStoragesData();
+        await Promise.all([
+            storageStore.loadFilesData(),
+            storageStore.loadVectorStoragesData(),
+        ]);
     };
 
     const changeVectorStorageDataPath = async () => {

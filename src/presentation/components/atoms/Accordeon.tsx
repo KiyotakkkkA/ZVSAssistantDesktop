@@ -32,7 +32,8 @@ export function Accordeon({
     rightSlot,
     children,
 }: AccordeonProps) {
-    const [isOpen, setIsOpen] = useState(defaultOpen);
+    const initialOpenRef = useRef(defaultOpen);
+    const [isOpen, setIsOpen] = useState(initialOpenRef.current);
     const contentRef = useRef<HTMLDivElement>(null);
     const [contentHeight, setContentHeight] = useState(0);
 
