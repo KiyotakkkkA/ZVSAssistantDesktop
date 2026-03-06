@@ -153,7 +153,9 @@ export const CreateProjectPage = observer(function CreateProjectPage() {
                         </p>
                         <InputBig
                             value={projectDescription}
-                            onChange={setProjectDescription}
+                            onChange={(event) =>
+                                setProjectDescription(event.target.value)
+                            }
                             className="h-28! rounded-xl! border border-main-700/70 bg-main-800/70 px-3 py-2 text-main-100 placeholder:text-main-500"
                             placeholder="Опишите цель и контекст проекта"
                         />

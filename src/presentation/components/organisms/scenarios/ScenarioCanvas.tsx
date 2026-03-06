@@ -1171,7 +1171,9 @@ export function ScenarioCanvas({
                     </p>
                     <InputBig
                         value={promptInstruction}
-                        onChange={setPromptInstruction}
+                        onChange={(value) =>
+                            setPromptInstruction(value.target.value)
+                        }
                         placeholder="Опишите, что должна сделать модель на этом шаге"
                         className="h-28 rounded-lg border border-main-700 bg-main-800 px-3 py-2 text-sm text-main-100"
                     />

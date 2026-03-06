@@ -248,7 +248,9 @@ export function ScenarioBlockSettingsForm({
                                                         item.param,
                                                         (prev) => ({
                                                             ...prev,
-                                                            comment: value,
+                                                            comment:
+                                                                value.target
+                                                                    .value,
                                                         }),
                                                     );
                                                 }}

@@ -1,7 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useState } from "react";
 import { useFileUpload } from "../../../hooks";
-import { Button } from "./Button";
+import { Button } from "zvs-uikit-lib";
 
 type InputPathProps = {
     label?: string;

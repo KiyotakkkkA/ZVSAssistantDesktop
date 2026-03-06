@@ -73,7 +73,9 @@ export function ChatUserBubbleCard({
                         <div className="space-y-3">
                             <InputBig
                                 value={editValue}
-                                onChange={(value) => onEditValueChange?.(value)}
+                                onChange={(value) =>
+                                    onEditValueChange?.(value.target.value)
+                                }
                                 className="h-24 rounded-xl border border-main-600 bg-main-800/85 px-3 py-2 text-sm text-main-100"
                             />
 

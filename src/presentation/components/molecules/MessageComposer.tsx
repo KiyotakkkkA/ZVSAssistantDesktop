@@ -1119,7 +1119,9 @@ export const MessageComposer = observer(function MessageComposer({
                         <InputBig
                             ref={areaRef}
                             value={msgContent}
-                            onChange={setMsgContent}
+                            onChange={(value) =>
+                                setMsgContent(value.target.value)
+                            }
                             placeholder="Напишите сообщение модели..."
                             className="h-auto! min-h-9 w-full rounded-lg border-0 bg-transparent p-2 text-main-100 placeholder:text-main-400"
                             onKeyDown={(event) => {

@@ -605,7 +605,9 @@ export const ChatSidebar = observer(function ChatSidebar() {
                         </p>
                         <InputBig
                             value={scenarioDescription}
-                            onChange={setScenarioDescription}
+                            onChange={(value) =>
+                                setScenarioDescription(value.target.value)
+                            }
                             className="h-28! rounded-xl! border border-main-700/70 bg-main-800/70 px-3 py-2 text-main-100 placeholder:text-main-500"
                             placeholder="Введите описание"
                         />

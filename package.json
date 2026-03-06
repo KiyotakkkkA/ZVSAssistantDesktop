@@ -32,7 +32,8 @@
         "react-router-dom": "^7.13.0",
         "remark-gfm": "^4.0.1",
         "shiki": "^3.22.0",
-        "utf-8-validate": "^6.0.6"
+        "utf-8-validate": "^6.0.6",
+        "zvs-uikit-lib": "file:../../ZVS/libs/zvs-uikit-lib/zvs-uikit-lib-1.0.0.tgz"
     },
     "devDependencies": {
         "@napi-rs/cli": "^2.18.4",

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../node_modules/zvs-uikit-lib/dist/**/*.{js,cjs,mjs,ts,tsx,jsx}";
 
 @theme {
     --color-main-50: rgb(250 250 250);

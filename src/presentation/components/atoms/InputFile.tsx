@@ -2,7 +2,7 @@ import { Icon } from "@iconify/react";
 import { useMemo, useState } from "react";
 import { useFileUpload } from "../../../hooks";
 import type { UploadedFileData } from "../../../types/ElectronApi";
-import { Button } from "./Button";
+import { Button } from "zvs-uikit-lib";
 
 type InputFileProps = {
     label?: string;

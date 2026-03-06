@@ -86,7 +86,9 @@ export const CreateScenarioPage = observer(function CreateScenarioPage() {
                         </p>
                         <InputBig
                             value={description}
-                            onChange={setDescription}
+                            onChange={(event) =>
+                                setDescription(event.target.value)
+                            }
                             className="h-28! rounded-xl! border border-main-700/70 bg-main-800/70 px-3 py-2 text-main-100 placeholder:text-main-500"
                             placeholder="Опишите цель и контекст сценария"
                         />

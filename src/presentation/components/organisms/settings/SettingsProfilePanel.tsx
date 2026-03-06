@@ -57,7 +57,9 @@ export const SettingsProfilePanel = ({
                         <InputBig
                             value={userPrompt}
                             onChange={(value) =>
-                                updateUserProfileDraft({ userPrompt: value })
+                                updateUserProfileDraft({
+                                    userPrompt: value.target.value,
+                                })
                             }
                             placeholder="Введите инструкции для модели"
                             className="h-28 rounded-xl border border-main-700 bg-main-800 px-3 py-2 text-sm text-main-100 placeholder:text-main-500"
