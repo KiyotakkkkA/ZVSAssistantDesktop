@@ -52,6 +52,7 @@ type RawResponse = {
 
 const createJsonHeaders = (authToken?: string): Record<string, string> => ({
     "Content-Type": "application/json",
+    "User-Agent": `ZVSAssistant/Desktop`,
     ...(authToken
         ? {
               Authorization: `Bearer ${authToken}`,
