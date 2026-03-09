@@ -339,19 +339,6 @@ pub async fn stream_chat_callback(
     stream_post_with_callback(&endpoint_url, token.trim(), &payload, &callback).await
 }
 
-#[napi(js_name = "getEmbed")]
-pub async fn get_embed(
-    payload_json: String,
-    token: String,
-    base_url: Option<String>,
-) -> napi::Result<String> {
-    let payload: Value = serde_json::from_str(&payload_json)
-        .map_err(|error| Error::from_reason(format!("Invalid payload JSON: {}", error)))?;
-    let endpoint_url = format!("{}/api/embed", normalize_base_url(base_url));
-    let first = post_non_stream_with_auth_fallback(&endpoint_url, token.trim(), &payload).await?;
-    serde_json::to_string(&first).map_err(|error| Error::from_reason(error.to_string()))
-}
-
 #[napi(js_name = "getBuiltinToolDefinitions")]
 pub fn get_builtin_tool_definitions() -> napi::Result<String> {
     let definitions = builtin_tool_definitions();

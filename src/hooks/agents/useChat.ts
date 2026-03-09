@@ -26,6 +26,7 @@ import {
     getProjectPrompt,
 } from "../../prompts/base";
 import { toOllamaMessages } from "../../utils/chat/ollamaChat";
+import { readAccessTokenFromLocalStorage } from "../../services/api/authTokens";
 
 const TOOL_STAGE_BY_NAME: Record<string, AssistantStage> = {
     planning_tool: "planning",
@@ -515,6 +516,8 @@ export function useChat() {
                                     projectsStore.activeProject
                                         ?.directoryPath || "",
                                 currentDate: new Date().toISOString(),
+                                zvsAccessToken:
+                                    readAccessTokenFromLocalStorage(),
                             },
                         };
 

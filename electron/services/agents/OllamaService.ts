@@ -1,12 +1,12 @@
 import { Config } from "../../../src/config";
 import type { OllamaChatChunk } from "../../../src/types/Chat";
 import type { StreamOllamaChatPayload } from "../../../src/types/ElectronApi";
+import {
+    buildVectorStorageSearchUrl,
+    normalizeVectorSearchResponse,
+    type VectorSearchPayload,
+} from "../../../src/services/api/vectorSearchShared";
 import { getNativeCoreAddon } from "../core/nativeCoreAddon";
-
-type GetEmbedPayload = {
-    model: string;
-    input: string | string[];
-};
 
 export class OllamaService {
     private readonly addon = getNativeCoreAddon();
@@ -99,43 +99,41 @@ export class OllamaService {
         }
     }
 
-    async getEmbed(payload: GetEmbedPayload, token: string) {
-        const payloadJson = JSON.stringify(payload);
-        const responseJson = await this.addon.getEmbed(
-            payloadJson,
-            token,
-            "http://127.0.0.1:11434",
+    async getEmbed(
+        vstore_id: string,
+        payload: VectorSearchPayload,
+        token: string,
+    ) {
+        const response = await fetch(
+            buildVectorStorageSearchUrl(Config.ZVS_MAIN_BASE_URL, vstore_id),
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token
+                        ? {
+                              Authorization: `Bearer ${token}`,
+                          }
+                        : {}),
+                },
+                body: JSON.stringify(payload),
+            },
         );
 
-        const parsed = JSON.parse(responseJson) as {
-            model?: string;
-            embeddings?: unknown;
-            total_duration?: number;
-            load_duration?: number;
-            prompt_eval_count?: number;
-        };
+        const raw = await response.text();
 
-        const embeddingsSource = Array.isArray(parsed.embeddings)
-            ? parsed.embeddings
-            : [];
-        const embeddings = embeddingsSource.map((vector) =>
-            Array.isArray(vector)
-                ? vector.map((value) => Number(value))
-                : ([] as number[]),
-        );
+        if (!response.ok) {
+            throw new Error(
+                raw || `Request failed with status ${response.status}`,
+            );
+        }
+
+        const parsed = normalizeVectorSearchResponse(raw);
 
         return {
-            model: parsed.model,
-            embeddings,
-            ...(typeof parsed.total_duration === "number"
-                ? { total_duration: parsed.total_duration }
-                : {}),
-            ...(typeof parsed.load_duration === "number"
-                ? { load_duration: parsed.load_duration }
-                : {}),
-            ...(typeof parsed.prompt_eval_count === "number"
-                ? { prompt_eval_count: parsed.prompt_eval_count }
-                : {}),
+            success: parsed.success ?? true,
+            message: parsed.message,
+            items: parsed.items ?? [],
         };
     }
 }

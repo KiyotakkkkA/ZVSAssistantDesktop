@@ -451,6 +451,7 @@ export type ChatRuntimeContext = {
     activeProjectId?: string;
     projectDirectory?: string;
     currentDate?: string;
+    zvsAccessToken?: string;
 };
 
 export type RunChatSessionPayload = {

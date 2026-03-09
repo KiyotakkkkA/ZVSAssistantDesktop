@@ -16,6 +16,11 @@ import type { UserProfileService } from "../userData/UserProfileService";
 import type { DatabaseService } from "../storage/DatabaseService";
 import type { OllamaToolDefinition } from "../../../src/types/Chat";
 import { getNativeCoreAddon } from "../core/nativeCoreAddon";
+import type { ProjectsService } from "./ProjectsService";
+import {
+    clampVectorSearchLimit,
+    toVectorSearchHits,
+} from "../../../src/services/api/vectorSearchShared";
 
 type ChatSessionServiceDeps = {
     ollamaService: OllamaService;
@@ -25,6 +30,7 @@ type ChatSessionServiceDeps = {
     telegramService: TelegramService;
     userProfileService: UserProfileService;
     databaseService: DatabaseService;
+    projectsService: ProjectsService;
 };
 
 type PlanStep = {
@@ -633,15 +639,38 @@ export class ChatSessionService {
             );
         }
 
+        const topK = clampVectorSearchLimit(args.limit ?? args.topK, 5);
+
+        const project =
+            this.deps.projectsService.getProjectById(activeProjectId);
+        const vectorStorageId = project?.vecStorId?.trim() || "";
+
+        if (!vectorStorageId) {
+            throw new Error(
+                "К текущему проекту не подключено векторное хранилище",
+            );
+        }
+
+        const token = payload.runtimeContext?.zvsAccessToken?.trim() || "";
+        const result = await this.deps.ollamaService.getEmbed(
+            vectorStorageId,
+            {
+                query,
+                topK,
+            },
+            token,
+        );
+        const items = Array.isArray(result.items) ? result.items : [];
+        const hits = toVectorSearchHits(items);
+
         return {
-            vectorStorageId: "remote_pending",
-            hits: [],
-            status: "stub",
-            message:
-                "Локальный индекс отключен. Подключите удалённый векторный сервер для выдачи результатов.",
+            vectorStorageId,
+            hits,
+            items,
             request: {
                 query,
-                storageId: "remote_pending",
+                topK,
+                storageId: vectorStorageId,
                 projectId: activeProjectId,
             },
         };

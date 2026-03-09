@@ -14,11 +14,6 @@ type NativeCoreAddon = {
         baseUrl: string | undefined | null,
         callback: (err: null | Error, chunk: string) => void,
     ) => Promise<void>;
-    getEmbed: (
-        payloadJson: string,
-        token: string,
-        baseUrl?: string,
-    ) => Promise<string>;
     getBuiltinToolDefinitions: () => string;
 };
 

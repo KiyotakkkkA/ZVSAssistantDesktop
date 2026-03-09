@@ -1,12 +1,67 @@
 import { postOllamaJson } from "../services/api";
+import { readAccessTokenFromLocalStorage } from "../services/api/authTokens";
+import { Config } from "../config";
 import { projectsStore } from "../stores/projectsStore";
 import { ToolsBuilder } from "../utils/ToolsBuilder";
+import {
+    buildVectorStorageSearchUrl,
+    clampVectorSearchLimit,
+    normalizeVectorSearchResponse,
+    toVectorSearchHits,
+    type VectorSearchResponse,
+} from "../services/api/vectorSearchShared";
 
 const postToolRequest = async (
     endpoint: "web_search" | "web_fetch",
     payload: Record<string, unknown>,
 ) => {
     return postOllamaJson(endpoint, payload);
+};
+
+const searchVectorStorageByApi = async (
+    vectorStorageId: string,
+    query: string,
+    topK: number,
+): Promise<VectorSearchResponse> => {
+    const api = window.appApi;
+    const token = readAccessTokenFromLocalStorage();
+    const url = buildVectorStorageSearchUrl(
+        Config.ZVS_MAIN_BASE_URL,
+        vectorStorageId,
+    );
+    const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    const bodyText = JSON.stringify({ query, topK });
+
+    if (api?.network?.proxyHttpRequest) {
+        const result = await api.network.proxyHttpRequest({
+            url,
+            method: "POST",
+            headers,
+            bodyText,
+        });
+
+        if (!result.ok) {
+            throw new Error(result.bodyText || result.statusText);
+        }
+
+        return normalizeVectorSearchResponse(result.bodyText);
+    }
+
+    const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: bodyText,
+    });
+    const raw = await response.text();
+
+    if (!response.ok) {
+        throw new Error(raw || `Request failed with status ${response.status}`);
+    }
+
+    return normalizeVectorSearchResponse(raw);
 };
 
 export const baseToolsPackage = () => {
@@ -77,6 +132,18 @@ export const baseToolsPackage = () => {
                 type: "object",
                 properties: {
                     vectorStorageId: { type: "string" },
+                    items: {
+                        type: "array",
+                        items: {
+                            type: "object",
+                            properties: {
+                                id: { type: "string" },
+                                document: { type: "string" },
+                                metadata_json: { type: "string" },
+                                distance: { type: "number" },
+                            },
+                        },
+                    },
                     hits: {
                         type: "array",
                         items: {
@@ -84,9 +151,6 @@ export const baseToolsPackage = () => {
                             properties: {
                                 id: { type: "string" },
                                 text: { type: "string" },
-                                fileId: { type: "string" },
-                                fileName: { type: "string" },
-                                chunkIndex: { type: "number" },
                                 score: { type: "number" },
                             },
                         },
@@ -95,14 +159,10 @@ export const baseToolsPackage = () => {
             },
             execute: async (args) => {
                 const query = typeof args.query === "string" ? args.query : "";
-                const requestedLimit =
-                    typeof args.limit === "number" ? args.limit : 5;
-                const limit = Math.max(
-                    1,
-                    Math.min(10, Math.floor(requestedLimit)),
-                );
-                const activeProjectId = projectsStore.activeProject?.id;
-                const api = window.appApi?.vectorStorages;
+                const limit = clampVectorSearchLimit(args.limit, 5);
+                const activeProject = projectsStore.activeProject;
+                const activeProjectId = activeProject?.id;
+                const vectorStorageId = activeProject?.vecStorId?.trim() || "";
 
                 if (!activeProjectId) {
                     throw new Error(
@@ -110,31 +170,23 @@ export const baseToolsPackage = () => {
                     );
                 }
 
-                if (!api) {
-                    throw new Error("API векторных хранилищ недоступен");
-                }
-
-                const vectorStorages = await api.getVectorStorages();
-                const connectedStorage = vectorStorages.find((storage) =>
-                    storage.usedByProjects.some(
-                        (projectRef) => projectRef.id === activeProjectId,
-                    ),
-                );
-
-                if (!connectedStorage) {
+                if (!vectorStorageId) {
                     throw new Error(
                         "К текущему проекту не подключено векторное хранилище",
                     );
                 }
 
-                const hits = await api.searchVectorStorage(
-                    connectedStorage.id,
+                const result = await searchVectorStorageByApi(
+                    vectorStorageId,
                     query,
                     limit,
                 );
+                const items = Array.isArray(result.items) ? result.items : [];
+                const hits = toVectorSearchHits(items);
 
                 return {
-                    vectorStorageId: connectedStorage.id,
+                    vectorStorageId,
+                    items,
                     hits,
                 };
             },

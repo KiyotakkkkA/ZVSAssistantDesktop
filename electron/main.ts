@@ -234,6 +234,7 @@ app.whenReady()
             telegramService,
             userProfileService,
             databaseService,
+            projectsService,
         });
 
         registerIpcCorePack({

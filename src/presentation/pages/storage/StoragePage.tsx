@@ -8,7 +8,7 @@ import {
     useVectorStorages,
 } from "../../../hooks";
 import { useFileSave } from "../../../hooks/files";
-import { Button, InputSmall, Switcher } from "../../components/atoms";
+import { Button, InputSmall, PrettyBR, Switcher } from "../../components/atoms";
 import { StoredFileCard } from "../../components/molecules/cards/storage";
 import { LoadingFallbackPage } from "../LoadingFallbackPage";
 import { storageStore } from "../../../stores/storageStore";
@@ -600,10 +600,9 @@ export const StoragePage = observer(function StoragePage() {
                                         </p>
                                     </div>
 
-                                    <div className="mt-4 rounded-xl border border-main-700/70 bg-main-900/45 p-3">
-                                        <h4 className="text-sm font-semibold text-main-100">
-                                            Теги
-                                        </h4>
+                                    <PrettyBR label="Теги" icon="mdi:tags" />
+
+                                    <div className="mt-4 rounded-xl bg-main-900/45">
                                         <div className="mt-3 flex flex-wrap gap-2">
                                             {selectedVectorStorage.tags.length >
                                             0 ? (
@@ -626,10 +625,12 @@ export const StoragePage = observer(function StoragePage() {
                                         </div>
                                     </div>
 
-                                    <div className="mt-4 rounded-xl border border-main-700/70 bg-main-900/45 p-3">
-                                        <h4 className="text-sm font-semibold text-main-100">
-                                            Содержащиеся файлы
-                                        </h4>
+                                    <PrettyBR
+                                        label="Содержащиеся файлы"
+                                        icon="mdi:file"
+                                    />
+
+                                    <div className="mt-4 rounded-xl bg-main-900/45">
                                         <div className="mt-3 space-y-2">
                                             {containedFiles.length > 0 ? (
                                                 containedFiles.map((file) => (
@@ -646,17 +647,19 @@ export const StoragePage = observer(function StoragePage() {
                                                     </div>
                                                 ))
                                             ) : (
-                                                <div className="flex h-16 items-center justify-center text-xs text-main-400">
+                                                <div className="flex h-16 items-center text-xs text-main-400">
                                                     В хранилище пока нет файлов.
                                                 </div>
                                             )}
                                         </div>
                                     </div>
 
-                                    <div className="mt-4 rounded-xl border border-main-700/70 bg-main-900/45 p-3">
-                                        <h4 className="text-sm font-semibold text-main-100">
-                                            Используется в проектах
-                                        </h4>
+                                    <PrettyBR
+                                        label="Содержащиеся файлы"
+                                        icon="mdi:folder"
+                                    />
+
+                                    <div className="mt-4 rounded-xl bg-main-900/45">
                                         <div className="mt-3 flex h-20 items-center text-xs text-main-400">
                                             {selectedVectorStorage
                                                 .usedByProjects.length > 0
