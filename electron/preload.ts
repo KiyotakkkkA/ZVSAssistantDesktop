@@ -142,31 +142,13 @@ const appApi: AppApi = {
             ipcRenderer.invoke("app:delete-scenario", scenarioId),
     },
     vectorStorages: {
-        getVectorStorages: () => ipcRenderer.invoke("app:get-vector-storages"),
-        createVectorStorage: () =>
-            ipcRenderer.invoke("app:create-vector-storage"),
-        getVectorTags: () => ipcRenderer.invoke("app:get-vector-tags"),
-        createVectorTag: (name: string) =>
-            ipcRenderer.invoke("app:create-vector-tag", name),
-        updateVectorStorage: (vectorStorageId: string, payload) =>
-            ipcRenderer.invoke(
-                "app:update-vector-storage",
-                vectorStorageId,
-                payload,
-            ),
-        deleteVectorStorage: (vectorStorageId: string) =>
-            ipcRenderer.invoke("app:delete-vector-storage", vectorStorageId),
+        getVectorStorages: async () => [],
+        updateVectorStorage: async () => null,
         searchVectorStorage: (
-            vectorStorageId: string,
-            query: string,
-            limit?: number,
-        ) =>
-            ipcRenderer.invoke(
-                "app:search-vector-storage",
-                vectorStorageId,
-                query,
-                limit,
-            ),
+            _vectorStorageId: string,
+            _query: string,
+            _limit?: number,
+        ) => Promise.resolve([]),
     },
     cache: {
         getCacheEntry: (key: string) =>

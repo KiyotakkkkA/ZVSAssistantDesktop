@@ -7,4 +7,3 @@ export * from "./useNotifications";
 export * from "./useExtensions";
 export * from "./files";
 export * from "./chat";
-export * from "./storage";

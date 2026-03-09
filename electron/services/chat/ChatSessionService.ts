@@ -14,7 +14,6 @@ import type { OllamaService } from "../agents/OllamaService";
 import type { TelegramService } from "../communications/TelegramService";
 import type { UserProfileService } from "../userData/UserProfileService";
 import type { DatabaseService } from "../storage/DatabaseService";
-import type { LanceDbService } from "../storage/LanceDbService";
 import type { OllamaToolDefinition } from "../../../src/types/Chat";
 import { getNativeCoreAddon } from "../core/nativeCoreAddon";
 
@@ -26,7 +25,6 @@ type ChatSessionServiceDeps = {
     telegramService: TelegramService;
     userProfileService: UserProfileService;
     databaseService: DatabaseService;
-    lanceDbService: LanceDbService;
 };
 
 type PlanStep = {
@@ -619,15 +617,11 @@ export class ChatSessionService {
         payload: RunChatSessionPayload,
     ) {
         const query = typeof args.query === "string" ? args.query.trim() : "";
-        const rawLimit = typeof args.limit === "number" ? args.limit : 5;
-        const limit = Math.max(1, Math.min(10, Math.floor(rawLimit)));
-
         if (!query) {
             throw new Error("Поисковый запрос пуст");
         }
 
         const profile = this.deps.userProfileService.getUserProfile();
-        const currentUserId = this.deps.userProfileService.getCurrentUserId();
         const activeProjectId =
             payload.runtimeContext?.activeProjectId ||
             profile.activeProjectId ||
@@ -639,62 +633,17 @@ export class ChatSessionService {
             );
         }
 
-        const vectorStorages =
-            this.deps.databaseService.getVectorStorages(currentUserId);
-        const connectedStorage = vectorStorages.find((storage) =>
-            storage.usedByProjects.some(
-                (projectRef) => projectRef.id === activeProjectId,
-            ),
-        );
-
-        if (!connectedStorage) {
-            throw new Error(
-                "К текущему проекту не подключено векторное хранилище",
-            );
-        }
-
-        const model =
-            profile.ollamaEmbeddingModel.trim() || profile.ollamaModel.trim();
-
-        if (!model) {
-            throw new Error("Не задана embedding model");
-        }
-
-        const embedResult = await this.deps.ollamaService.getEmbed(
-            {
-                model,
-                input: [query],
-            },
-            profile.ollamaToken,
-        );
-
-        const queryEmbedding = embedResult?.embeddings?.[0] ?? [];
-
-        if (!queryEmbedding.length) {
-            throw new Error("Не удалось получить embedding запроса");
-        }
-
-        const rows = await this.deps.lanceDbService.search(
-            connectedStorage.dataPath,
-            queryEmbedding,
-            limit,
-        );
-
         return {
-            vectorStorageId: connectedStorage.id,
-            hits: rows.map((row) => ({
-                id: row.id,
-                text: row.text,
-                fileId: row.fileId,
-                fileName: row.fileName,
-                chunkIndex: row.chunkIndex,
-                score:
-                    typeof row._distance === "number"
-                        ? row._distance
-                        : typeof row._score === "number"
-                          ? row._score
-                          : 0,
-            })),
+            vectorStorageId: "remote_pending",
+            hits: [],
+            status: "stub",
+            message:
+                "Локальный индекс отключен. Подключите удалённый векторный сервер для выдачи результатов.",
+            request: {
+                query,
+                storageId: "remote_pending",
+                projectId: activeProjectId,
+            },
         };
     }
 

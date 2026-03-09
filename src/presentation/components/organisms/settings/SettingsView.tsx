@@ -12,13 +12,19 @@ import { SettingsChatPanel } from "./SettingsChatPanel";
 import { SettingsInterfacePanel } from "./SettingsInterfacePanel";
 import { SettingsNotificationPanel } from "./SettingsNotificationPanel";
 import { SettingsProfilePanel } from "./SettingsProfilePanel";
+import { SettingsZvsAccountPanel } from "./SettingsZvsAccountPanel";
 
-type SettingsRoute = "interface" | "chat" | "notifications" | "profile";
+type SettingsRoute =
+    | "interface"
+    | "chat"
+    | "notifications"
+    | "profile"
+    | "zvs-account";
 
 export type SettingsViewHandle = {
     save: () => Promise<{
         saved: boolean;
-        scope: "chat" | "profile" | "general";
+        scope: "chat" | "profile" | "account" | "general";
     }>;
 };
 
@@ -30,6 +36,12 @@ type SettingsRouteItem = {
 };
 
 const settingsRoutes: SettingsRouteItem[] = [
+    {
+        key: "zvs-account",
+        title: "ZVS Аккаунт",
+        icon: "mdi:shield-account-outline",
+        description: "Форма авторизации в ZVS",
+    },
     {
         key: "interface",
         title: "Интерфейс",
@@ -70,6 +82,10 @@ export const SettingsView = forwardRef<SettingsViewHandle>((_, ref) => {
         userPrompt: userProfile.userPrompt,
         userLanguage: userProfile.userLanguage,
     });
+    const [zvsAccountDraft, setZvsAccountDraft] = useState({
+        login: "",
+        password: "",
+    });
 
     useEffect(() => {
         setProfileDraft({
@@ -101,10 +117,19 @@ export const SettingsView = forwardRef<SettingsViewHandle>((_, ref) => {
                     return { saved: true, scope: "profile" };
                 }
 
+                if (activeRoute === "zvs-account") {
+                    return {
+                        saved:
+                            zvsAccountDraft.login.trim().length > 0 ||
+                            zvsAccountDraft.password.length > 0,
+                        scope: "account",
+                    };
+                }
+
                 return { saved: false, scope: "general" };
             },
         }),
-        [activeRoute, profileDraft, updateUserProfile],
+        [activeRoute, profileDraft, updateUserProfile, zvsAccountDraft],
     );
 
     const renderedPanel: Record<SettingsRoute, ReactNode> = useMemo(
@@ -131,8 +156,26 @@ export const SettingsView = forwardRef<SettingsViewHandle>((_, ref) => {
                     }}
                 />
             ),
+            "zvs-account": (
+                <SettingsZvsAccountPanel
+                    login={zvsAccountDraft.login}
+                    password={zvsAccountDraft.password}
+                    updateDraft={(nextDraft) => {
+                        setZvsAccountDraft((prev) => ({
+                            ...prev,
+                            ...nextDraft,
+                        }));
+                    }}
+                />
+            ),
         }),
-        [profileDraft, themeOptions, updateUserProfile, userProfile],
+        [
+            profileDraft,
+            themeOptions,
+            updateUserProfile,
+            userProfile,
+            zvsAccountDraft,
+        ],
     );
 
     return (

@@ -5,7 +5,6 @@ import type {
     JobRealtimeEvent,
 } from "../../../src/types/ElectronApi";
 import { JobsStorage } from "./JobsStorage";
-import { VectorizationService } from "../storage/VectorizationService";
 
 type ExtensionsServicePort = {
     installFromGithubRelease: (params: {
@@ -25,7 +24,6 @@ export class JobService {
 
     constructor(
         private readonly jobsStorage: JobsStorage,
-        private readonly vectorizationService: VectorizationService,
         private readonly extensionsService: ExtensionsServicePort,
         private readonly emitEvent: (event: JobRealtimeEvent) => void,
     ) {
@@ -153,23 +151,16 @@ export class JobService {
         stageRef: { current: string },
     ): Promise<string> {
         if (payload.kind === "vectorization") {
-            await this.vectorizationService.runVectorizationJob(
-                payload,
-                signal,
-                {
-                    onStage: (message, tag = "info") => {
-                        stageRef.current = message;
-                        const progressEvent = this.jobsStorage.appendJobEvent(
-                            job.id,
-                            message,
-                            tag,
-                        );
-                        this.emitJobEvent(progressEvent);
-                    },
-                },
+            stageRef.current = "Подготовка удалённой индексации";
+            this.emitJobEvent(
+                this.jobsStorage.appendJobEvent(
+                    job.id,
+                    "Локальная векторизация отключена. Используется заглушка до подключения удалённого индексатора.",
+                    "warning",
+                ),
             );
-
-            return "Задача векторизации успешно завершена";
+            await this.delay(250, signal);
+            return "Задача векторизации завершена в режиме заглушки";
         }
 
         if (payload.kind === "extension-install") {

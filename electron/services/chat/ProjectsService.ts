@@ -213,26 +213,9 @@ export class ProjectsService {
     }
 
     private attachLinkedVectorStorage(project: Project): Project {
-        const vectorStorages = this.databaseService.getVectorStorages(
-            this.createdBy,
-        );
-        const linkedStorage = vectorStorages.find((vectorStorage) =>
-            vectorStorage.usedByProjects.some(
-                (projectRef) => projectRef.id === project.id,
-            ),
-        );
-
-        const linkedVectorStorage: ProjectLinkedVectorStorage | null =
-            linkedStorage
-                ? {
-                      id: linkedStorage.id,
-                      name: linkedStorage.name,
-                  }
-                : null;
-
         return {
             ...project,
-            linkedVectorStorage,
+            linkedVectorStorage: null as ProjectLinkedVectorStorage | null,
         };
     }
 }

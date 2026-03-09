@@ -20,6 +20,10 @@ const scopeToastsMeta = {
         title: "Сохранено!",
         description: "Пользовательские данные успешно обновлены.",
     },
+    account: {
+        title: "Сохранено!",
+        description: "Данные ZVS аккаунта обновлены.",
+    },
 };
 
 export function ChatHeader({

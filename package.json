@@ -18,9 +18,9 @@
     },
     "dependencies": {
         "@iconify/react": "^6.0.2",
-        "@lancedb/lancedb": "^0.26.2",
         "@mistralai/mistralai": "^1.9.10",
         "better-sqlite3": "^12.6.2",
+        "bufferutil": "^4.1.0",
         "flatted": "^3.3.4",
         "mammoth": "^1.11.0",
         "mobx": "^6.15.0",
@@ -57,8 +57,5 @@
         "vite-plugin-electron": "^0.28.6",
         "vite-plugin-electron-renderer": "^0.14.5"
     },
-    "main": "dist-electron/main.js",
-    "optionalDependencies": {
-        "bufferutil": "^4.1.0"
-    }
+    "main": "dist-electron/main.js"
 }

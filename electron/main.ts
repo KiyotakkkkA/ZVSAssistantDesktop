@@ -13,8 +13,6 @@ import { DialogsService } from "./services/chat/DialogsService";
 import { ProjectsService } from "./services/chat/ProjectsService";
 import { ScenariosService } from "./services/chat/ScenariosService";
 import { ChatSessionService } from "./services/chat/ChatSessionService";
-import { LanceDbService } from "./services/storage/LanceDbService";
-import { VectorizationService } from "./services/storage/VectorizationService";
 import { JobsStorage } from "./services/jobs/JobsStorage";
 import { JobService } from "./services/jobs/JobService";
 import { DatabaseService } from "./services/storage/DatabaseService";
@@ -200,21 +198,12 @@ app.whenReady()
         commandExecService = new CommandExecService();
         browserService = new BrowserService();
         ollamaService = new OllamaService();
-        const lanceDbService = new LanceDbService(appPaths.vectorIndexPath);
-        const vectorizationService = new VectorizationService(
-            databaseService,
-            fileStorageService,
-            userProfileService,
-            ollamaService,
-            lanceDbService,
-        );
         const jobsStorage = new JobsStorage(
             databaseService,
             userProfileService,
         );
         jobService = new JobService(
             jobsStorage,
-            vectorizationService,
             extensionsService,
             (jobEvent) => {
                 win?.webContents.send("app:jobs-event", jobEvent);
@@ -245,7 +234,6 @@ app.whenReady()
             telegramService,
             userProfileService,
             databaseService,
-            lanceDbService,
         });
 
         registerIpcCorePack({
@@ -272,11 +260,7 @@ app.whenReady()
         registerIpcStoragePack({
             databaseService,
             fileStorageService,
-            userProfileService,
-            lanceDbService,
-            ollamaService,
             fSystemService,
-            vectorIndexPath: appPaths.vectorIndexPath,
         });
         registerIpcJobsPack({
             jobService,

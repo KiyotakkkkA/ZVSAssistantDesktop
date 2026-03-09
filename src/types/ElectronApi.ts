@@ -393,14 +393,10 @@ export type AppApiScenariosNamespace = {
 
 export type AppApiVectorStoragesNamespace = {
     getVectorStorages: () => Promise<VectorStorageRecord[]>;
-    createVectorStorage: () => Promise<VectorStorageRecord>;
-    getVectorTags: () => Promise<VectorTagRecord[]>;
-    createVectorTag: (name: string) => Promise<VectorTagRecord | null>;
     updateVectorStorage: (
         vectorStorageId: string,
         payload: UpdateVectorStoragePayload,
     ) => Promise<VectorStorageRecord | null>;
-    deleteVectorStorage: (vectorStorageId: string) => Promise<boolean>;
     searchVectorStorage: (
         vectorStorageId: string,
         query: string,

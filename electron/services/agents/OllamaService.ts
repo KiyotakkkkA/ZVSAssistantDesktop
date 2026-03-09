@@ -104,7 +104,7 @@ export class OllamaService {
         const responseJson = await this.addon.getEmbed(
             payloadJson,
             token,
-            Config.OLLAMA_BASE_URL.trim(),
+            "http://127.0.0.1:11434",
         );
 
         const parsed = JSON.parse(responseJson) as {

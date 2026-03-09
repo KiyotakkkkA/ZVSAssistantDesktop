@@ -2,7 +2,6 @@ import { makeAutoObservable, runInAction } from "mobx";
 import type {
     SavedFileRecord,
     UpdateVectorStoragePayload,
-    VectorTagRecord,
     VectorStorageRecord,
 } from "../types/ElectronApi";
 
@@ -14,17 +13,14 @@ export type StorageFileProjectRef = {
 class StorageStore {
     isFilesLoading = false;
     isVectorStoragesLoading = false;
-    isVectorTagsLoading = false;
     files: SavedFileRecord[] = [];
     selectedFileId: string | null = null;
     vectorStorages: VectorStorageRecord[] = [];
-    vectorTags: VectorTagRecord[] = [];
     selectedVectorStorageId: string | null = null;
     projectRefByFileId: Record<string, StorageFileProjectRef> = {};
 
     private isLoadingFiles = false;
     private isLoadingVectorStorages = false;
-    private isLoadingVectorTags = false;
 
     constructor() {
         makeAutoObservable(this, {}, { autoBind: true });
@@ -153,94 +149,12 @@ class StorageStore {
         }
     }
 
-    async loadVectorTagsData(): Promise<void> {
-        if (this.isLoadingVectorTags) {
-            return;
-        }
-
-        this.isLoadingVectorTags = true;
-
-        runInAction(() => {
-            this.isVectorTagsLoading = true;
-        });
-
-        try {
-            const api = window.appApi;
-
-            if (!api) {
-                runInAction(() => {
-                    this.vectorTags = [];
-                });
-                return;
-            }
-
-            const tags = await api.vectorStorages.getVectorTags();
-
-            runInAction(() => {
-                this.vectorTags = tags;
-            });
-        } finally {
-            runInAction(() => {
-                this.isVectorTagsLoading = false;
-            });
-
-            this.isLoadingVectorTags = false;
-        }
-    }
-
     setSelectedFileId(fileId: string): void {
         this.selectedFileId = fileId;
     }
 
     setSelectedVectorStorageId(vectorStorageId: string): void {
         this.selectedVectorStorageId = vectorStorageId;
-    }
-
-    async createVectorStorage(): Promise<VectorStorageRecord | null> {
-        const api = window.appApi;
-
-        if (!api) {
-            return null;
-        }
-
-        const createdVectorStorage =
-            await api.vectorStorages.createVectorStorage();
-
-        runInAction(() => {
-            this.vectorStorages = [
-                createdVectorStorage,
-                ...this.vectorStorages.filter(
-                    (vectorStorage) =>
-                        vectorStorage.id !== createdVectorStorage.id,
-                ),
-            ];
-            this.selectedVectorStorageId = createdVectorStorage.id;
-        });
-
-        return createdVectorStorage;
-    }
-
-    async createVectorTag(name: string): Promise<VectorTagRecord | null> {
-        const api = window.appApi;
-
-        if (!api) {
-            return null;
-        }
-
-        const createdTag = await api.vectorStorages.createVectorTag(name);
-
-        if (!createdTag) {
-            return null;
-        }
-
-        runInAction(() => {
-            const withoutSameId = this.vectorTags.filter(
-                (tag) => tag.id !== createdTag.id,
-            );
-            this.vectorTags = [createdTag, ...withoutSameId];
-        });
-
-        return createdTag;
     }
 
     async updateVectorStorage(
@@ -272,35 +186,6 @@ class StorageStore {
         });
 
         return updatedVectorStorage;
-    }
-
-    async deleteVectorStorage(vectorStorageId: string): Promise<boolean> {
-        const api = window.appApi;
-
-        if (!api) {
-            return false;
-        }
-
-        const isDeleted =
-            await api.vectorStorages.deleteVectorStorage(vectorStorageId);
-
-        if (!isDeleted) {
-            return false;
-        }
-
-        runInAction(() => {
-            this.vectorStorages = this.vectorStorages.filter(
-                (vectorStorage) => vectorStorage.id !== vectorStorageId,
-            );
-
-            if (this.selectedVectorStorageId !== vectorStorageId) {
-                return;
-            }
-
-            this.selectedVectorStorageId = this.vectorStorages[0]?.id ?? null;
-        });
-
-        return true;
     }
 
     get selectedFile(): SavedFileRecord | null {
