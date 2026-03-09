@@ -117,7 +117,6 @@ export type VectorStorageRecord = {
     id: string;
     name: string;
     size: number;
-    dataPath: string;
     lastActiveAt: string;
     createdAt: string;
     fileIds: string[];
@@ -137,7 +136,6 @@ export type VectorStoreSearchHit = {
 export type UpdateVectorStoragePayload = {
     name?: string;
     size?: number;
-    dataPath?: string;
     lastActiveAt?: string;
     fileIds?: string[];
     projectIds?: string[];
@@ -378,6 +376,10 @@ export type AppApiProjectsNamespace = {
     getProjectById: (projectId: string) => Promise<Project | null>;
     createProject: (payload: CreateProjectPayload) => Promise<Project>;
     deleteProject: (projectId: string) => Promise<DeleteProjectResult>;
+    updateProjectVectorStorage: (
+        projectId: string,
+        vecStorId: string | null,
+    ) => Promise<Project | null>;
 };
 
 export type AppApiScenariosNamespace = {

@@ -94,4 +94,14 @@ export const registerIpcProjectsPack = ({
             deletedProjectId: projectId,
         };
     });
+
+    handleIpc(
+        "app:update-project-vector-storage",
+        (projectId: string, vecStorId: string | null) => {
+            return projectsService.updateProjectVectorStorage(
+                projectId,
+                vecStorId,
+            );
+        },
+    );
 };

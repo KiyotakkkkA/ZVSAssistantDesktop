@@ -95,7 +95,7 @@ export const getOllamaModelsCatalog = async (): Promise<
     OllamaCatalogModel[]
 > => {
     const raw = await proxyHttpRequest({
-        url: "https://ollama.com/api/tags",
+        url: `${Config.OLLAMA_BASE_URL}/api/tags`,
         method: "GET",
     });
 

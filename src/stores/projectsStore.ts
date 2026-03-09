@@ -127,6 +127,36 @@ class ProjectsStore {
         return true;
     }
 
+    async updateProjectVectorStorage(
+        projectId: string,
+        vecStorId: string | null,
+    ): Promise<Project | null> {
+        const api = window.appApi;
+
+        if (!api) {
+            return null;
+        }
+
+        const updatedProject = await api.projects.updateProjectVectorStorage(
+            projectId,
+            vecStorId,
+        );
+
+        if (!updatedProject) {
+            return null;
+        }
+
+        runInAction(() => {
+            if (this.activeProject?.id === updatedProject.id) {
+                this.activeProject = updatedProject;
+            }
+
+            this.upsertProjectListItem(updatedProject);
+        });
+
+        return updatedProject;
+    }
+
     clearActiveProject(): void {
         this.activeProject = null;
     }

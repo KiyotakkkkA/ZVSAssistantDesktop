@@ -1,7 +1,7 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import type {
     SavedFileRecord,
-    UpdateVectorStoragePayload,
+    VectorTagRecord,
     VectorStorageRecord,
 } from "../types/ElectronApi";
 
@@ -16,11 +16,11 @@ class StorageStore {
     files: SavedFileRecord[] = [];
     selectedFileId: string | null = null;
     vectorStorages: VectorStorageRecord[] = [];
+    vectorTags: VectorTagRecord[] = [];
     selectedVectorStorageId: string | null = null;
     projectRefByFileId: Record<string, StorageFileProjectRef> = {};
 
     private isLoadingFiles = false;
-    private isLoadingVectorStorages = false;
 
     constructor() {
         makeAutoObservable(this, {}, { autoBind: true });
@@ -99,54 +99,28 @@ class StorageStore {
         }
     }
 
-    async loadVectorStoragesData(): Promise<void> {
-        if (this.isLoadingVectorStorages) {
+    setVectorStoragesData(nextVectorStorages: VectorStorageRecord[]): void {
+        const normalized = Array.isArray(nextVectorStorages)
+            ? nextVectorStorages
+            : [];
+
+        this.vectorStorages = normalized;
+
+        if (
+            this.selectedVectorStorageId &&
+            normalized.some(
+                (vectorStorage) =>
+                    vectorStorage.id === this.selectedVectorStorageId,
+            )
+        ) {
             return;
         }
 
-        this.isLoadingVectorStorages = true;
+        this.selectedVectorStorageId = normalized[0]?.id ?? null;
+    }
 
-        runInAction(() => {
-            this.isVectorStoragesLoading = true;
-        });
-
-        try {
-            const api = window.appApi;
-
-            if (!api) {
-                runInAction(() => {
-                    this.vectorStorages = [];
-                    this.selectedVectorStorageId = null;
-                });
-                return;
-            }
-
-            const nextVectorStorages =
-                await api.vectorStorages.getVectorStorages();
-
-            runInAction(() => {
-                this.vectorStorages = nextVectorStorages;
-
-                if (
-                    this.selectedVectorStorageId &&
-                    nextVectorStorages.some(
-                        (vectorStorage) =>
-                            vectorStorage.id === this.selectedVectorStorageId,
-                    )
-                ) {
-                    return;
-                }
-
-                this.selectedVectorStorageId =
-                    nextVectorStorages[0]?.id ?? null;
-            });
-        } finally {
-            runInAction(() => {
-                this.isVectorStoragesLoading = false;
-            });
-
-            this.isLoadingVectorStorages = false;
-        }
+    setVectorTagsData(nextVectorTags: VectorTagRecord[]): void {
+        this.vectorTags = Array.isArray(nextVectorTags) ? nextVectorTags : [];
     }
 
     setSelectedFileId(fileId: string): void {
@@ -155,37 +129,6 @@ class StorageStore {
 
     setSelectedVectorStorageId(vectorStorageId: string): void {
         this.selectedVectorStorageId = vectorStorageId;
-    }
-
-    async updateVectorStorage(
-        vectorStorageId: string,
-        payload: UpdateVectorStoragePayload,
-    ): Promise<VectorStorageRecord | null> {
-        const api = window.appApi;
-
-        if (!api) {
-            return null;
-        }
-
-        const updatedVectorStorage =
-            await api.vectorStorages.updateVectorStorage(
-                vectorStorageId,
-                payload,
-            );
-
-        if (!updatedVectorStorage) {
-            return null;
-        }
-
-        runInAction(() => {
-            this.vectorStorages = this.vectorStorages.map((vectorStorage) =>
-                vectorStorage.id === updatedVectorStorage.id
-                    ? updatedVectorStorage
-                    : vectorStorage,
-            );
-        });
-
-        return updatedVectorStorage;
     }
 
     get selectedFile(): SavedFileRecord | null {

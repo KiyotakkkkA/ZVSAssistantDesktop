@@ -5,5 +5,7 @@ export * from "./useUserProfile";
 export * from "./useToasts";
 export * from "./useNotifications";
 export * from "./useExtensions";
+export * from "./useStorage";
+export * from "./useAuth";
 export * from "./files";
 export * from "./chat";

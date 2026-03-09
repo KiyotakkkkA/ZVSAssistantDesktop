@@ -129,6 +129,15 @@ const appApi: AppApi = {
             ipcRenderer.invoke("app:create-project", payload),
         deleteProject: (projectId: string) =>
             ipcRenderer.invoke("app:delete-project", projectId),
+        updateProjectVectorStorage: (
+            projectId: string,
+            vecStorId: string | null,
+        ) =>
+            ipcRenderer.invoke(
+                "app:update-project-vector-storage",
+                projectId,
+                vecStorId,
+            ),
     },
     scenarios: {
         getScenariosList: () => ipcRenderer.invoke("app:get-scenarios-list"),
@@ -142,13 +151,24 @@ const appApi: AppApi = {
             ipcRenderer.invoke("app:delete-scenario", scenarioId),
     },
     vectorStorages: {
-        getVectorStorages: async () => [],
-        updateVectorStorage: async () => null,
+        getVectorStorages: () => ipcRenderer.invoke("app:get-vector-storages"),
+        updateVectorStorage: (vectorStorageId: string, payload) =>
+            ipcRenderer.invoke(
+                "app:update-vector-storage",
+                vectorStorageId,
+                payload,
+            ),
         searchVectorStorage: (
-            _vectorStorageId: string,
-            _query: string,
-            _limit?: number,
-        ) => Promise.resolve([]),
+            vectorStorageId: string,
+            query: string,
+            limit?: number,
+        ) =>
+            ipcRenderer.invoke(
+                "app:search-vector-storage",
+                vectorStorageId,
+                query,
+                limit,
+            ),
     },
     cache: {
         getCacheEntry: (key: string) =>

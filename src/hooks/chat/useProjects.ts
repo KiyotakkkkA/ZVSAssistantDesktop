@@ -27,6 +27,20 @@ export const useProjects = () => {
         return projectsStore.deleteProject(projectId);
     }, []);
 
+    const updateProjectVectorStorage = useCallback(
+        async (projectId: string, vecStorId: string | null) => {
+            if (!projectId) {
+                return null;
+            }
+
+            return projectsStore.updateProjectVectorStorage(
+                projectId,
+                vecStorId,
+            );
+        },
+        [],
+    );
+
     return {
         isReady: projectsStore.isReady,
         projects: projectsStore.projects,
@@ -35,6 +49,7 @@ export const useProjects = () => {
         createProject,
         switchProject,
         deleteProject,
+        updateProjectVectorStorage,
         clearActiveProject: projectsStore.clearActiveProject,
     };
 };

@@ -1,8 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { observer } from "mobx-react-lite";
 import { Icon } from "@iconify/react";
-import { useToasts } from "../../../hooks";
+import {
+    useToasts,
+    useVectorStorageTags,
+    useVectorStorages,
+} from "../../../hooks";
 import { useFileSave } from "../../../hooks/files";
 import { Button, InputSmall, Switcher } from "../../components/atoms";
 import { StoredFileCard } from "../../components/molecules/cards/storage";
@@ -24,14 +28,79 @@ export const StoragePage = observer(function StoragePage() {
     const [activeView, setActiveView] = useState<StorageView>("files");
     const [fileSearchQuery, setFileSearchQuery] = useState("");
     const [vectorSearchQuery, setVectorSearchQuery] = useState("");
+    const [debouncedVectorSearchQuery, setDebouncedVectorSearchQuery] =
+        useState("");
+    const [selectedVectorTagIds, setSelectedVectorTagIds] = useState<string[]>(
+        [],
+    );
+    const lastStorageErrorRef = useRef("");
+    const lastTagsErrorRef = useRef("");
 
     const files = storageStore.files;
     const vectorStorages = storageStore.vectorStorages;
+    const vectorTags = storageStore.vectorTags;
     const selectedVectorStorage = storageStore.selectedVectorStorage;
+
+    const vectorStoragesQuery = useVectorStorages(
+        {
+            name: debouncedVectorSearchQuery,
+            tagIds: selectedVectorTagIds,
+        },
+        { enabled: true },
+    );
+    const vectorTagsQuery = useVectorStorageTags({ enabled: true });
+
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            setDebouncedVectorSearchQuery(vectorSearchQuery);
+        }, 350);
+
+        return () => {
+            window.clearTimeout(timeoutId);
+        };
+    }, [vectorSearchQuery]);
+
+    useEffect(() => {
+        if (!vectorStoragesQuery.error) {
+            return;
+        }
+
+        const description =
+            vectorStoragesQuery.error.message ||
+            "Не удалось загрузить векторные хранилища.";
+
+        if (description === lastStorageErrorRef.current) {
+            return;
+        }
+
+        lastStorageErrorRef.current = description;
+        toasts.danger({
+            title: "Ошибка загрузки хранилищ",
+            description,
+        });
+    }, [vectorStoragesQuery.error, toasts]);
+
+    useEffect(() => {
+        if (!vectorTagsQuery.error) {
+            return;
+        }
+
+        const description =
+            vectorTagsQuery.error.message || "Не удалось загрузить теги.";
+
+        if (description === lastTagsErrorRef.current) {
+            return;
+        }
+
+        lastTagsErrorRef.current = description;
+        toasts.danger({
+            title: "Ошибка загрузки тегов",
+            description,
+        });
+    }, [vectorTagsQuery.error, toasts]);
 
     useEffect(() => {
         void storageStore.loadFilesData();
-        void storageStore.loadVectorStoragesData();
     }, []);
 
     const formatFileSize = (bytes: number) => {
@@ -81,19 +150,7 @@ export const StoragePage = observer(function StoragePage() {
         );
     }, [fileSearchQuery, files]);
 
-    const filteredVectorStorages = useMemo(() => {
-        const normalizedQuery = vectorSearchQuery.trim().toLowerCase();
-
-        if (!normalizedQuery) {
-            return vectorStorages;
-        }
-
-        return vectorStorages.filter((vectorStorage) => {
-            const haystack =
-                `${vectorStorage.name} ${vectorStorage.id}`.toLowerCase();
-            return haystack.includes(normalizedQuery);
-        });
-    }, [vectorSearchQuery, vectorStorages]);
+    const filteredVectorStorages = vectorStorages;
 
     const containedFiles = (() => {
         if (!selectedVectorStorage) {
@@ -160,7 +217,7 @@ export const StoragePage = observer(function StoragePage() {
 
         await Promise.all([
             storageStore.loadFilesData(),
-            storageStore.loadVectorStoragesData(),
+            vectorStoragesQuery.refetch(),
         ]);
 
         toasts.success({
@@ -172,7 +229,30 @@ export const StoragePage = observer(function StoragePage() {
     const isActiveViewLoading =
         activeView === "files"
             ? storageStore.isFilesLoading
-            : storageStore.isVectorStoragesLoading;
+            : vectorStoragesQuery.isLoading;
+
+    const refreshVectorData = async () => {
+        const [storagesResult, tagsResult] = await Promise.all([
+            vectorStoragesQuery.refetch(),
+            vectorTagsQuery.refetch(),
+        ]);
+
+        if (storagesResult.error || tagsResult.error) {
+            toasts.danger({
+                title: "Ошибка обновления",
+                description:
+                    storagesResult.error?.message ??
+                    tagsResult.error?.message ??
+                    "Не удалось обновить данные векторного хранилища.",
+            });
+            return;
+        }
+
+        toasts.success({
+            title: "Обновлено",
+            description: "Список хранилищ и тегов успешно обновлён.",
+        });
+    };
 
     if (isActiveViewLoading) {
         return <LoadingFallbackPage title="Загрузка хранилища..." />;
@@ -352,6 +432,92 @@ export const StoragePage = observer(function StoragePage() {
                                 placeholder="Поиск векторного хранилища..."
                             />
 
+                            <div className="rounded-xl border border-main-700/70 bg-main-900/45 p-3">
+                                <div className="mb-2 flex items-center justify-between gap-2">
+                                    <p className="text-xs uppercase tracking-[0.12em] text-main-400">
+                                        Фильтр по тегам
+                                    </p>
+                                    <button
+                                        type="button"
+                                        className="text-xs text-main-300 transition-colors hover:text-main-100"
+                                        onClick={() =>
+                                            setSelectedVectorTagIds([])
+                                        }
+                                        disabled={
+                                            selectedVectorTagIds.length === 0
+                                        }
+                                    >
+                                        Очистить
+                                    </button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {vectorTags.length > 0 ? (
+                                        vectorTags.map((tag) => {
+                                            const isSelected =
+                                                selectedVectorTagIds.includes(
+                                                    tag.id,
+                                                );
+
+                                            return (
+                                                <button
+                                                    key={tag.id}
+                                                    type="button"
+                                                    className={`rounded-lg border px-2 py-1 text-xs transition-colors ${
+                                                        isSelected
+                                                            ? "border-main-200 bg-main-100 text-main-900"
+                                                            : "border-main-700/70 bg-main-900/55 text-main-200 hover:bg-main-800/70"
+                                                    }`}
+                                                    onClick={() => {
+                                                        setSelectedVectorTagIds(
+                                                            (previous) =>
+                                                                isSelected
+                                                                    ? previous.filter(
+                                                                          (
+                                                                              current,
+                                                                          ) =>
+                                                                              current !==
+                                                                              tag.id,
+                                                                      )
+                                                                    : [
+                                                                          ...previous,
+                                                                          tag.id,
+                                                                      ],
+                                                        );
+                                                    }}
+                                                >
+                                                    {tag.name}
+                                                </button>
+                                            );
+                                        })
+                                    ) : (
+                                        <p className="text-xs text-main-400">
+                                            Теги недоступны.
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <Button
+                                variant="secondary"
+                                shape="rounded-lg"
+                                className="h-8 px-3 text-xs"
+                                onClick={() => {
+                                    void refreshVectorData();
+                                }}
+                                disabled={
+                                    vectorStoragesQuery.isFetching ||
+                                    vectorTagsQuery.isFetching
+                                }
+                            >
+                                <Icon icon="mdi:refresh" width={16} />
+                                <span className="ml-1">
+                                    {vectorStoragesQuery.isFetching ||
+                                    vectorTagsQuery.isFetching
+                                        ? "Обновление..."
+                                        : "Обновить"}
+                                </span>
+                            </Button>
+
                             <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                                 {filteredVectorStorages.length > 0 ? (
                                     filteredVectorStorages.map(
@@ -417,13 +583,6 @@ export const StoragePage = observer(function StoragePage() {
                                             {formatFileSize(
                                                 selectedVectorStorage.size,
                                             )}
-                                        </p>
-                                        <p className="text-main-400">
-                                            Файл индекса
-                                        </p>
-                                        <p className="break-all text-main-200">
-                                            {selectedVectorStorage.dataPath ||
-                                                "Не указана"}
                                         </p>
                                         <p className="text-main-400">
                                             Последняя активность

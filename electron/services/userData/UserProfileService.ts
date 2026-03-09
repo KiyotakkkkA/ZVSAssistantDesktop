@@ -187,6 +187,21 @@ export class UserProfileService {
             ...(typeof parsed.userLanguage === "string"
                 ? { userLanguage: parsed.userLanguage }
                 : {}),
+            ...(typeof parsed.zvsAuthUserId === "string"
+                ? { zvsAuthUserId: parsed.zvsAuthUserId }
+                : {}),
+            ...(typeof parsed.zvsAuthLogin === "string"
+                ? { zvsAuthLogin: parsed.zvsAuthLogin }
+                : {}),
+            ...(typeof parsed.zvsAuthEmail === "string"
+                ? { zvsAuthEmail: parsed.zvsAuthEmail }
+                : {}),
+            ...(typeof parsed.zvsAuthName === "string"
+                ? { zvsAuthName: parsed.zvsAuthName }
+                : {}),
+            ...(typeof parsed.zvsAuthUpdatedAt === "string"
+                ? { zvsAuthUpdatedAt: parsed.zvsAuthUpdatedAt }
+                : {}),
             activeDialogId: normalizeNullableId(parsed.activeDialogId),
             activeProjectId: normalizeNullableId(parsed.activeProjectId),
             activeScenarioId: normalizeNullableId(parsed.activeScenarioId),

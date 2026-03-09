@@ -4,7 +4,10 @@ import { useToasts } from "../../../../hooks";
 import { toolsStore } from "../../../../stores/toolsStore";
 import { Button, Modal } from "../../atoms";
 import { ToolPackageCard } from "../../molecules/cards/chat";
-import { SettingsView, type SettingsViewHandle } from "../settings";
+import {
+    SettingsView,
+    type SettingsViewHandle,
+} from "../settings/SettingsView";
 
 type ChatHeaderProps = {
     title?: string;
@@ -22,7 +25,7 @@ const scopeToastsMeta = {
     },
     account: {
         title: "Сохранено!",
-        description: "Данные ZVS аккаунта обновлены.",
+        description: "Данные ZVS Профильа обновлены.",
     },
 };
 
@@ -32,11 +35,25 @@ export function ChatHeader({
 }: ChatHeaderProps) {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
+    const [isSettingsSaveVisible, setIsSettingsSaveVisible] = useState(false);
     const settingsViewRef = useRef<SettingsViewHandle | null>(null);
     const toasts = useToasts();
 
     const handleSaveSettings = async () => {
-        const result = await settingsViewRef.current?.save();
+        let result: Awaited<ReturnType<SettingsViewHandle["save"]>> | undefined;
+
+        try {
+            result = await settingsViewRef.current?.save();
+        } catch (error) {
+            toasts.danger({
+                title: "Не удалось сохранить",
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Произошла ошибка при сохранении настроек.",
+            });
+            return;
+        }
 
         if (!result) {
             return;
@@ -113,18 +130,25 @@ export function ChatHeader({
                 title="Настройки"
                 className="h-[90vh] max-w-[min(1440px,98vw)]"
                 footer={
-                    <Button
-                        variant="primary"
-                        className="rounded-xl px-4 py-2"
-                        onClick={() => {
-                            void handleSaveSettings();
-                        }}
-                    >
-                        Сохранить
-                    </Button>
+                    isSettingsSaveVisible ? (
+                        <Button
+                            variant="primary"
+                            className="rounded-xl px-4 py-2"
+                            onClick={() => {
+                                void handleSaveSettings();
+                            }}
+                        >
+                            Сохранить
+                        </Button>
+                    ) : undefined
                 }
             >
-                <SettingsView ref={settingsViewRef} />
+                <SettingsView
+                    ref={settingsViewRef}
+                    onSaveVisibilityChange={(isVisible: boolean) => {
+                        setIsSettingsSaveVisible(isVisible);
+                    }}
+                />
             </Modal>
 
             <Modal

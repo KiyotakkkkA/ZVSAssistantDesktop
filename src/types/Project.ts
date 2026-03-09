@@ -9,6 +9,7 @@ export type Project = {
     description: string;
     directoryPath: string;
     dialogId: string;
+    vecStorId: string | null;
     fileUUIDs: string[];
     requiredTools: string[];
     linkedVectorStorage: ProjectLinkedVectorStorage | null;

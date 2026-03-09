@@ -177,22 +177,9 @@ export function useChat() {
                         ? activeProject.id
                         : "";
 
-                let hasConnectedVectorStorage = false;
-                if (activeProjectId) {
-                    const vectorStoragesApi = window.appApi?.vectorStorages;
-
-                    if (vectorStoragesApi) {
-                        const vectorStorages =
-                            await vectorStoragesApi.getVectorStorages();
-                        hasConnectedVectorStorage = vectorStorages.some(
-                            (vectorStorage) =>
-                                vectorStorage.usedByProjects.some(
-                                    (projectRef) =>
-                                        projectRef.id === activeProjectId,
-                                ),
-                        );
-                    }
-                }
+                const hasConnectedVectorStorage = Boolean(
+                    activeProjectId && activeProject?.vecStorId,
+                );
 
                 const requestTools = hasConnectedVectorStorage
                     ? toolsStore.toolDefinitions

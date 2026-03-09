@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { useNavigate, useParams } from "react-router-dom";
 import { useChat } from "../../../../hooks/agents";
-import { useProjects, useToasts } from "../../../../hooks";
+import { useProjects, useToasts, useVectorStorages } from "../../../../hooks";
 import { useFileSave } from "../../../../hooks/files";
 import { Icon } from "@iconify/react";
 import { MessageComposer } from "../../../components/molecules";
@@ -17,7 +17,8 @@ export const ProjectPage = observer(function ProjectPage() {
     const { projectId = "" } = useParams();
     const navigate = useNavigate();
     const toasts = useToasts();
-    const { switchProject, activeProject } = useProjects();
+    const { switchProject, activeProject, updateProjectVectorStorage } =
+        useProjects();
     const { getFilesByIds, openFile, openPath } = useFileSave();
 
     const {
@@ -35,6 +36,9 @@ export const ProjectPage = observer(function ProjectPage() {
     const [isProjectLoading, setIsProjectLoading] = useState(true);
     const [selectedVectorStorageId, setSelectedVectorStorageId] = useState("");
     const [isVectorBindingSaving, setIsVectorBindingSaving] = useState(false);
+    const vectorStoragesQuery = useVectorStorages(undefined, {
+        enabled: isDocumentsOpen,
+    });
 
     useEffect(() => {
         setIsProjectLoading(true);
@@ -75,14 +79,6 @@ export const ProjectPage = observer(function ProjectPage() {
             isCancelled = true;
         };
     }, [projectId, switchProject, getFilesByIds, navigate, toasts]);
-
-    useEffect(() => {
-        if (!isDocumentsOpen) {
-            return;
-        }
-
-        void storageStore.loadVectorStoragesData();
-    }, [isDocumentsOpen]);
 
     const linkedVectorStorage = activeProject?.linkedVectorStorage ?? null;
 
@@ -142,26 +138,18 @@ export const ProjectPage = observer(function ProjectPage() {
     };
 
     const saveVectorBinding = async () => {
-        const api = window.appApi?.vectorStorages;
-
-        if (!api || !activeProject) {
+        if (!activeProject) {
             return;
         }
 
         const projectId = activeProject.id;
+        const nextVecStorId = selectedVectorStorageId || null;
+        const currentVecStorId = activeProject.vecStorId ?? null;
 
         try {
             setIsVectorBindingSaving(true);
 
-            const vectorStorages = await api.getVectorStorages();
-            const currentLinkedStorage =
-                vectorStorages.find((vectorStorage) =>
-                    vectorStorage.usedByProjects.some(
-                        (projectRef) => projectRef.id === projectId,
-                    ),
-                ) ?? null;
-
-            if ((currentLinkedStorage?.id ?? "") === selectedVectorStorageId) {
+            if (currentVecStorId === nextVecStorId) {
                 toasts.info({
                     title: "Без изменений",
                     description: "Привязка векторного хранилища уже актуальна.",
@@ -169,37 +157,24 @@ export const ProjectPage = observer(function ProjectPage() {
                 return;
             }
 
-            for (const vectorStorage of vectorStorages) {
-                const currentProjectIds = vectorStorage.usedByProjects.map(
-                    (projectRef) => projectRef.id,
-                );
-                const hasProject = currentProjectIds.includes(projectId);
-                const shouldHaveProject =
-                    selectedVectorStorageId.length > 0 &&
-                    vectorStorage.id === selectedVectorStorageId;
+            const updatedProject = await updateProjectVectorStorage(
+                projectId,
+                nextVecStorId,
+            );
 
-                if (hasProject === shouldHaveProject) {
-                    continue;
-                }
-
-                const nextProjectIds = shouldHaveProject
-                    ? [...new Set([...currentProjectIds, projectId])]
-                    : currentProjectIds.filter(
-                          (currentProjectId) => currentProjectId !== projectId,
-                      );
-
-                await api.updateVectorStorage(vectorStorage.id, {
-                    projectIds: nextProjectIds,
+            if (!updatedProject) {
+                toasts.warning({
+                    title: "Не удалось обновить привязку",
+                    description: "Попробуйте ещё раз.",
                 });
+                return;
             }
 
-            await storageStore.loadVectorStoragesData();
-            await switchProject(projectId);
-            setSelectedVectorStorageId(selectedVectorStorageId);
+            setSelectedVectorStorageId(updatedProject.vecStorId ?? "");
 
             toasts.success({
                 title: "Привязка обновлена",
-                description: selectedVectorStorageId
+                description: nextVecStorId
                     ? "Векторное хранилище подключено к проекту."
                     : "Векторное хранилище отключено от проекта.",
             });
@@ -327,7 +302,7 @@ export const ProjectPage = observer(function ProjectPage() {
                                 }}
                                 disabled={
                                     isVectorBindingSaving ||
-                                    storageStore.isVectorStoragesLoading
+                                    vectorStoragesQuery.isFetching
                                 }
                             >
                                 {isVectorBindingSaving

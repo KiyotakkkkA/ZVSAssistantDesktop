@@ -211,7 +211,6 @@ class JobsStorage {
             });
 
             if (!event.job.isPending) {
-                void storageStore.loadVectorStoragesData();
                 void storageStore.loadFilesData();
             }
 

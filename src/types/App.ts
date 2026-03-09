@@ -37,6 +37,11 @@ export type UserProfile = {
     userName: string;
     userPrompt: string;
     userLanguage: string;
+    zvsAuthUserId: string;
+    zvsAuthLogin: string;
+    zvsAuthEmail: string;
+    zvsAuthName: string;
+    zvsAuthUpdatedAt: string;
     activeDialogId: string | null;
     activeProjectId: string | null;
     activeScenarioId: string | null;

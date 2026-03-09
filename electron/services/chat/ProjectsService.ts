@@ -48,6 +48,7 @@ export class ProjectsService {
             description: payload.description.trim(),
             directoryPath: projectDirectoryPath,
             dialogId: payload.dialogId,
+            vecStorId: null,
             fileUUIDs: this.normalizeFileIds(payload.fileUUIDs),
             requiredTools: this.normalizeRequiredTools(payload.requiredTools),
             linkedVectorStorage: null,
@@ -69,6 +70,33 @@ export class ProjectsService {
         this.databaseService.deleteProject(project.id, this.createdBy);
 
         return project;
+    }
+
+    updateProjectVectorStorage(
+        projectId: string,
+        vecStorId: string | null,
+    ): Project | null {
+        const projects = this.readProjects();
+        const targetProject =
+            projects.find((project) => project.id === projectId) ?? null;
+
+        if (!targetProject) {
+            return null;
+        }
+
+        const normalizedVecStorId =
+            typeof vecStorId === "string" && vecStorId.trim().length > 0
+                ? vecStorId.trim()
+                : null;
+
+        const updatedProject: Project = {
+            ...targetProject,
+            vecStorId: normalizedVecStorId,
+            updatedAt: new Date().toISOString(),
+        };
+
+        this.writeProject(updatedProject);
+        return this.attachLinkedVectorStorage(updatedProject);
     }
 
     private normalizeProjectId(id: unknown): string {
@@ -162,6 +190,21 @@ export class ProjectsService {
                             .projectPath,
                 ),
                 dialogId: parsed.dialogId,
+                vecStorId:
+                    typeof parsed.vecStorId === "string" &&
+                    parsed.vecStorId.trim().length > 0
+                        ? parsed.vecStorId.trim()
+                        : typeof (parsed as Partial<Record<string, unknown>>)
+                                .vec_stor_id === "string" &&
+                            String(
+                                (parsed as Partial<Record<string, unknown>>)
+                                    .vec_stor_id,
+                            ).trim().length > 0
+                          ? String(
+                                (parsed as Partial<Record<string, unknown>>)
+                                    .vec_stor_id,
+                            ).trim()
+                          : null,
                 fileUUIDs: this.normalizeFileIds(
                     parsed.fileUUIDs ??
                         (parsed as Partial<Record<string, unknown>>)
@@ -191,9 +234,14 @@ export class ProjectsService {
     }
 
     private writeProject(project: Project): void {
+        const payloadToPersist = {
+            ...project,
+            vec_stor_id: project.vecStorId,
+        };
+
         this.databaseService.upsertProjectRaw(
             project.id,
-            project,
+            payloadToPersist,
             this.createdBy,
         );
     }
@@ -213,9 +261,17 @@ export class ProjectsService {
     }
 
     private attachLinkedVectorStorage(project: Project): Project {
+        const linkedVectorStorage: ProjectLinkedVectorStorage | null =
+            project.vecStorId
+                ? {
+                      id: project.vecStorId,
+                      name: project.vecStorId,
+                  }
+                : null;
+
         return {
             ...project,
-            linkedVectorStorage: null as ProjectLinkedVectorStorage | null,
+            linkedVectorStorage,
         };
     }
 }
