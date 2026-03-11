@@ -50,9 +50,31 @@ type RawResponse = {
     bodyText: string;
 };
 
+const getOperatingSystemName = (): string => {
+    if (typeof navigator === "undefined") {
+        return "Unknown";
+    }
+
+    const platformSource = `${navigator.platform} ${navigator.userAgent}`;
+
+    if (/win/i.test(platformSource)) {
+        return "Windows";
+    }
+
+    if (/mac/i.test(platformSource)) {
+        return "macOS";
+    }
+
+    if (/linux/i.test(platformSource)) {
+        return "Linux";
+    }
+
+    return "Unknown";
+};
+
 const createJsonHeaders = (authToken?: string): Record<string, string> => ({
     "Content-Type": "application/json",
-    "User-Agent": `ZVSAssistant/Desktop`,
+    "User-Agent": `ZVSAssistant/Desktop/${getOperatingSystemName()}`,
     ...(authToken
         ? {
               Authorization: `Bearer ${authToken}`,
