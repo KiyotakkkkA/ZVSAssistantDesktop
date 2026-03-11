@@ -6,6 +6,7 @@ import type {
     UserProfile,
 } from "./App";
 import type {
+    BuiltinToolPackage,
     ChatDialog,
     ChatDialogListItem,
     DeleteDialogResult,
@@ -26,15 +27,6 @@ import type {
     ScenarioListItem,
     UpdateScenarioPayload,
 } from "./Scenario";
-
-export type ExecShellCommandResult = {
-    command: string;
-    cwd: string;
-    isAdmin: false;
-    exitCode: number;
-    stdout: string;
-    stderr: string;
-};
 
 export type UploadedFileData = {
     name: string;
@@ -267,88 +259,6 @@ export type AppApiDialogsNamespace = {
     saveDialogSnapshot: (dialog: ChatDialog) => Promise<ChatDialog>;
 };
 
-export type AppApiShellNamespace = {
-    execShellCommand: (
-        command: string,
-        cwd?: string,
-    ) => Promise<ExecShellCommandResult>;
-};
-
-export type BrowserRedirect = {
-    from: string;
-    to: string;
-};
-
-export type BrowserNavigateResult = {
-    success: boolean;
-    requestedUrl: string;
-    finalUrl: string;
-    title: string;
-    redirected: boolean;
-    redirects: BrowserRedirect[];
-    statusCode: number | null;
-    loadTimeMs: number;
-    error?: string;
-};
-
-export type BrowserSnapshotElement = {
-    id: string;
-    tag: string;
-    role: string;
-    text: string;
-    href: string;
-    type: string;
-    placeholder: string;
-    selector: string;
-};
-
-export type BrowserPageSnapshot = {
-    url: string;
-    title: string;
-    headings: string[];
-    elements: BrowserSnapshotElement[];
-    textPreview: string;
-    capturedAt: string;
-};
-
-export type BrowserInteractAction = "click" | "type";
-
-export type BrowserInteractParams = {
-    action: BrowserInteractAction;
-    selector: string;
-    text?: string;
-    submit?: boolean;
-    waitForNavigationMs?: number;
-};
-
-export type BrowserInteractResult = {
-    success: boolean;
-    action: BrowserInteractAction;
-    selector: string;
-    elementTag?: string;
-    url: string;
-    title: string;
-    waitedMs: number;
-    error?: string;
-};
-
-export type BrowserCloseResult = {
-    success: boolean;
-    hadSession: boolean;
-};
-
-export type AppApiBrowserNamespace = {
-    openUrl: (
-        url: string,
-        timeoutMs?: number,
-    ) => Promise<BrowserNavigateResult>;
-    getPageSnapshot: (maxElements?: number) => Promise<BrowserPageSnapshot>;
-    interactWith: (
-        params: BrowserInteractParams,
-    ) => Promise<BrowserInteractResult>;
-    closeSession: () => Promise<BrowserCloseResult>;
-};
-
 export type AppApiUploadNamespace = {
     pickFiles: (options?: {
         accept?: string[];
@@ -439,6 +349,10 @@ export type AppApiExtensionsNamespace = {
     getExtensionsState: () => Promise<AppExtensionInfo[]>;
 };
 
+export type AppApiToolsNamespace = {
+    getBuiltinToolPackages: () => Promise<BuiltinToolPackage[]>;
+};
+
 export type StreamOllamaChatPayload = {
     model: string;
     messages: OllamaMessage[];
@@ -450,8 +364,12 @@ export type StreamOllamaChatPayload = {
 export type ChatRuntimeContext = {
     activeProjectId?: string;
     projectDirectory?: string;
+    projectVectorStorageId?: string;
     currentDate?: string;
     zvsAccessToken?: string;
+    zvsBaseUrl?: string;
+    telegramId?: string;
+    telegramBotToken?: string;
 };
 
 export type RunChatSessionPayload = {
@@ -559,59 +477,11 @@ export type AppApiVoiceNamespace = {
     ) => () => void;
 };
 
-export type FsDirectoryEntry = {
-    name: string;
-    type: "file" | "directory";
-    size: number;
-    modifiedAt: string;
-};
-
-export type FsListDirectoryResult = {
-    path: string;
-    entries: FsDirectoryEntry[];
-};
-
-export type FsCreateFileResult = {
-    success: boolean;
-    path: string;
-};
-
-export type FsCreateDirResult = {
-    success: boolean;
-    path: string;
-};
-
-export type FsReadFileResult = {
-    path: string;
-    content: string;
-    totalLines: number;
-    fromLine: number;
-    toLine: number;
-};
-
-export type AppApiFsNamespace = {
-    listDirectory: (cwd: string) => Promise<FsListDirectoryResult>;
-    createFile: (
-        cwd: string,
-        filename: string,
-        content?: string,
-    ) => Promise<FsCreateFileResult>;
-    createDir: (cwd: string, dirname: string) => Promise<FsCreateDirResult>;
-    readFile: (
-        filePath: string,
-        readAll: boolean,
-        fromLine?: number,
-        toLine?: number,
-    ) => Promise<FsReadFileResult>;
-};
-
 export type AppApi = {
     boot: AppApiBootNamespace;
     themes: AppApiThemesNamespace;
     profile: AppApiProfileNamespace;
     dialogs: AppApiDialogsNamespace;
-    shell: AppApiShellNamespace;
-    browser: AppApiBrowserNamespace;
     upload: AppApiUploadNamespace;
     files: AppApiFilesNamespace;
     projects: AppApiProjectsNamespace;
@@ -622,7 +492,7 @@ export type AppApi = {
     network: AppApiNetworkNamespace;
     communications: AppApiCommunicationsNamespace;
     extensions: AppApiExtensionsNamespace;
+    tools: AppApiToolsNamespace;
     llm: AppApiLlmNamespace;
     voice: AppApiVoiceNamespace;
-    fs: AppApiFsNamespace;
 };

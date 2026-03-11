@@ -2,15 +2,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { app, BrowserWindow, dialog, shell } from "electron";
-import type { CommandExecService } from "../services/CommandExecService";
-import type { BrowserService } from "../services/BrowserService";
 import type { FileStorageService } from "../services/storage/FileStorageService";
 import type { FSystemService } from "../services/FSystemService";
 import type {
     SaveImageFromSourcePayload,
     UploadedFileData,
 } from "../../src/types/ElectronApi";
-import { handleIpc, handleIpcWithEvent, handleManyIpc } from "./ipcUtils";
+import { handleIpc, handleIpcWithEvent } from "./ipcUtils";
 
 const mimeByExtension: Record<string, string> = {
     ".png": "image/png",
@@ -83,47 +81,14 @@ const parseDataUrl = (src: string) => {
 };
 
 export type IpcSystemPackDeps = {
-    commandExecService: CommandExecService;
-    browserService: BrowserService;
     fileStorageService: FileStorageService;
     fSystemService: FSystemService;
 };
 
 export const registerIpcSystemPack = ({
-    commandExecService,
-    browserService,
     fileStorageService,
     fSystemService,
 }: IpcSystemPackDeps) => {
-    handleManyIpc([
-        [
-            "app:exec-shell-command",
-            (command: string, cwd?: string) =>
-                commandExecService.execute(command, cwd),
-        ],
-        [
-            "app:browser-open-url",
-            (url: string, timeoutMs?: number) =>
-                browserService.openUrl(url, timeoutMs),
-        ],
-        [
-            "app:browser-get-page-snapshot",
-            (maxElements?: number) =>
-                browserService.getPageSnapshot(maxElements),
-        ],
-        [
-            "app:browser-interact-with",
-            (params: {
-                action: "click" | "type";
-                selector: string;
-                text?: string;
-                submit?: boolean;
-                waitForNavigationMs?: number;
-            }) => browserService.interactWith(params),
-        ],
-        ["app:browser-close-session", () => browserService.closeSession()],
-    ]);
-
     handleIpc("app:open-saved-file", async (fileId: string) => {
         const file = fileStorageService.getFileById(fileId);
 

@@ -8,11 +8,12 @@ use tokio::sync::Mutex;
 use crate::application::ports::ToolExecutorPort;
 use crate::domain::chat::ToolExecutionRequest;
 use crate::domain::error::CoreError;
+use crate::tools::packs::studying_pack::fetch_mirea_schedule_by_date;
 
 #[async_trait]
 pub trait BuiltinToolHostPort: Send + Sync {
     async fn exec_shell(&self, command: &str, cwd: Option<&str>) -> Result<Value, CoreError>;
-    async fn vector_search(&self, args: &Value) -> Result<Value, CoreError>;
+    async fn vector_search(&self, request: &ToolExecutionRequest) -> Result<Value, CoreError>;
     async fn web_search(&self, query: &str) -> Result<Value, CoreError>;
     async fn web_fetch(&self, url: &str) -> Result<Value, CoreError>;
     async fn browser_open_url(&self, args: &Value) -> Result<Value, CoreError>;
@@ -31,7 +32,6 @@ pub trait BuiltinToolHostPort: Send + Sync {
         from_row: Option<u32>,
         to_row: Option<u32>,
     ) -> Result<Value, CoreError>;
-    async fn mirea_schedule(&self, date_value: &str) -> Result<Value, CoreError>;
 }
 
 #[derive(Debug, Clone)]
@@ -352,15 +352,16 @@ impl BuiltinToolsExecutor {
 #[async_trait]
 impl ToolExecutorPort for BuiltinToolsExecutor {
     async fn execute_tool(&self, request: ToolExecutionRequest) -> Result<Value, CoreError> {
-        let args = request.args;
+        let args = &request.args;
 
         match request.tool_name.as_str() {
             "command_exec" => self.execute_command_exec(&args).await,
-            "vector_store_search_tool" => self.host_port.vector_search(&args).await,
+            "vector_store_search_tool" => self.host_port.vector_search(&request).await,
             "web_search" => self.execute_web_search(&args).await,
             "web_fetch" => self.execute_web_fetch(&args).await,
             "open_url" => self.host_port.browser_open_url(&args).await,
             "get_page_snapshot" => self.host_port.browser_snapshot(&args).await,
+            "interact_with" => self.host_port.browser_interact(&args).await,
             "interract_with" => self.host_port.browser_interact(&args).await,
             "close_browser" => self.host_port.browser_close().await,
             "send_telegram_msg" => self.host_port.telegram_send(&args).await,
@@ -369,14 +370,62 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
             "create_file" => self.execute_create_file(&args).await,
             "create_dir" => self.execute_create_dir(&args).await,
             "read_file" => self.execute_read_file(&args).await,
-            "qa_tool" => Ok(json!({
-                "status": "awaiting_user_response",
-                "question": args.get("question").and_then(Value::as_str).unwrap_or_default(),
-                "reason": args.get("reason").and_then(Value::as_str).unwrap_or_default(),
-                "selectAnswers": args.get("selectAnswers").cloned().unwrap_or_else(|| json!([])),
-                "userAnswer": args.get("userAnswer").and_then(Value::as_str).unwrap_or_default(),
-                "instruction": "Задай пользователю этот вопрос и дождись ответа в чате перед продолжением.",
-            })),
+            "qa_tool" => {
+                let questions = args
+                    .get("questions")
+                    .and_then(Value::as_array)
+                    .map(|items| {
+                        items.iter()
+                            .filter_map(|item| match item {
+                                Value::String(question) => {
+                                    let trimmed = question.trim();
+
+                                    if trimmed.is_empty() {
+                                        None
+                                    } else {
+                                        Some(json!({
+                                            "question": trimmed,
+                                            "reason": "",
+                                            "selectAnswers": [],
+                                            "userAnswerHint": "",
+                                        }))
+                                    }
+                                }
+                                Value::Object(_) => Some(item.clone()),
+                                _ => None,
+                            })
+                            .collect::<Vec<Value>>()
+                    })
+                    .filter(|items| !items.is_empty())
+                    .unwrap_or_else(|| {
+                        let question = args
+                            .get("question")
+                            .and_then(Value::as_str)
+                            .map(str::trim)
+                            .unwrap_or_default();
+
+                        if question.is_empty() {
+                            Vec::new()
+                        } else {
+                            vec![json!({
+                                "question": question,
+                                "reason": args.get("reason").and_then(Value::as_str).unwrap_or_default(),
+                                "selectAnswers": args.get("selectAnswers").cloned().unwrap_or_else(|| json!([])),
+                                "userAnswerHint": args
+                                    .get("userAnswerHint")
+                                    .or_else(|| args.get("userAnswer"))
+                                    .and_then(Value::as_str)
+                                    .unwrap_or_default(),
+                            })]
+                        }
+                    });
+
+                Ok(json!({
+                    "status": "awaiting_user_response",
+                    "questions": questions,
+                    "instruction": "Задай пользователю все вопросы из списка, дождись ответов на каждый и продолжай только после получения полного набора ответов.",
+                }))
+            }
             "planning_tool" => self.execute_planning_tool(&args).await,
             "schedule_mirea_tool" => {
                 let date_value = args
@@ -394,7 +443,7 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
                     ));
                 }
 
-                self.host_port.mirea_schedule(date_value).await
+                fetch_mirea_schedule_by_date(date_value).await
             }
             _ => Err(CoreError::Tool(format!(
                 "Tool {} не поддерживается в core runtime",

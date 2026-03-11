@@ -1,9 +1,9 @@
-import type { ToolPackageDescriptor } from "../../../../../utils/ToolsBuilder";
+import type { BuiltinToolPackage } from "../../../../../types/Chat";
 import { Accordeon } from "../../../atoms";
 import { ShikiCodeBlock } from "../../render/ShikiCodeBlock";
 
 type ToolPackageCardProps = {
-    pkg: ToolPackageDescriptor;
+    pkg: BuiltinToolPackage;
 };
 
 export function ToolPackageCard({ pkg }: ToolPackageCardProps) {

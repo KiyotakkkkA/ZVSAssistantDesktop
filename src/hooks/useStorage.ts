@@ -24,8 +24,8 @@ type VectorStorageTagsApiResponse = {
     tags?: unknown[];
 };
 
-export const VECTOR_STORAGES_QUERY_KEY = ["vector-storages"] as const;
-export const VECTOR_STORAGE_TAGS_QUERY_KEY = ["vector-storage-tags"] as const;
+const VECTOR_STORAGES_QUERY_KEY = ["vector-storages"] as const;
+const VECTOR_STORAGE_TAGS_QUERY_KEY = ["vector-storage-tags"] as const;
 
 const proxyHttpRequest = async ({
     url,

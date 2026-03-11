@@ -10,6 +10,7 @@ export type IpcCorePackDeps = {
         preferredThemeData: ReturnType<ThemesService["resolveThemePalette"]>;
     };
     extensionsService: ExtensionsService;
+    getBuiltinToolPackages: () => string;
     themesService: ThemesService;
     userProfileService: UserProfileService;
 };
@@ -17,6 +18,7 @@ export type IpcCorePackDeps = {
 export const registerIpcCorePack = ({
     getBootData,
     extensionsService,
+    getBuiltinToolPackages,
     themesService,
     userProfileService,
 }: IpcCorePackDeps) => {
@@ -36,6 +38,10 @@ export const registerIpcCorePack = ({
         [
             "app:get-extensions-state",
             () => extensionsService.getExtensionsState(),
+        ],
+        [
+            "app:get-builtin-tool-packages",
+            () => JSON.parse(getBuiltinToolPackages()) as unknown,
         ],
         ["app:get-themes-list", () => themesService.getThemesList()],
         [

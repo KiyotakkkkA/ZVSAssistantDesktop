@@ -1,13 +1,22 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::{BTreeMap, HashSet};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatRuntimeContext {
     pub active_project_id: Option<String>,
     pub project_directory: Option<String>,
+    pub project_vector_storage_id: Option<String>,
     pub current_date: Option<String>,
+    pub zvs_access_token: Option<String>,
+    pub zvs_base_url: Option<String>,
+    pub telegram_id: Option<String>,
+    pub telegram_bot_token: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,40 +45,61 @@ pub struct ResolveCommandApprovalPayload {
 pub enum ChatSessionEvent {
     #[serde(rename = "thinking.delta")]
     ThinkingDelta {
+        #[serde(rename = "sessionId")]
         session_id: String,
+        #[serde(rename = "chunkText")]
         chunk_text: String,
     },
     #[serde(rename = "content.delta")]
     ContentDelta {
+        #[serde(rename = "sessionId")]
         session_id: String,
+        #[serde(rename = "chunkText")]
         chunk_text: String,
     },
     #[serde(rename = "tool.call")]
     ToolCall {
+        #[serde(rename = "sessionId")]
         session_id: String,
+        #[serde(rename = "callId")]
         call_id: String,
+        #[serde(rename = "toolName")]
         tool_name: String,
         args: Value,
     },
     #[serde(rename = "tool.result")]
     ToolResult {
+        #[serde(rename = "sessionId")]
         session_id: String,
+        #[serde(rename = "callId")]
         call_id: String,
+        #[serde(rename = "toolName")]
         tool_name: String,
         args: Value,
         result: Value,
     },
     #[serde(rename = "usage")]
     Usage {
+        #[serde(rename = "sessionId")]
         session_id: String,
+        #[serde(rename = "promptTokens")]
         prompt_tokens: u32,
+        #[serde(rename = "completionTokens")]
         completion_tokens: u32,
+        #[serde(rename = "totalTokens")]
         total_tokens: u32,
     },
     #[serde(rename = "done")]
-    Done { session_id: String },
+    Done {
+        #[serde(rename = "sessionId")]
+        session_id: String,
+    },
     #[serde(rename = "error")]
-    Error { session_id: String, message: String },
+    Error {
+        #[serde(rename = "sessionId")]
+        session_id: String,
+        message: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -82,7 +112,6 @@ pub enum OllamaRole {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct OllamaMessage {
     pub role: OllamaRole,
     pub content: String,
@@ -92,7 +121,6 @@ pub struct OllamaMessage {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct OllamaToolCall {
     #[serde(rename = "type")]
     pub kind: Option<String>,
@@ -100,7 +128,6 @@ pub struct OllamaToolCall {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct OllamaToolCallFunction {
     pub index: Option<u32>,
     pub name: String,
@@ -108,7 +135,6 @@ pub struct OllamaToolCallFunction {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct OllamaToolDefinition {
     #[serde(rename = "type")]
     pub kind: String,
@@ -116,7 +142,6 @@ pub struct OllamaToolDefinition {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct OllamaToolFunction {
     pub name: String,
     pub description: Option<String>,
@@ -124,7 +149,6 @@ pub struct OllamaToolFunction {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ToolParameterSchema {
     #[serde(rename = "type")]
     pub schema_type: String,
@@ -158,9 +182,27 @@ pub struct OllamaChunkMessage {
     pub tool_calls: Option<Vec<OllamaToolCall>>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct SessionState {
-    pub cancelled: bool,
+    cancelled: Arc<AtomicBool>,
+}
+
+impl Default for SessionState {
+    fn default() -> Self {
+        Self {
+            cancelled: Arc::new(AtomicBool::new(false)),
+        }
+    }
+}
+
+impl SessionState {
+    pub fn cancel(&self) {
+        self.cancelled.store(true, Ordering::Relaxed);
+    }
+
+    pub fn is_cancelled(&self) -> bool {
+        self.cancelled.load(Ordering::Relaxed)
+    }
 }
 
 #[derive(Debug, Clone)]

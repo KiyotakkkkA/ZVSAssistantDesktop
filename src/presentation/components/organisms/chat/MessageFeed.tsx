@@ -12,6 +12,7 @@ import { MarkdownStaticContent } from "../../molecules/render";
 import type {
     AssistantStage,
     ChatMessage,
+    QaToolState,
     ToolTrace,
 } from "../../../../types/Chat";
 import { useMessages } from "../../../../hooks";
@@ -79,14 +80,22 @@ const buildStageLineIcon = ({
 
 function AssistantResponseBlock({
     stages,
+    saveQaAnswer,
     sendQaAnswer,
+    setQaActiveQuestion,
     onApproveCommandExec,
     onRejectCommandExec,
     activeStage,
     isActive,
 }: {
     stages: ChatMessage[];
-    sendQaAnswer: (qaMessageId: string, answer: string) => void;
+    saveQaAnswer: (
+        qaMessageId: string,
+        questionIndex: number,
+        answer: string,
+    ) => void;
+    sendQaAnswer: (qaMessageId: string, qaState?: QaToolState) => void;
+    setQaActiveQuestion: (qaMessageId: string, questionIndex: number) => void;
     onApproveCommandExec: (messageId: string) => void;
     onRejectCommandExec: (messageId: string) => void;
     activeStage?: AssistantStage | null;
@@ -254,8 +263,27 @@ function AssistantResponseBlock({
                                                 message.toolTrace?.status ===
                                                 "answered"
                                             }
-                                            onSendAnswer={(answer) =>
-                                                sendQaAnswer(message.id, answer)
+                                            onSelectQuestion={(questionIndex) =>
+                                                setQaActiveQuestion(
+                                                    message.id,
+                                                    questionIndex,
+                                                )
+                                            }
+                                            onSaveAnswer={(
+                                                questionIndex,
+                                                answer,
+                                            ) =>
+                                                saveQaAnswer(
+                                                    message.id,
+                                                    questionIndex,
+                                                    answer,
+                                                )
+                                            }
+                                            onSendAnswers={(qaState) =>
+                                                sendQaAnswer(
+                                                    message.id,
+                                                    qaState,
+                                                )
                                             }
                                         />
                                     ) : (
@@ -410,6 +438,8 @@ export function MessageFeed({
         confirmDeleteMessage,
         approveCommandExec,
         rejectCommandExec,
+        saveQaAnswer,
+        setQaActiveQuestion,
         sendQaAnswer,
     } = useMessages({ sendMessage });
 
@@ -501,7 +531,11 @@ export function MessageFeed({
                                         isActiveResponse) && (
                                         <AssistantResponseBlock
                                             stages={linkedStages}
+                                            saveQaAnswer={saveQaAnswer}
                                             sendQaAnswer={sendQaAnswer}
+                                            setQaActiveQuestion={
+                                                setQaActiveQuestion
+                                            }
                                             onApproveCommandExec={
                                                 approveCommandExec
                                             }
@@ -527,7 +561,11 @@ export function MessageFeed({
                                 <div key={message.id}>
                                     <AssistantResponseBlock
                                         stages={[message]}
+                                        saveQaAnswer={saveQaAnswer}
                                         sendQaAnswer={sendQaAnswer}
+                                        setQaActiveQuestion={
+                                            setQaActiveQuestion
+                                        }
                                         onApproveCommandExec={
                                             approveCommandExec
                                         }

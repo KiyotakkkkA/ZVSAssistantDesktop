@@ -3,9 +3,7 @@ import path from "node:path";
 import { app, BrowserWindow } from "electron";
 import { fileURLToPath } from "node:url";
 import { InitService } from "./services/InitService";
-import { CommandExecService } from "./services/CommandExecService";
 import { BrowserService } from "./services/BrowserService";
-import { OllamaService } from "./services/agents/OllamaService";
 import { MistralService } from "./services/agents/MistralService";
 import { PiperService } from "./services/agents/PiperService";
 import { ExtensionsService } from "./services/extensions/ExtensionsService";
@@ -32,6 +30,7 @@ import { registerIpcJobsPack } from "./ipc/ipcJobsPack";
 import { registerIpcAgentsPack } from "./ipc/ipcAgentsPack";
 import { registerIpcCommunicationsPack } from "./ipc/ipcCommunicationsPack";
 import { registerIpcSystemPack } from "./ipc/ipcSystemPack";
+import { getNativeCoreAddon } from "./services/core/nativeCoreAddon";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -58,9 +57,7 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
     : RENDERER_DIST;
 
 let win: BrowserWindow | null;
-let commandExecService: CommandExecService;
 let browserService: BrowserService;
-let ollamaService: OllamaService;
 let mistralService: MistralService;
 let piperService: PiperService;
 let jobService: JobService;
@@ -195,9 +192,7 @@ app.whenReady()
             };
         };
 
-        commandExecService = new CommandExecService();
         browserService = new BrowserService();
-        ollamaService = new OllamaService();
         const jobsStorage = new JobsStorage(
             databaseService,
             userProfileService,
@@ -227,19 +222,15 @@ app.whenReady()
             },
         });
         chatSessionService = new ChatSessionService({
-            ollamaService,
-            commandExecService,
             browserService,
-            fSystemService,
-            telegramService,
             userProfileService,
-            databaseService,
-            projectsService,
         });
 
         registerIpcCorePack({
             getBootData,
             extensionsService,
+            getBuiltinToolPackages: () =>
+                getNativeCoreAddon().getBuiltinToolPackages(),
             themesService,
             userProfileService,
         });
@@ -275,8 +266,6 @@ app.whenReady()
             telegramService,
         });
         registerIpcSystemPack({
-            commandExecService,
-            browserService,
             fileStorageService,
             fSystemService,
         });

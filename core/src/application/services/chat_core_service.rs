@@ -1,5 +1,5 @@
 use futures::StreamExt;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{oneshot, Mutex};
@@ -50,10 +50,11 @@ impl ChatCoreService {
         let config = self.resolve_session_config(&payload);
         let mut messages: Vec<OllamaMessage> = payload.messages.clone();
         let mut tool_calls_used = 0u32;
+        let state = SessionState::default();
 
         {
             let mut sessions = self.sessions.lock().await;
-            sessions.insert(session_id.clone(), SessionState::default());
+            sessions.insert(session_id.clone(), state.clone());
         }
 
         let result = self
@@ -61,23 +62,35 @@ impl ChatCoreService {
                 &session_id,
                 &payload,
                 &config,
+                &state,
                 &mut messages,
                 &mut tool_calls_used,
             )
             .await;
 
         self.cleanup_session(&session_id).await;
-        result
+
+        if let Err(error) = result {
+            self.event_sink.emit(ChatSessionEvent::Error {
+                session_id,
+                message: Self::core_error_message(&error),
+            });
+        }
+
+        Ok(())
     }
 
     pub async fn cancel_chat_session(&self, session_id: &str) -> bool {
-        let mut sessions = self.sessions.lock().await;
-        let Some(state) = sessions.get_mut(session_id) else {
+        let state = {
+            let sessions = self.sessions.lock().await;
+            sessions.get(session_id).cloned()
+        };
+
+        let Some(state) = state else {
             return false;
         };
 
-        state.cancelled = true;
-        drop(sessions);
+        state.cancel();
         self.resolve_session_approvals(session_id, false).await;
         true
     }
@@ -121,10 +134,11 @@ impl ChatCoreService {
         session_id: &str,
         payload: &RunChatSessionPayload,
         config: &SessionConfig,
+        state: &SessionState,
         messages: &mut Vec<OllamaMessage>,
         tool_calls_used: &mut u32,
     ) -> Result<(), CoreError> {
-        while !self.is_cancelled(session_id).await {
+        while !state.is_cancelled() {
             let mut round_content = String::new();
             let mut round_thinking = String::new();
             let mut round_tool_calls = Vec::new();
@@ -135,7 +149,7 @@ impl ChatCoreService {
             while let Some(chunk_result) = stream.next().await {
                 let chunk = chunk_result?;
 
-                if self.is_cancelled(session_id).await {
+                if state.is_cancelled() {
                     break;
                 }
 
@@ -175,7 +189,7 @@ impl ChatCoreService {
                 }
             }
 
-            if self.is_cancelled(session_id).await {
+            if state.is_cancelled() {
                 break;
             }
 
@@ -204,7 +218,7 @@ impl ChatCoreService {
             });
 
             for tool_call in round_tool_calls {
-                if self.is_cancelled(session_id).await {
+                if state.is_cancelled() {
                     break;
                 }
 
@@ -273,16 +287,18 @@ impl ChatCoreService {
                     }
                 }
 
-                let result = self
-                    .tool_executor_port
-                    .execute_tool(ToolExecutionRequest {
-                        session_id: session_id.to_owned(),
-                        call_id: call_id.clone(),
-                        tool_name: tool_name.clone(),
-                        args: args_value.clone(),
-                        runtime_context: payload.runtime_context.clone(),
-                    })
-                    .await?;
+                let request = ToolExecutionRequest {
+                    session_id: session_id.to_owned(),
+                    call_id: call_id.clone(),
+                    tool_name: tool_name.clone(),
+                    args: args_value.clone(),
+                    runtime_context: payload.runtime_context.clone(),
+                };
+
+                let result = match self.tool_executor_port.execute_tool(request).await {
+                    Ok(result) => result,
+                    Err(error) => Self::wrap_tool_error(&tool_name, &error),
+                };
 
                 self.event_sink.emit(ChatSessionEvent::ToolResult {
                     session_id: session_id.to_owned(),
@@ -294,11 +310,7 @@ impl ChatCoreService {
 
                 messages.push(OllamaMessage {
                     role: crate::domain::chat::OllamaRole::Tool,
-                    content: if result.is_string() {
-                        result.as_str().unwrap_or_default().to_owned()
-                    } else {
-                        serde_json::to_string(&result).unwrap_or_else(|_| "{}".to_owned())
-                    },
+                    content: Self::to_tool_message(&result),
                     tool_calls: None,
                     tool_name: Some(tool_name),
                     thinking: None,
@@ -314,9 +326,48 @@ impl ChatCoreService {
         Ok(())
     }
 
-    async fn is_cancelled(&self, session_id: &str) -> bool {
-        let sessions = self.sessions.lock().await;
-        sessions.get(session_id).map(|state| state.cancelled).unwrap_or(false)
+    fn to_tool_message(result: &Value) -> String {
+        if result.is_string() {
+            result.as_str().unwrap_or_default().to_owned()
+        } else {
+            serde_json::to_string(result).unwrap_or_else(|_| "{}".to_owned())
+        }
+    }
+
+    fn core_error_message(error: &CoreError) -> String {
+        match error {
+            CoreError::Validation(message)
+            | CoreError::ToolNotAllowed(message)
+            | CoreError::Llm(message)
+            | CoreError::Tool(message)
+            | CoreError::Internal(message) => message.clone(),
+            CoreError::ToolLimitExceeded(limit) => {
+                format!("Превышен лимит вызовов инструментов ({})", limit)
+            }
+            CoreError::Cancelled => "Операция отменена".to_owned(),
+        }
+    }
+
+    fn wrap_tool_error(tool_name: &str, error: &CoreError) -> Value {
+        let (code, status_code) = match error {
+            CoreError::Validation(_) => ("validation", Some(400)),
+            CoreError::ToolNotAllowed(_) => ("tool_not_allowed", Some(403)),
+            CoreError::ToolLimitExceeded(_) => ("tool_limit_exceeded", Some(429)),
+            CoreError::Cancelled => ("cancelled", None),
+            CoreError::Llm(_) => ("llm_error", Some(502)),
+            CoreError::Tool(_) => ("tool_execution_failed", Some(500)),
+            CoreError::Internal(_) => ("internal", Some(500)),
+        };
+
+        json!({
+            "ok": false,
+            "error": {
+                "toolName": tool_name,
+                "code": code,
+                "message": Self::core_error_message(error),
+                "statusCode": status_code,
+            }
+        })
     }
 
     async fn cleanup_session(&self, session_id: &str) {

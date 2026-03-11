@@ -85,19 +85,6 @@ const appApi: AppApi = {
         saveDialogSnapshot: (dialog: ChatDialog): Promise<ChatDialog> =>
             ipcRenderer.invoke("app:save-dialog-snapshot", dialog),
     },
-    shell: {
-        execShellCommand: (command: string, cwd?: string) =>
-            ipcRenderer.invoke("app:exec-shell-command", command, cwd),
-    },
-    browser: {
-        openUrl: (url: string, timeoutMs?: number) =>
-            ipcRenderer.invoke("app:browser-open-url", url, timeoutMs),
-        getPageSnapshot: (maxElements?: number) =>
-            ipcRenderer.invoke("app:browser-get-page-snapshot", maxElements),
-        interactWith: (params) =>
-            ipcRenderer.invoke("app:browser-interact-with", params),
-        closeSession: () => ipcRenderer.invoke("app:browser-close-session"),
-    },
     upload: {
         pickFiles: (options?: { accept?: string[]; multiple?: boolean }) =>
             ipcRenderer.invoke("app:pick-files", options),
@@ -221,6 +208,10 @@ const appApi: AppApi = {
         getExtensionsState: () =>
             ipcRenderer.invoke("app:get-extensions-state"),
     },
+    tools: {
+        getBuiltinToolPackages: () =>
+            ipcRenderer.invoke("app:get-builtin-tool-packages"),
+    },
     llm: {
         runChatSession: (payload) =>
             ipcRenderer.invoke("app:chat-run-session", JSON.stringify(payload)),
@@ -277,27 +268,6 @@ const appApi: AppApi = {
                 ipcRenderer.off("app:voice-transcription-event", handler);
             };
         },
-    },
-    fs: {
-        listDirectory: (cwd: string) =>
-            ipcRenderer.invoke("app:fs-list-directory", cwd),
-        createFile: (cwd: string, filename: string, content?: string) =>
-            ipcRenderer.invoke("app:fs-create-file", cwd, filename, content),
-        createDir: (cwd: string, dirname: string) =>
-            ipcRenderer.invoke("app:fs-create-dir", cwd, dirname),
-        readFile: (
-            filePath: string,
-            readAll: boolean,
-            fromLine?: number,
-            toLine?: number,
-        ) =>
-            ipcRenderer.invoke(
-                "app:fs-read-file",
-                filePath,
-                readAll,
-                fromLine,
-                toLine,
-            ),
     },
 };
 

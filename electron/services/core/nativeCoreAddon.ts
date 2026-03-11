@@ -6,15 +6,20 @@ type NativeCoreAddon = {
     streamChat: (
         payloadJson: string,
         token: string,
-        baseUrl?: string,
-    ) => Promise<string>;
-    streamChatCallback: (
-        payloadJson: string,
-        token: string,
         baseUrl: string | undefined | null,
         callback: (err: null | Error, chunk: string) => void,
     ) => Promise<void>;
+    runChatSessionCore: (
+        payloadJson: string,
+        token: string,
+        baseUrl: string | undefined | null,
+        callback: (err: null | Error, event: string) => void,
+    ) => Promise<void>;
+    cancelChatSessionCore: (sessionId: string) => Promise<boolean>;
+    resolveCommandApprovalCore: (payloadJson: string) => Promise<boolean>;
+    submitToolResult: (callId: string, resultJson: string) => Promise<boolean>;
     getBuiltinToolDefinitions: () => string;
+    getBuiltinToolPackages: () => string;
 };
 
 let cachedAddon: NativeCoreAddon | null = null;

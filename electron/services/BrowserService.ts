@@ -1,13 +1,67 @@
 import { BrowserWindow } from "electron";
-import type {
-    BrowserCloseResult,
-    BrowserInteractAction,
-    BrowserInteractParams,
-    BrowserInteractResult,
-    BrowserNavigateResult,
-    BrowserPageSnapshot,
-    BrowserRedirect,
-} from "../../src/types/ElectronApi";
+
+type BrowserRedirect = {
+    from: string;
+    to: string;
+};
+
+type BrowserNavigateResult = {
+    success: boolean;
+    requestedUrl: string;
+    finalUrl: string;
+    title: string;
+    redirected: boolean;
+    redirects: BrowserRedirect[];
+    statusCode: number | null;
+    loadTimeMs: number;
+    error?: string;
+};
+
+type BrowserSnapshotElement = {
+    id: string;
+    tag: string;
+    role: string;
+    text: string;
+    href: string;
+    type: string;
+    placeholder: string;
+    selector: string;
+};
+
+type BrowserPageSnapshot = {
+    url: string;
+    title: string;
+    headings: string[];
+    elements: BrowserSnapshotElement[];
+    textPreview: string;
+    capturedAt: string;
+};
+
+type BrowserInteractAction = "click" | "type";
+
+type BrowserInteractParams = {
+    action: BrowserInteractAction;
+    selector: string;
+    text?: string;
+    submit?: boolean;
+    waitForNavigationMs?: number;
+};
+
+type BrowserInteractResult = {
+    success: boolean;
+    action: BrowserInteractAction;
+    selector: string;
+    elementTag?: string;
+    url: string;
+    title: string;
+    waitedMs: number;
+    error?: string;
+};
+
+type BrowserCloseResult = {
+    success: boolean;
+    hadSession: boolean;
+};
 
 const SUPPORTED_PROTOCOLS = new Set(["http:", "https:"]);
 const BROWSER_ACTIONS = new Set<BrowserInteractAction>(["click", "type"]);

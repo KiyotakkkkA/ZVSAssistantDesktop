@@ -122,7 +122,8 @@ export function ToolBubbleCard({
                             )}
 
                             {(execStatus === "accepted" ||
-                                execStatus === "cancelled") && (
+                                execStatus === "cancelled" ||
+                                execStatus === "failed") && (
                                 <p className="text-[11px] text-main-400">
                                     Статус:{" "}
                                     <span
@@ -130,7 +131,9 @@ export function ToolBubbleCard({
                                     >
                                         {execStatus === "accepted"
                                             ? "Подтверждено"
-                                            : "Отклонено"}
+                                            : execStatus === "failed"
+                                              ? "Ошибка выполнения"
+                                              : "Отклонено"}
                                     </span>
                                 </p>
                             )}

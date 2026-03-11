@@ -1,65 +1,90 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import { Button, InputBig } from "../../../atoms";
-import type { ToolTrace } from "../../../../../types/Chat";
+import type { QaToolState, ToolTrace } from "../../../../../types/Chat";
+import {
+    normalizeQaToolState,
+    qaToolHasCompleteAnswers,
+} from "../../../../../utils/chat/qaTool";
 
 type QaToolBubbleCardProps = {
     toolTrace?: ToolTrace;
     answered?: boolean;
-    onSendAnswer: (answer: string) => void;
-};
-
-const pickString = (value: unknown): string =>
-    typeof value === "string" ? value.trim() : "";
-
-const pickStringArray = (value: unknown): string[] => {
-    if (!Array.isArray(value)) {
-        return [];
-    }
-
-    return value.filter((item): item is string => typeof item === "string");
+    onSelectQuestion: (questionIndex: number) => void;
+    onSaveAnswer: (questionIndex: number, answer: string) => void;
+    onSendAnswers: (qaState: QaToolState) => void;
 };
 
 export function QaToolBubbleCard({
     toolTrace,
     answered = false,
-    onSendAnswer,
+    onSelectQuestion,
+    onSaveAnswer,
+    onSendAnswers,
 }: QaToolBubbleCardProps) {
-    const [answer, setAnswer] = useState("");
+    const qaState = useMemo(() => normalizeQaToolState(toolTrace), [toolTrace]);
+    const [draftAnswers, setDraftAnswers] = useState<Record<string, string>>(
+        {},
+    );
 
-    const payload = useMemo(() => {
-        const args = (toolTrace?.args || {}) as Record<string, unknown>;
-        const result = (toolTrace?.result || {}) as Record<string, unknown>;
+    useEffect(() => {
+        setDraftAnswers((previous) => {
+            const next = { ...previous };
 
-        const question =
-            pickString(result.question) || pickString(args.question);
-        const reason = pickString(result.reason) || pickString(args.reason);
-        const selectAnswers = [
-            ...new Set([
-                ...pickStringArray(result.selectAnswers),
-                ...pickStringArray(args.selectAnswers),
-            ]),
-        ];
-        const userAnswerHint =
-            pickString(result.userAnswer) || pickString(args.userAnswer);
+            qaState.questions.forEach((question) => {
+                if (!(question.id in next)) {
+                    next[question.id] = question.answer || "";
+                }
+            });
 
-        return {
-            question,
-            reason,
-            selectAnswers,
-            userAnswerHint,
-        };
-    }, [toolTrace?.args, toolTrace?.result]);
+            return next;
+        });
+    }, [qaState.questions]);
 
-    const submitAnswer = () => {
-        const next = answer.trim();
+    const questions = qaState.questions;
+    const activeQuestionIndex = qaState.activeQuestionIndex ?? 0;
+    const currentQuestion = questions[activeQuestionIndex];
+    const currentDraft = currentQuestion
+        ? (draftAnswers[currentQuestion.id] ?? currentQuestion.answer ?? "")
+        : "";
+    const hasCurrentUnsavedChanges = Boolean(
+        currentQuestion &&
+        currentDraft.trim() !== (currentQuestion.answer || "").trim(),
+    );
+    const canSubmitAll =
+        qaToolHasCompleteAnswers(qaState) && !hasCurrentUnsavedChanges;
+
+    if (!currentQuestion) {
+        return (
+            <div className="w-full rounded-2xl border border-main-700/60 bg-main-900/60 px-4 py-3 text-sm text-main-100">
+                Нужны дополнительные данные от пользователя.
+            </div>
+        );
+    }
+
+    const setDraft = (value: string) => {
+        setDraftAnswers((previous) => ({
+            ...previous,
+            [currentQuestion.id]: value,
+        }));
+    };
+
+    const saveCurrentAnswer = () => {
+        const next = currentDraft.trim();
 
         if (!next) {
             return;
         }
 
-        onSendAnswer(next);
-        setAnswer("");
+        onSaveAnswer(activeQuestionIndex, next);
+    };
+
+    const selectQuickAnswer = (value: string) => {
+        setDraftAnswers((previous) => ({
+            ...previous,
+            [currentQuestion.id]: value,
+        }));
+        onSaveAnswer(activeQuestionIndex, value);
     };
 
     return (
@@ -87,34 +112,96 @@ export function QaToolBubbleCard({
                 )}
             </div>
 
+            {questions.length > 1 ? (
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs text-main-300">
+                            Вопросы: {activeQuestionIndex + 1}/
+                            {questions.length}
+                        </p>
+                        <p className="text-xs text-main-400">
+                            Ответьте на все вопросы, чтобы ассистент смог
+                            продолжить выполнение
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {questions.map((question, index) => {
+                            const hasAnswer = Boolean(question.answer?.trim());
+
+                            return (
+                                <Button
+                                    key={question.id}
+                                    variant={
+                                        index === activeQuestionIndex
+                                            ? "primary"
+                                            : "secondary"
+                                    }
+                                    shape="rounded-lg"
+                                    className="h-8 px-3 text-xs"
+                                    onClick={() => onSelectQuestion(index)}
+                                >
+                                    {hasAnswer ? "✓ " : ""}Вопрос {index + 1}
+                                </Button>
+                            );
+                        })}
+                    </div>
+                </div>
+            ) : null}
+
             <div className="rounded-xl border border-main-700/70 bg-main-900/45 p-3 space-y-2">
                 <p className="text-sm text-main-100">
-                    {payload.question ||
-                        "Нужны дополнительные данные от пользователя."}
+                    {currentQuestion.question}
                 </p>
 
-                {payload.reason ? (
+                {currentQuestion.reason ? (
                     <p className="text-xs text-main-400">
-                        Причина: {payload.reason}
+                        Причина: {currentQuestion.reason}
                     </p>
                 ) : null}
             </div>
 
-            {!answered && (
+            {questions.some((question) => question.answer?.trim()) ? (
+                <div className="space-y-2 rounded-xl border border-main-700/70 bg-main-900/35 p-3">
+                    <p className="text-xs font-semibold text-main-300">
+                        Сохранённые ответы
+                    </p>
+                    <div className="space-y-2 text-xs text-main-300">
+                        {questions.map((question, index) => (
+                            <div
+                                key={question.id}
+                                className="rounded-lg bg-main-950/30 px-3 py-2"
+                            >
+                                <p className="text-main-200">
+                                    {index + 1}. {question.question}
+                                </p>
+                                <p className="mt-1 text-main-400">
+                                    {question.answer?.trim() ||
+                                        "Ответ ещё не сохранён"}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ) : null}
+
+            {!answered ? (
                 <>
-                    {payload.selectAnswers.length > 0 ? (
+                    {currentQuestion.selectAnswers &&
+                    currentQuestion.selectAnswers.length > 0 ? (
                         <div className="space-y-2">
                             <p className="text-xs text-main-300">
                                 Быстрый выбор
                             </p>
                             <div className="flex flex-wrap gap-2">
-                                {payload.selectAnswers.map((option) => (
+                                {currentQuestion.selectAnswers.map((option) => (
                                     <Button
                                         key={option}
                                         variant="secondary"
                                         shape="rounded-lg"
                                         className="h-8 px-3 text-xs"
-                                        onClick={() => onSendAnswer(option)}
+                                        onClick={() =>
+                                            selectQuickAnswer(option)
+                                        }
                                     >
                                         {option}
                                     </Button>
@@ -128,25 +215,52 @@ export function QaToolBubbleCard({
                             Развёрнутый ответ
                         </p>
                         <InputBig
-                            value={answer}
-                            onChange={(value) => setAnswer(value.target.value)}
+                            value={currentDraft}
+                            onChange={(value) => setDraft(value.target.value)}
                             className="h-24 rounded-xl border border-main-700 bg-main-800 px-3 py-2 text-sm text-main-100"
-                            placeholder={"Введите ваш ответ"}
+                            placeholder={
+                                currentQuestion.userAnswerHint ||
+                                "Введите ваш ответ"
+                            }
                         />
-                        <div className="flex justify-end">
+                        {hasCurrentUnsavedChanges ? (
+                            <p className="text-xs text-amber-300">
+                                Есть несохранённые изменения для текущего
+                                вопроса.
+                            </p>
+                        ) : null}
+                        <div className="flex justify-between gap-2">
                             <Button
-                                variant="primary"
+                                variant="secondary"
                                 shape="rounded-lg"
                                 className="h-8 px-3 text-xs"
-                                onClick={submitAnswer}
-                                disabled={!answer.trim()}
+                                onClick={saveCurrentAnswer}
+                                disabled={!currentDraft.trim()}
                             >
-                                Отправить ответ
+                                Сохранить ответ
                             </Button>
+                            {activeQuestionIndex === questions.length - 1 ? (
+                                <Button
+                                    variant="primary"
+                                    shape="rounded-lg"
+                                    className="h-8 px-3 text-xs"
+                                    onClick={() => onSendAnswers(qaState)}
+                                    disabled={!canSubmitAll}
+                                >
+                                    Ответить и продолжить
+                                </Button>
+                            ) : null}
                         </div>
+                        {activeQuestionIndex === questions.length - 1 &&
+                        !canSubmitAll ? (
+                            <p className="text-xs text-main-400">
+                                Перед отправкой сохраните текущий ответ и
+                                заполните все вопросы.
+                            </p>
+                        ) : null}
                     </div>
                 </>
-            )}
+            ) : null}
         </div>
     );
 }

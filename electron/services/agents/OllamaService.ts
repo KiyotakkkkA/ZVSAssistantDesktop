@@ -31,7 +31,27 @@ export class OllamaService {
             | { kind: "done" };
 
         const queue: QueueItem[] = [];
+        let queueHead = 0;
         let notify: (() => void) | null = null;
+
+        const pushQueueItem = (item: QueueItem) => {
+            queue.push(item);
+
+            if (queueHead > 1024 && queueHead * 2 >= queue.length) {
+                queue.splice(0, queueHead);
+                queueHead = 0;
+            }
+        };
+
+        const shiftQueueItem = (): QueueItem | undefined => {
+            if (queueHead >= queue.length) {
+                return undefined;
+            }
+
+            const item = queue[queueHead];
+            queueHead += 1;
+            return item;
+        };
 
         const wake = () => {
             if (notify) {
@@ -42,21 +62,21 @@ export class OllamaService {
         };
 
         const streamPromise = this.addon
-            .streamChatCallback(
+            .streamChat(
                 payloadJson,
                 token,
                 Config.OLLAMA_BASE_URL.trim(),
                 (err: null | Error, chunkJson: string) => {
                     if (err) {
-                        queue.push({ kind: "error", error: err });
+                        pushQueueItem({ kind: "error", error: err });
                     } else {
                         try {
-                            queue.push({
+                            pushQueueItem({
                                 kind: "chunk",
                                 chunk: JSON.parse(chunkJson) as OllamaChatChunk,
                             });
                         } catch (parseErr) {
-                            queue.push({
+                            pushQueueItem({
                                 kind: "error",
                                 error:
                                     parseErr instanceof Error
@@ -69,27 +89,27 @@ export class OllamaService {
                 },
             )
             .then(() => {
-                queue.push({ kind: "done" });
+                pushQueueItem({ kind: "done" });
                 wake();
             })
             .catch((err: unknown) => {
-                queue.push({
+                pushQueueItem({
                     kind: "error",
                     error: err instanceof Error ? err : new Error(String(err)),
                 });
-                queue.push({ kind: "done" });
+                pushQueueItem({ kind: "done" });
                 wake();
             });
 
         try {
             while (true) {
-                while (queue.length === 0) {
+                while (queueHead >= queue.length) {
                     await new Promise<void>((resolve) => {
                         notify = resolve;
                     });
                 }
 
-                const item = queue.shift()!;
+                const item = shiftQueueItem()!;
                 if (item.kind === "done") break;
                 if (item.kind === "error") throw item.error;
                 yield item.chunk;

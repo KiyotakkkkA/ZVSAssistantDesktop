@@ -20,6 +20,7 @@ import {
     getTimeStamp,
 } from "../../utils/chat/chatStream";
 import { createChatChunkQueueManager } from "../../utils/chat/chatChunkQueue";
+import { inferToolTraceStatus } from "../../utils/chat/toolExecution";
 import {
     getSystemPrompt,
     getUserPrompt,
@@ -27,6 +28,7 @@ import {
 } from "../../prompts/base";
 import { toOllamaMessages } from "../../utils/chat/ollamaChat";
 import { readAccessTokenFromLocalStorage } from "../../services/api/authTokens";
+import { Config } from "../../config";
 
 const TOOL_STAGE_BY_NAME: Record<string, AssistantStage> = {
     planning_tool: "planning",
@@ -243,7 +245,9 @@ export function useChat() {
                                       `SCENARIO_LAUNCH: ${scenarioLaunchPayload.scenarioName}`,
                                       scenarioLaunchPayload.scenarioFlow,
                                       scenarioRuntimeEnvText,
-                                      "Instruction: execute scenario flow strictly by graph links. If data is missing, ask one clear question via qa_tool or plain assistant question.",
+                                      "SCENARIO_POLICY: Execute the scenario strictly by its graph links and do not skip required transitions.",
+                                      "SCENARIO_POLICY: If required data is missing, ask up to 3 short precise questions via qa_tool or ask one direct assistant question.",
+                                      "SCENARIO_POLICY: Do not fabricate intermediate scenario state, external results, or user inputs.",
                                   ].join("\n\n"),
                                   timestamp: getTimeStamp(),
                               },
@@ -268,7 +272,7 @@ export function useChat() {
                                   id: createMessageId(),
                                   author: "system" as const,
                                   content:
-                                      "PROJECT_VECTOR_SEARCH_POLICY: In this project chat you must always use vector_store_search_tool before producing a final answer when the task can depend on project documents or project facts.",
+                                      "PROJECT_VECTOR_SEARCH_POLICY: In this project chat you must use vector_store_search_tool before the final answer whenever the task can depend on project documents, repository facts, requirements, architecture, or prior project decisions.",
                                   timestamp: getTimeStamp(),
                               },
                           ]
@@ -308,6 +312,7 @@ export function useChat() {
                     completionTokens: 0,
                     totalTokens: 0,
                 };
+                let stopChatEvents: (() => void) | null = null;
                 const markFirstActivity = () => {
                     if (hasFirstChunk) {
                         return;
@@ -323,6 +328,22 @@ export function useChat() {
 
                     chatSessionIdRef.current = sessionId;
                     let sessionError: Error | null = null;
+                    let isTerminalEventReceived = false;
+                    let resolveTerminalEvent: (() => void) | null = null;
+                    const terminalEventPromise = new Promise<void>(
+                        (resolve) => {
+                            resolveTerminalEvent = resolve;
+                        },
+                    );
+
+                    const settleTerminalEvent = () => {
+                        if (isTerminalEventReceived) {
+                            return;
+                        }
+
+                        isTerminalEventReceived = true;
+                        resolveTerminalEvent?.();
+                    };
 
                     const handleChatEvent = (event: ChatSessionEvent) => {
                         if (event.sessionId !== sessionId) {
@@ -404,16 +425,10 @@ export function useChat() {
                             const messageId = toolTraceMessageIds.get(
                                 event.callId,
                             );
-                            const commandResult =
-                                event.result && typeof event.result === "object"
-                                    ? (event.result as { status?: string })
-                                    : null;
-                            const inferredStatus =
-                                event.toolName === "command_exec"
-                                    ? commandResult?.status === "cancelled"
-                                        ? "cancelled"
-                                        : "accepted"
-                                    : "accepted";
+                            const inferredStatus = inferToolTraceStatus(
+                                event.toolName,
+                                event.result,
+                            );
 
                             updateMessages((prev) => {
                                 if (!messageId) {
@@ -453,10 +468,7 @@ export function useChat() {
                                                   toolName: event.toolName,
                                                   args: event.args,
                                                   result: event.result,
-                                                  status:
-                                                      message.toolTrace
-                                                          ?.status ||
-                                                      inferredStatus,
+                                                  status: inferredStatus,
                                                   ...(event.toolName ===
                                                   "command_exec"
                                                       ? getCommandRequestMeta(
@@ -486,45 +498,48 @@ export function useChat() {
 
                         if (event.type === "done") {
                             setIsAwaitingFirstChunk(false);
+                            settleTerminalEvent();
                             return;
                         }
 
                         if (event.type === "error") {
                             sessionError = new Error(event.message);
+                            settleTerminalEvent();
                         }
                     };
 
-                    const stopChatEvents = llmApi.onChatEvent(handleChatEvent);
+                    stopChatEvents = llmApi.onChatEvent(handleChatEvent);
 
-                    try {
-                        const payload: RunChatSessionPayload = {
-                            sessionId,
-                            model: ollamaModel,
-                            messages: toOllamaMessages(historyForRequest),
-                            enabledToolNames,
-                            think: true,
-                            ...(scenarioFormatHint
-                                ? { format: scenarioFormatHint }
-                                : {}),
-                            maxToolCalls:
-                                userProfile.maxToolCallsPerResponse > 0
-                                    ? userProfile.maxToolCallsPerResponse
-                                    : 1,
-                            runtimeContext: {
-                                activeProjectId,
-                                projectDirectory:
-                                    projectsStore.activeProject
-                                        ?.directoryPath || "",
-                                currentDate: new Date().toISOString(),
-                                zvsAccessToken:
-                                    readAccessTokenFromLocalStorage(),
-                            },
-                        };
+                    const payload: RunChatSessionPayload = {
+                        sessionId,
+                        model: ollamaModel,
+                        messages: toOllamaMessages(historyForRequest),
+                        enabledToolNames,
+                        think: true,
+                        ...(scenarioFormatHint
+                            ? { format: scenarioFormatHint }
+                            : {}),
+                        maxToolCalls:
+                            userProfile.maxToolCallsPerResponse > 0
+                                ? userProfile.maxToolCallsPerResponse
+                                : 1,
+                        runtimeContext: {
+                            activeProjectId,
+                            projectDirectory:
+                                projectsStore.activeProject?.directoryPath ||
+                                "",
+                            projectVectorStorageId:
+                                projectsStore.activeProject?.vecStorId || "",
+                            currentDate: new Date().toISOString(),
+                            zvsAccessToken: readAccessTokenFromLocalStorage(),
+                            zvsBaseUrl: Config.ZVS_MAIN_BASE_URL,
+                            telegramId: userProfile.telegramId,
+                            telegramBotToken: userProfile.telegramBotToken,
+                        },
+                    };
 
-                        await llmApi.runChatSession(payload);
-                    } finally {
-                        stopChatEvents();
-                    }
+                    await llmApi.runChatSession(payload);
+                    await terminalEventPromise;
 
                     if (sessionError) {
                         throw sessionError;
@@ -559,6 +574,8 @@ export function useChat() {
                     const savedDialog = await chatsStore.saveSnapshot(snapshot);
                     activeDialogRef.current = savedDialog;
                     commitMessages(savedDialog.messages);
+
+                    stopChatEvents?.();
                 } catch (error) {
                     if (cancellationRequestedRef.current) {
                         chunkQueueManager.reset();
@@ -601,6 +618,7 @@ export function useChat() {
                         return [...prev.slice(0, -1), updatedLastMessage];
                     });
                 } finally {
+                    stopChatEvents?.();
                     chunkQueueManager.reset();
                     chatSessionIdRef.current = null;
                     cancellationRequestedRef.current = false;

@@ -1,7 +1,11 @@
 import { useCallback, useState } from "react";
 import { chatsStore } from "../../stores/chatsStore";
 import { useToasts } from "../useToasts";
-import type { ChatDialog } from "../../types/Chat";
+import type { ChatDialog, QaToolState, ToolTrace } from "../../types/Chat";
+import {
+    buildQaToolSubmission,
+    normalizeQaToolState,
+} from "../../utils/chat/qaTool";
 
 type UseMessagesParams = {
     sendMessage: (content: string) => void;
@@ -164,6 +168,74 @@ export const useMessages = ({ sendMessage }: UseMessagesParams) => {
         [],
     );
 
+    const updateToolTrace = useCallback(
+        (messageId: string, updater: (toolTrace: ToolTrace) => ToolTrace) => {
+            const dialog = chatsStore.activeDialog;
+
+            if (!dialog) {
+                return;
+            }
+
+            chatsStore.replaceByDialog({
+                ...dialog,
+                messages: dialog.messages.map((message) =>
+                    message.id === messageId && message.toolTrace
+                        ? {
+                              ...message,
+                              toolTrace: updater(message.toolTrace),
+                          }
+                        : message,
+                ),
+                updatedAt: new Date().toISOString(),
+            });
+        },
+        [],
+    );
+
+    const setQaActiveQuestion = useCallback(
+        (messageId: string, questionIndex: number) => {
+            updateToolTrace(messageId, (toolTrace) => {
+                const qaState = normalizeQaToolState(toolTrace);
+
+                return {
+                    ...toolTrace,
+                    qaState: {
+                        ...qaState,
+                        activeQuestionIndex: questionIndex,
+                    },
+                };
+            });
+        },
+        [updateToolTrace],
+    );
+
+    const saveQaAnswer = useCallback(
+        (messageId: string, questionIndex: number, answer: string) => {
+            const nextAnswer = answer.trim();
+
+            updateToolTrace(messageId, (toolTrace) => {
+                const qaState = normalizeQaToolState(toolTrace);
+                const questions = qaState.questions.map((question, index) =>
+                    index === questionIndex
+                        ? {
+                              ...question,
+                              answer: nextAnswer,
+                          }
+                        : question,
+                );
+
+                return {
+                    ...toolTrace,
+                    qaState: {
+                        activeQuestionIndex: questionIndex,
+                        questions,
+                    },
+                };
+            });
+        },
+        [updateToolTrace],
+    );
+
     const truncateDialogFromMessage = useCallback(
         async (dialog: ChatDialog, messageId: string) => {
             const truncateApi =
@@ -222,9 +294,26 @@ export const useMessages = ({ sendMessage }: UseMessagesParams) => {
     );
 
     const sendQaAnswer = useCallback(
-        (qaMessageId: string, answer: string) => {
+        (qaMessageId: string, qaState?: QaToolState) => {
+            const dialog = chatsStore.activeDialog;
+
+            if (!dialog) {
+                return;
+            }
+
+            const message = dialog.messages.find(
+                (item) => item.id === qaMessageId,
+            );
+            const resolvedQaState =
+                qaState ?? normalizeQaToolState(message?.toolTrace);
+            const submission = buildQaToolSubmission(resolvedQaState);
+
+            if (!submission.trim()) {
+                return;
+            }
+
             setToolTraceStatus(qaMessageId, "answered");
-            sendMessage(`__qa_hidden__${answer}`);
+            sendMessage(`__qa_hidden__${submission}`);
         },
         [setToolTraceStatus, sendMessage],
     );
@@ -345,6 +434,8 @@ export const useMessages = ({ sendMessage }: UseMessagesParams) => {
         confirmDeleteMessage,
         approveCommandExec,
         rejectCommandExec,
+        saveQaAnswer,
+        setQaActiveQuestion,
         sendQaAnswer,
     };
 };

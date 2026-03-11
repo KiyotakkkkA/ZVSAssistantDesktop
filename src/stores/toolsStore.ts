@@ -1,36 +1,118 @@
 import { makeAutoObservable } from "mobx";
-import {
-    baseToolsPackage,
-    browserToolsPackage,
-    communicationToolsPackage,
-    filesystemToolsPackage,
-    studyingToolsPackage,
-    systemToolsPackage,
-} from "../tools";
-import type { OllamaToolDefinition } from "../types/Chat";
-import type { ToolPackageDescriptor } from "../utils/ToolsBuilder";
+import type { BuiltinToolPackage, OllamaToolDefinition } from "../types/Chat";
 
 class ToolsStore {
-    readonly packages: ToolPackageDescriptor[];
+    packages: BuiltinToolPackage[] = [];
 
     enabledToolNames = new Set<string>();
     requiredPromptToolNames = new Set<string>();
+    isLoading = false;
+    isLoaded = false;
 
     constructor() {
-        this.packages = [
-            ...baseToolsPackage(),
-            ...browserToolsPackage(),
-            ...communicationToolsPackage(),
-            ...filesystemToolsPackage(),
-            ...studyingToolsPackage(),
-            ...systemToolsPackage(),
-        ];
-        this.enabledToolNames = new Set(
-            this.packages.flatMap((pkg) =>
-                pkg.tools.map((tool) => tool.schema.function.name),
-            ),
-        );
         makeAutoObservable(this, {}, { autoBind: true });
+        void this.loadBuiltinToolPackages();
+    }
+
+    private normalizePackages(payload: unknown): BuiltinToolPackage[] {
+        if (!Array.isArray(payload)) {
+            return [];
+        }
+
+        return payload
+            .map((item) => {
+                if (!item || typeof item !== "object") {
+                    return null;
+                }
+
+                const maybePackage = item as Partial<BuiltinToolPackage>;
+
+                if (
+                    typeof maybePackage.id !== "string" ||
+                    typeof maybePackage.title !== "string" ||
+                    typeof maybePackage.description !== "string" ||
+                    !Array.isArray(maybePackage.tools)
+                ) {
+                    return null;
+                }
+
+                const tools = maybePackage.tools.filter(
+                    (tool): tool is BuiltinToolPackage["tools"][number] => {
+                        if (!tool || typeof tool !== "object") {
+                            return false;
+                        }
+
+                        const maybeTool =
+                            tool as BuiltinToolPackage["tools"][number];
+
+                        return (
+                            typeof maybeTool.packageId === "string" &&
+                            typeof maybeTool.packageTitle === "string" &&
+                            typeof maybeTool.packageDescription === "string" &&
+                            maybeTool.schema?.type === "function" &&
+                            typeof maybeTool.schema.function?.name === "string"
+                        );
+                    },
+                );
+
+                return {
+                    id: maybePackage.id,
+                    title: maybePackage.title,
+                    description: maybePackage.description,
+                    tools: tools.map((tool) => ({
+                        ...tool,
+                        ...(tool.outputScheme &&
+                        typeof tool.outputScheme === "object" &&
+                        !Array.isArray(tool.outputScheme)
+                            ? { outputScheme: tool.outputScheme }
+                            : {}),
+                    })),
+                };
+            })
+            .filter((pkg): pkg is BuiltinToolPackage => Boolean(pkg));
+    }
+
+    async loadBuiltinToolPackages(): Promise<void> {
+        if (this.isLoading) {
+            return;
+        }
+
+        const api = window.appApi;
+        if (!api?.tools?.getBuiltinToolPackages) {
+            this.isLoaded = true;
+            return;
+        }
+
+        this.isLoading = true;
+
+        try {
+            const packagesPayload = await api.tools.getBuiltinToolPackages();
+            const nextPackages = this.normalizePackages(packagesPayload);
+            const nextToolNames = new Set(
+                nextPackages.flatMap((pkg) =>
+                    pkg.tools.map((tool) => tool.schema.function.name),
+                ),
+            );
+
+            this.packages = nextPackages;
+            this.enabledToolNames = this.enabledToolNames.size
+                ? new Set(
+                      Array.from(this.enabledToolNames).filter((toolName) =>
+                          nextToolNames.has(toolName),
+                      ),
+                  )
+                : nextToolNames;
+            this.requiredPromptToolNames = new Set(
+                Array.from(this.requiredPromptToolNames).filter((toolName) =>
+                    this.enabledToolNames.has(toolName),
+                ),
+            );
+        } catch (error) {
+            console.error("Failed to load builtin tool packages", error);
+        } finally {
+            this.isLoading = false;
+            this.isLoaded = true;
+        }
     }
 
     get allTools() {
@@ -66,7 +148,12 @@ class ToolsStore {
             return "";
         }
 
-        return `You must use these tools while completing task: TOOLS - ${selected.join(", ")}`;
+        return [
+            "REQUIRED_TOOL_POLICY:",
+            `- You must use these tools while completing the task when they are relevant: ${selected.join(", ")}`,
+            "- Do not skip a required tool if the final answer depends on information that the tool is intended to provide.",
+            "- If a required tool fails, state that clearly and continue with the best justified answer possible.",
+        ].join("\n");
     }
 
     isToolEnabled(toolName: string): boolean {
@@ -117,7 +204,7 @@ class ToolsStore {
         return userTools.map((tool) => tool.schema);
     }
 
-    getFilteredPackages(query: string): ToolPackageDescriptor[] {
+    getFilteredPackages(query: string): BuiltinToolPackage[] {
         const normalized = query.trim().toLowerCase();
 
         if (!normalized) {
@@ -152,7 +239,6 @@ class ToolsStore {
             })
             .filter((pkg) => pkg.tools.length > 0);
     }
-
 }
 
 export const toolsStore = new ToolsStore();

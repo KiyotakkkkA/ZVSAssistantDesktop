@@ -5,9 +5,9 @@ use napi_derive::napi;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use reqwest::Client;
 use serde_json::Value;
-use crate::tools::builtin_tools::builtin_tool_definitions;
+use crate::tools::builtin_tools::{builtin_tool_definitions, builtin_tool_packages};
 
-fn normalize_base_url(base_url: Option<String>) -> String {
+pub(crate) fn normalize_base_url(base_url: Option<String>) -> String {
     let fallback = "http://127.0.0.1:11434".to_owned();
     let value = base_url
         .map(|value| value.trim().to_owned())
@@ -16,7 +16,7 @@ fn normalize_base_url(base_url: Option<String>) -> String {
     value.trim_end_matches('/').to_owned()
 }
 
-fn auth_header_by_mode(token: &str, mode: &str) -> Option<String> {
+pub(crate) fn auth_header_by_mode(token: &str, mode: &str) -> Option<String> {
     if token.trim().is_empty() {
         return None;
     }
@@ -34,7 +34,7 @@ fn auth_header_by_mode(token: &str, mode: &str) -> Option<String> {
     }
 }
 
-fn is_unauthorized(status: Option<reqwest::StatusCode>, body: &str) -> bool {
+pub(crate) fn is_unauthorized(status: Option<reqwest::StatusCode>, body: &str) -> bool {
     if let Some(status_code) = status {
         if status_code.as_u16() == 401 {
             return true;
@@ -44,104 +44,7 @@ fn is_unauthorized(status: Option<reqwest::StatusCode>, body: &str) -> bool {
     lowered.contains("unauthorized") || lowered.contains("401")
 }
 
-async fn post_with_auth_fallback(
-    endpoint_url: &str,
-    token: &str,
-    body_value: &Value,
-) -> napi::Result<Vec<Value>> {
-    let modes = if token.trim().is_empty() {
-        vec!["none"]
-    } else {
-        vec!["bearer", "raw", "none"]
-    };
-    let mut last_error = String::new();
-    for mode in modes {
-        let mut headers = HeaderMap::new();
-        headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        if let Some(auth) = auth_header_by_mode(token, mode) {
-            if let Ok(value) = HeaderValue::from_str(&auth) {
-                headers.insert(AUTHORIZATION, value);
-            }
-        }
-        let client = Client::builder()
-            .default_headers(headers)
-            .build()
-            .map_err(|error| Error::from_reason(error.to_string()))?;
-        let request = client.post(endpoint_url).json(body_value);
-        let response_result = request.send().await;
-        let response = match response_result {
-            Ok(response) => response,
-            Err(error) => {
-                last_error = error.to_string();
-                continue;
-            }
-        };
-        let status = response.status();
-        if !status.is_success() {
-            let text = response
-                .text()
-                .await
-                .unwrap_or_else(|_| String::new());
-            if is_unauthorized(Some(status), &text) {
-                last_error = text.to_owned();
-                continue;
-            }
-            return Err(Error::from_reason(if text.trim().is_empty() {
-                format!("Request failed ({})", status)
-            } else {
-                text.to_owned()
-            }));
-        }
-        let mut chunks: Vec<Value> = Vec::new();
-        let mut buffer = String::new();
-        let mut stream = response.bytes_stream();
-        while let Some(chunk) = stream.next().await {
-            let bytes = chunk.map_err(|e| Error::from_reason(e.to_string()))?;
-            buffer.push_str(&String::from_utf8_lossy(&bytes));
-            while let Some(pos) = buffer.find('\n') {
-                let line = buffer[..pos].trim().to_string();
-                buffer.drain(..=pos);
-                if line.is_empty() {
-                    continue;
-                }
-                let parsed: Value = serde_json::from_str(&line)
-                    .map_err(|e| Error::from_reason(format!("Stream JSON error: {}", e)))?;
-                chunks.push(parsed);
-            }
-        }
-        let rest = buffer.trim().to_string();
-        if !rest.is_empty() {
-            if let Ok(parsed) = serde_json::from_str::<Value>(&rest) {
-                chunks.push(parsed);
-            }
-        }
-        let has_done_chunk = chunks.iter().any(|chunk| {
-            chunk
-                .get("done")
-                .and_then(Value::as_bool)
-                .unwrap_or(false)
-        });
-        if !has_done_chunk {
-            let mut fallback_payload = body_value.clone();
-            if let Value::Object(object) = &mut fallback_payload {
-                object.insert("stream".to_owned(), Value::Bool(false));
-            }
-            let fallback_first =
-                post_non_stream_with_auth_fallback(endpoint_url, token, &fallback_payload).await?;
-            if !fallback_first.is_null() {
-                return Ok(vec![fallback_first]);
-            }
-        }
-        return Ok(chunks);
-    }
-    Err(Error::from_reason(if last_error.is_empty() {
-        "Ollama auth failed".to_owned()
-    } else {
-        format!("Ollama auth failed: {}", last_error)
-    }))
-}
-
-async fn post_non_stream_with_auth_fallback(
+pub(crate) async fn post_non_stream_with_auth_fallback(
     endpoint_url: &str,
     token: &str,
     body_value: &Value,
@@ -197,22 +100,6 @@ async fn post_non_stream_with_auth_fallback(
     } else {
         format!("Ollama auth failed: {}", last_error)
     }))
-}
-
-#[napi(js_name = "streamChat")]
-pub async fn stream_chat(
-    payload_json: String,
-    token: String,
-    base_url: Option<String>,
-) -> napi::Result<String> {
-    let mut payload: Value = serde_json::from_str(&payload_json)
-        .map_err(|error| Error::from_reason(format!("Invalid payload JSON: {}", error)))?;
-    if let Value::Object(ref mut object) = payload {
-        object.insert("stream".to_owned(), Value::Bool(true));
-    }
-    let endpoint_url = format!("{}/api/chat", normalize_base_url(base_url));
-    let chunks = post_with_auth_fallback(&endpoint_url, token.trim(), &payload).await?;
-    serde_json::to_string(&chunks).map_err(|error| Error::from_reason(error.to_string()))
 }
 
 async fn stream_post_with_callback(
@@ -322,7 +209,7 @@ async fn stream_post_with_callback(
     }))
 }
 
-#[napi(js_name = "streamChatCallback")]
+#[napi(js_name = "streamChat")]
 pub async fn stream_chat_callback(
     payload_json: String,
     token: String,
@@ -344,4 +231,10 @@ pub fn get_builtin_tool_definitions() -> napi::Result<String> {
     let definitions = builtin_tool_definitions();
     serde_json::to_string(&definitions)
         .map_err(|error| Error::from_reason(error.to_string()))
+}
+
+#[napi(js_name = "getBuiltinToolPackages")]
+pub fn get_builtin_tool_packages() -> napi::Result<String> {
+    let packages = builtin_tool_packages();
+    serde_json::to_string(&packages).map_err(|error| Error::from_reason(error.to_string()))
 }

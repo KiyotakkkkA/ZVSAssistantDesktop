@@ -8,12 +8,27 @@ export type AssistantStage =
     | "tools_calling"
     | "answering";
 
+export type QaToolQuestionState = {
+    id: string;
+    question: string;
+    reason?: string;
+    selectAnswers?: string[];
+    userAnswerHint?: string;
+    answer?: string;
+};
+
+export type QaToolState = {
+    activeQuestionIndex?: number;
+    questions: QaToolQuestionState[];
+};
+
 export type ToolTrace = {
     callId: string;
     toolName: string;
     args: Record<string, unknown>;
     result: unknown;
-    status?: "pending" | "accepted" | "cancelled" | "answered";
+    status?: "pending" | "accepted" | "cancelled" | "answered" | "failed";
+    qaState?: QaToolState;
     command?: string;
     cwd?: string;
     isAdmin?: boolean;
@@ -91,6 +106,21 @@ export type OllamaToolDefinition = {
     };
 };
 
+export type BuiltinToolDescriptor = {
+    packageId: string;
+    packageTitle: string;
+    packageDescription: string;
+    schema: OllamaToolDefinition;
+    outputScheme?: Record<string, unknown>;
+};
+
+export type BuiltinToolPackage = {
+    id: string;
+    title: string;
+    description: string;
+    tools: BuiltinToolDescriptor[];
+};
+
 export type OllamaResponseFormat = "json" | Record<string, unknown>;
 
 export type OllamaToolCall = {
@@ -117,19 +147,6 @@ export interface OllamaChatChunk {
     eval_count?: number;
 }
 
-export interface OllamaChatResponse {
-    model?: string;
-    created_at?: string;
-    message: {
-        role?: OllamaRole;
-        content?: string;
-        thinking?: string;
-        tool_calls?: OllamaToolCall[];
-    };
-    done: boolean;
-    done_reason?: string;
-}
-
 export interface StreamChatParams {
     model: string;
     token?: string;
@@ -138,12 +155,4 @@ export interface StreamChatParams {
     format?: OllamaResponseFormat;
     signal?: AbortSignal;
     onChunk?: (chunk: OllamaChatChunk) => void;
-}
-
-export interface ChatOllamaParams {
-    model: string;
-    token?: string;
-    messages: OllamaMessage[];
-    tools?: OllamaToolDefinition[];
-    signal?: AbortSignal;
 }
