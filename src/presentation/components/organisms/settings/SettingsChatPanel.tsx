@@ -24,12 +24,10 @@ export const SettingsChatPanel = () => {
     const {
         chatDriver,
         ollamaModel,
-        ollamaEmbeddingModel,
         ollamaToken,
         mistralVoiceRecModel,
         mistralToken,
         voiceRecognitionDriver,
-        embeddingDriver,
         telegramId,
         telegramBotToken,
         assistantName,
@@ -294,32 +292,6 @@ export const SettingsChatPanel = () => {
                         />
                     </div>
 
-                    <div className="flex items-center justify-between gap-4">
-                        <div className="flex gap-2 items-center">
-                            <Icon
-                                icon="mdi:numbers"
-                                width={28}
-                                height={28}
-                                className={`text-main-300 rounded-md p-0.5 ${embeddingDriver === "ollama" ? "bg-lime-700/80" : "bg-main-700/80"}`}
-                            />
-                            <div>
-                                <p className="text-sm font-medium text-main-200">
-                                    Использовать для создания эмбеддингов
-                                </p>
-                                <p className="text-xs text-main-400">Ollama</p>
-                            </div>
-                        </div>
-
-                        <InputCheckbox
-                            checked={embeddingDriver === "ollama"}
-                            onChange={(checked) => {
-                                void updateChatParams({
-                                    embeddingDriver: checked ? "ollama" : "",
-                                });
-                            }}
-                        />
-                    </div>
-
                     <div className="space-y-2">
                         <p className="text-sm font-medium text-main-200">
                             Модель
@@ -342,21 +314,6 @@ export const SettingsChatPanel = () => {
                                 Выбрать
                             </Button>
                         </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <p className="text-sm font-medium text-main-200">
-                            Эмбеддинг-модель
-                        </p>
-                        <InputSmall
-                            value={ollamaEmbeddingModel}
-                            onChange={(event) =>
-                                void updateChatParams({
-                                    ollamaEmbeddingModel: event.target.value,
-                                })
-                            }
-                            placeholder="embeddinggemma"
-                        />
                     </div>
 
                     <div className="space-y-2">

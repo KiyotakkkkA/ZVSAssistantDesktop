@@ -4,7 +4,6 @@ import { extensionsStore } from "./extensionsStore";
 
 const DEFAULT_THEME_ID = "dark-main";
 const DEFAULT_OLLAMA_MODEL = "gpt-oss:20b";
-const DEFAULT_OLLAMA_EMBEDDING_MODEL = "embeddinggemma";
 const DEFAULT_MISTRAL_VOICE_REC_MODEL = "";
 
 class UserProfileStore {
@@ -12,12 +11,11 @@ class UserProfileStore {
     userProfile: UserProfile = {
         themePreference: DEFAULT_THEME_ID,
         ollamaModel: DEFAULT_OLLAMA_MODEL,
-        ollamaEmbeddingModel: DEFAULT_OLLAMA_EMBEDDING_MODEL,
         ollamaToken: "",
         mistralVoiceRecModel: DEFAULT_MISTRAL_VOICE_REC_MODEL,
         mistralToken: "",
         voiceRecognitionDriver: "",
-        embeddingDriver: "",
+
         telegramId: "",
         telegramBotToken: "",
         chatDriver: "ollama",

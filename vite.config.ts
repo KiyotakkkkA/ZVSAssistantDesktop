@@ -16,8 +16,6 @@ export default defineConfig({
                         rollupOptions: {
                             external: [
                                 "better-sqlite3",
-                                "@lancedb/lancedb",
-                                "pdf-parse",
                                 "../native/core/index.cjs",
                             ],
                         },

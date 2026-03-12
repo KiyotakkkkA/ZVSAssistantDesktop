@@ -8,9 +8,9 @@
     "scripts": {
         "dev": "vite --host",
         "build:core": "npx @napi-rs/cli build --cargo-cwd core --cargo-name assistant_core --platform --release --target x86_64-pc-windows-msvc native/core && node -e \"const fs=require('fs'); if(fs.existsSync('native/core/index.js')) fs.copyFileSync('native/core/index.js','native/core/index.cjs');\"",
-        "typecheck": "tsc --noEmit && tsc --project tsconfig.node.json --noEmit",
         "build:app": "npm run build:core && vite build",
         "build": "npm run typecheck && npm run build:app && electron-builder",
+        "typecheck": "tsc --noEmit && tsc --project tsconfig.node.json --noEmit",
         "release:win": "npm run typecheck && npm run build:app && electron-builder --win --x64",
         "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
         "deps:rebuild": "npx electron-rebuild -f -w better-sqlite3",
@@ -22,11 +22,8 @@
         "@tanstack/react-query": "^5.90.21",
         "better-sqlite3": "^12.6.2",
         "bufferutil": "^4.1.0",
-        "flatted": "^3.3.4",
-        "mammoth": "^1.11.0",
         "mobx": "^6.15.0",
         "mobx-react-lite": "^4.1.1",
-        "pdf-parse": "^2.4.5",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "react-markdown": "^10.1.0",
@@ -34,7 +31,7 @@
         "remark-gfm": "^4.0.1",
         "shiki": "^3.22.0",
         "utf-8-validate": "^6.0.6",
-        "zvs-uikit-lib": "file:../../ZVS/libs/zvs-uikit-lib/zvs-uikit-lib-1.0.0.tgz"
+        "zvs-uikit-lib": "file:../libs/zvs-uikit-lib/zvs-uikit-lib-1.0.0.tgz"
     },
     "devDependencies": {
         "@napi-rs/cli": "^2.18.4",
