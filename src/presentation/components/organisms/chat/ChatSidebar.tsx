@@ -284,7 +284,7 @@ export const ChatSidebar = observer(function ChatSidebar() {
         }
 
         await deleteDialog(deleteDialogId);
-        toasts.info({
+        toasts.success({
             title: "Диалог удалён",
             description: "Диалог был удалён из списка.",
         });

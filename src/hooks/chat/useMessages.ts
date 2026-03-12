@@ -369,7 +369,7 @@ export const useMessages = ({ sendMessage }: UseMessagesParams) => {
 
         await deleteDialogMessage(dialog, deleteMessageId);
 
-        toasts.info({
+        toasts.success({
             title: "Сообщение удалено",
             description: "Сообщение удалено из текущего диалога.",
         });
