@@ -173,8 +173,11 @@ export class ChatSessionService {
         }
 
         if (method === "tools.store_calling_doc") {
+            const dialogIdRaw =
+                typeof args.dialogId === "string" ? args.dialogId.trim() : "";
             const sessionId =
                 typeof args.sessionId === "string" ? args.sessionId : "";
+            const dialogId = dialogIdRaw || sessionId;
             const callId = typeof args.callId === "string" ? args.callId : "";
             const toolName =
                 typeof args.toolName === "string" ? args.toolName : "";
@@ -185,9 +188,9 @@ export class ChatSessionService {
                     : 1;
             const payload = args.payload ?? {};
 
-            if (!sessionId || !callId || !toolName) {
+            if (!dialogId || !sessionId || !callId || !toolName) {
                 throw new Error(
-                    "tools.store_calling_doc requires sessionId, callId and toolName",
+                    "tools.store_calling_doc requires dialogId/sessionId, callId and toolName",
                 );
             }
 
@@ -195,6 +198,7 @@ export class ChatSessionService {
             const created = this.deps.databaseService.createToolCallingDocument(
                 {
                     createdBy,
+                    dialogId,
                     sessionId,
                     callId,
                     toolName,
@@ -235,6 +239,7 @@ export class ChatSessionService {
             return {
                 ok: true,
                 docId: doc.docId,
+                dialogId: doc.dialogId,
                 callId: doc.callId,
                 toolName: doc.toolName,
                 iteration: doc.iteration,

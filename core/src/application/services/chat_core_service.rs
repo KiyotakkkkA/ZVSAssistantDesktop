@@ -292,6 +292,14 @@ impl ChatCoreService {
                 };
 
                 let (result_for_ui, doc_id) = Self::extract_tool_result_payload(result);
+                let result_for_event = if tool_name == "get_tools_calling" {
+                    Self::build_get_tools_calling_event_result(
+                        &result_for_ui,
+                        doc_id.as_deref(),
+                    )
+                } else {
+                    result_for_ui.clone()
+                };
 
                 self.event_sink.emit(ChatSessionEvent::ToolResult {
                     session_id: session_id.to_owned(),
@@ -299,7 +307,7 @@ impl ChatCoreService {
                     tool_name: tool_name.clone(),
                     doc_id: doc_id.clone(),
                     args: args_value,
-                    result: result_for_ui.clone(),
+                    result: result_for_event,
                 });
 
                 let tool_content = if let Some(doc_id_value) = doc_id {
@@ -391,6 +399,45 @@ impl ChatCoreService {
             (Some(payload), Some(found_doc_id)) => (payload, Some(found_doc_id)),
             _ => (result, None),
         }
+    }
+
+    fn build_get_tools_calling_event_result(
+        raw_result: &Value,
+        doc_id_from_executor: Option<&str>,
+    ) -> Value {
+        let doc_id = doc_id_from_executor
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned)
+            .or_else(|| {
+                raw_result
+                    .get("docId")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(str::to_owned)
+            })
+            .unwrap_or_default();
+
+        let status = raw_result
+            .get("status")
+            .and_then(Value::as_str)
+            .unwrap_or("loaded")
+            .to_owned();
+
+        let message = if let Some(text) = raw_result.get("message").and_then(Value::as_str) {
+            text.to_owned()
+        } else if doc_id.is_empty() {
+            "Данные через get_tools_calling загружены".to_owned()
+        } else {
+            format!("Данные по doc_id={} загружены через get_tools_calling", doc_id)
+        };
+
+        json!({
+            "docId": doc_id,
+            "status": status,
+            "message": message,
+        })
     }
 
     fn core_error_message(error: &CoreError) -> String {

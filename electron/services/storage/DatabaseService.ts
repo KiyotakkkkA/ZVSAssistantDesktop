@@ -102,40 +102,91 @@ export class DatabaseService {
             payloadRecord.updatedAt
                 ? payloadRecord.updatedAt
                 : new Date().toISOString();
+        const currentTokensMeta =
+            payloadRecord.tokenUsage !== undefined
+                ? JSON.stringify(payloadRecord.tokenUsage)
+                : null;
 
         this.database
             .prepare(
                 `
-                INSERT INTO dialogs (id, payload_json, updated_at, created_by)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO dialogs (id, payload_json, current_tokens_meta, updated_at, created_by)
+                VALUES (?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     payload_json = excluded.payload_json,
+                    current_tokens_meta = excluded.current_tokens_meta,
                     updated_at = excluded.updated_at,
                     created_by = excluded.created_by
                 `,
             )
-            .run(dialogId, JSON.stringify(payload), updatedAt, createdBy);
+            .run(
+                dialogId,
+                JSON.stringify(payload),
+                currentTokensMeta,
+                updatedAt,
+                createdBy,
+            );
+    }
+
+    updateDialogCurrentTokensMeta(
+        dialogId: string,
+        tokenUsage: unknown,
+        createdBy: string,
+    ): void {
+        this.database
+            .prepare(
+                `
+                UPDATE dialogs
+                SET current_tokens_meta = ?
+                WHERE id = ?
+                  AND created_by = ?
+                `,
+            )
+            .run(JSON.stringify(tokenUsage), dialogId, createdBy);
     }
 
     getDialogsRaw(createdBy: string): unknown[] {
         const rows = this.database
             .prepare(
-                `SELECT payload_json
+                `SELECT payload_json, current_tokens_meta
                  FROM dialogs
                  WHERE created_by = ?
                  ORDER BY updated_at DESC`,
             )
-            .all(createdBy) as Array<{ payload_json: string }>;
+            .all(createdBy) as Array<{
+            payload_json: string;
+            current_tokens_meta: string | null;
+        }>;
 
         return rows
-            .map((row) => this.tryParseJson(row.payload_json))
+            .map((row) => {
+                const parsed = this.tryParseJson(row.payload_json);
+
+                if (!parsed || typeof parsed !== "object") {
+                    return null;
+                }
+
+                const tokensMeta =
+                    typeof row.current_tokens_meta === "string"
+                        ? this.tryParseJson(row.current_tokens_meta)
+                        : null;
+
+                if (!tokensMeta || typeof tokensMeta !== "object") {
+                    return parsed;
+                }
+
+                return {
+                    ...(parsed as Record<string, unknown>),
+                    tokenUsage: tokensMeta,
+                };
+            })
             .filter((row) => row !== null);
     }
 
     getDialogRaw(dialogId: string, createdBy: string): unknown | null {
         const row = this.database
             .prepare(
-                `SELECT payload_json
+                `SELECT payload_json, current_tokens_meta
                  FROM dialogs
                  WHERE id = ?
                    AND created_by = ?
@@ -144,6 +195,7 @@ export class DatabaseService {
             .get(dialogId, createdBy) as
             | {
                   payload_json: string;
+                  current_tokens_meta: string | null;
               }
             | undefined;
 
@@ -151,7 +203,25 @@ export class DatabaseService {
             return null;
         }
 
-        return this.tryParseJson(row.payload_json);
+        const parsed = this.tryParseJson(row.payload_json);
+
+        if (!parsed || typeof parsed !== "object") {
+            return parsed;
+        }
+
+        const tokensMeta =
+            typeof row.current_tokens_meta === "string"
+                ? this.tryParseJson(row.current_tokens_meta)
+                : null;
+
+        if (!tokensMeta || typeof tokensMeta !== "object") {
+            return parsed;
+        }
+
+        return {
+            ...(parsed as Record<string, unknown>),
+            tokenUsage: tokensMeta,
+        };
     }
 
     upsertDialogContextRaw(
@@ -215,6 +285,7 @@ export class DatabaseService {
 
     createToolCallingDocument(params: {
         createdBy: string;
+        dialogId: string;
         sessionId: string;
         callId: string;
         toolName: string;
@@ -243,6 +314,7 @@ export class DatabaseService {
                 `
                 INSERT INTO tools_calling_docs (
                     id,
+                    dialog_id,
                     session_id,
                     call_id,
                     tool_name,
@@ -251,11 +323,12 @@ export class DatabaseService {
                     created_at,
                     created_by
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `,
             )
             .run(
-                `tcd_${randomUUID().replace(/-/g, "")}`,
+                docId,
+                params.dialogId,
                 params.sessionId,
                 params.callId,
                 params.toolName,
@@ -274,6 +347,7 @@ export class DatabaseService {
     ): {
         docId: string;
         payload: unknown;
+        dialogId: string;
         callId: string;
         toolName: string;
         iteration: number;
@@ -287,6 +361,7 @@ export class DatabaseService {
                     d.doc_id,
                     d.payload_json,
                     d.created_at,
+                    l.dialog_id,
                     l.call_id,
                     l.tool_name,
                     l.iteration,
@@ -304,6 +379,7 @@ export class DatabaseService {
                   doc_id: string;
                   payload_json: string;
                   created_at: string;
+                  dialog_id: string;
                   call_id: string;
                   tool_name: string;
                   iteration: number;
@@ -318,6 +394,7 @@ export class DatabaseService {
         return {
             docId: row.doc_id,
             payload: this.tryParseJson(row.payload_json),
+            dialogId: row.dialog_id,
             callId: row.call_id,
             toolName: row.tool_name,
             iteration: row.iteration,
@@ -1006,6 +1083,7 @@ export class DatabaseService {
             CREATE TABLE IF NOT EXISTS dialogs (
                 id TEXT PRIMARY KEY,
                 payload_json TEXT NOT NULL,
+                current_tokens_meta TEXT,
                 updated_at TEXT NOT NULL,
                 created_by TEXT NOT NULL,
                 FOREIGN KEY(created_by) REFERENCES profiles(id) ON DELETE CASCADE
@@ -1029,6 +1107,7 @@ export class DatabaseService {
 
             CREATE TABLE IF NOT EXISTS tools_calling_docs (
                 id TEXT PRIMARY KEY,
+                dialog_id TEXT NOT NULL,
                 session_id TEXT NOT NULL,
                 call_id TEXT NOT NULL,
                 tool_name TEXT NOT NULL,

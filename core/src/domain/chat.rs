@@ -9,6 +9,7 @@ use std::sync::{
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatRuntimeContext {
+    pub active_dialog_id: Option<String>,
     pub active_project_id: Option<String>,
     pub project_directory: Option<String>,
     pub project_vector_storage_id: Option<String>,

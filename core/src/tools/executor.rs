@@ -514,6 +514,15 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
             .and_then(|value| value.parse::<u32>().ok())
             .unwrap_or(1);
 
+        let dialog_id = request
+            .runtime_context
+            .as_ref()
+            .and_then(|ctx| ctx.active_dialog_id.as_ref())
+            .map(|value| value.trim())
+            .filter(|value| !value.is_empty())
+            .unwrap_or(request.session_id.as_str())
+            .to_owned();
+
         let tool_payload = json!({
             "sessionId": request.session_id,
             "callId": request.call_id,
@@ -524,6 +533,7 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
         });
 
         let saved_doc = self.host_port.tools_store_calling_doc(&json!({
+            "dialogId": dialog_id,
             "sessionId": request.session_id,
             "callId": request.call_id,
             "toolName": request.tool_name,

@@ -80,6 +80,41 @@ fn find_value_field<'a>(object: &'a serde_json::Map<String, Value>, keys: &[&str
     None
 }
 
+fn count_get_tools_calling_meta_tokens(
+    encoder: Option<&CoreBPE>,
+    tool_trace_object: &serde_json::Map<String, Value>,
+) -> usize {
+    let mut total = 0usize;
+
+    if let Some(doc_id) = tool_trace_object.get("docId") {
+        total += count_json_tokens(encoder, doc_id);
+    }
+
+    if let Some(status) = tool_trace_object.get("status") {
+        total += count_json_tokens(encoder, status);
+    }
+
+    if let Some(message) = tool_trace_object.get("message") {
+        total += count_json_tokens(encoder, message);
+    }
+
+    if let Some(tool_name) = tool_trace_object.get("toolName") {
+        total += count_json_tokens(encoder, tool_name);
+    }
+
+    if let Some(args) = tool_trace_object.get("args") {
+        if let Some(args_object) = args.as_object() {
+            if let Some(doc_id) = args_object.get("docId") {
+                total += count_json_tokens(encoder, doc_id);
+            }
+        } else {
+            total += count_json_tokens(encoder, args);
+        }
+    }
+
+    total
+}
+
 pub fn calculate_dialog_token_usage(payload: &Value) -> DialogTokenUsageSummary {
     let encoder = cl100k_base().ok();
     let encoder_ref = encoder.as_ref();
@@ -153,11 +188,24 @@ pub fn calculate_dialog_token_usage(payload: &Value) -> DialogTokenUsageSummary 
 
                 if let Some(tool_trace) = message_object.get("toolTrace") {
                     if let Some(tool_trace_object) = tool_trace.as_object() {
-                        if let Some(args) = tool_trace_object.get("args") {
-                            acc.tool_results += count_json_tokens(encoder_ref, args);
-                        }
-                        if let Some(result) = tool_trace_object.get("result") {
-                            acc.tool_results += count_json_tokens(encoder_ref, result);
+                        let tool_name = tool_trace_object
+                            .get("toolName")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default();
+
+                        if tool_name == "get_tools_calling" {
+                            acc.tool_results +=
+                                count_get_tools_calling_meta_tokens(
+                                    encoder_ref,
+                                    tool_trace_object,
+                                );
+                        } else {
+                            if let Some(args) = tool_trace_object.get("args") {
+                                acc.tool_results += count_json_tokens(encoder_ref, args);
+                            }
+                            if let Some(result) = tool_trace_object.get("result") {
+                                acc.tool_results += count_json_tokens(encoder_ref, result);
+                            }
                         }
                     } else {
                         acc.tool_results += count_json_tokens(encoder_ref, tool_trace);

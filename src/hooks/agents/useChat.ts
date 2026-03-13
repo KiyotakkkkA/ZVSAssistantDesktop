@@ -558,6 +558,7 @@ export function useChat() {
                                 ? userProfile.maxToolCallsPerResponse
                                 : 1,
                         runtimeContext: {
+                            activeDialogId: currentDialog.id,
                             activeProjectId,
                             projectDirectory:
                                 projectsStore.activeProject?.directoryPath ||

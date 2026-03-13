@@ -118,6 +118,11 @@ export class DialogsService {
             return this.getDialogById(dialogId, activeDialogId);
         }
 
+        const dialogRaw = this.databaseService.getDialogRaw(
+            dialogId,
+            this.createdBy,
+        ) as Partial<ChatDialog> | null;
+
         const normalizedMessages = raw.messages
             .map((message) => this.normalizeMessage(message as ChatMessage))
             .filter(Boolean);
@@ -129,7 +134,9 @@ export class DialogsService {
                     ? raw.title
                     : "Новый диалог",
             messages: normalizedMessages,
-            tokenUsage: this.normalizeTokenUsage(raw.tokenUsage),
+            tokenUsage: this.normalizeTokenUsage(
+                dialogRaw?.tokenUsage ?? raw.tokenUsage,
+            ),
             forProjectId: this.normalizeForProjectId(raw.forProjectId),
             createdAt:
                 typeof raw.createdAt === "string" && raw.createdAt
@@ -399,9 +406,13 @@ export class DialogsService {
         options?: { recountContextTokens?: boolean },
     ): void {
         this.databaseService.upsertDialogRaw(dialog.id, dialog, this.createdBy);
+        const dialogContextPayload: ChatDialog = {
+            ...dialog,
+            tokenUsage: undefined,
+        };
         this.databaseService.upsertDialogContextRaw(
             dialog.id,
-            dialog,
+            dialogContextPayload,
             this.createdBy,
         );
 
@@ -499,43 +510,11 @@ export class DialogsService {
                 ...(usageParsed || {}),
             });
 
-            const now = new Date().toISOString();
-            const nextDialog: Partial<ChatDialog> = {
-                ...existingDialog,
-                tokenUsage: mergedTokenUsage,
-                updatedAt:
-                    typeof existingDialog.updatedAt === "string" &&
-                    existingDialog.updatedAt
-                        ? existingDialog.updatedAt
-                        : now,
-            };
-
-            this.databaseService.upsertDialogRaw(
+            this.databaseService.updateDialogCurrentTokensMeta(
                 dialogId,
-                nextDialog,
+                mergedTokenUsage,
                 this.createdBy,
             );
-
-            const existingContext = this.databaseService.getDialogContextRaw(
-                dialogId,
-                this.createdBy,
-            ) as Partial<ChatDialog> | null;
-
-            if (existingContext) {
-                this.databaseService.upsertDialogContextRaw(
-                    dialogId,
-                    {
-                        ...existingContext,
-                        tokenUsage: mergedTokenUsage,
-                        updatedAt:
-                            typeof existingContext.updatedAt === "string" &&
-                            existingContext.updatedAt
-                                ? existingContext.updatedAt
-                                : now,
-                    },
-                    this.createdBy,
-                );
-            }
         } catch (error) {
             console.warn(
                 "[DialogsService] failed to recount dialog context tokens:",

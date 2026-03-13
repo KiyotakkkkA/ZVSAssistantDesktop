@@ -363,6 +363,7 @@ export type StreamOllamaChatPayload = {
 };
 
 export type ChatRuntimeContext = {
+    activeDialogId?: string;
     activeProjectId?: string;
     projectDirectory?: string;
     projectVectorStorageId?: string;
