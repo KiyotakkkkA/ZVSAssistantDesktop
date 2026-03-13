@@ -2,6 +2,7 @@ import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ImagePreviewBlock } from "./ImagePreviewBlock";
+import { MermaidDiagramBlock } from "./MermaidDiagramBlock";
 import { ShikiCodeBlock } from "./ShikiCodeBlock";
 
 interface MarkdownStaticContentProps {
@@ -41,6 +42,10 @@ const MARKDOWN_COMPONENTS: Components = {
         }
 
         const language = codeClassName?.replace("language-", "") || "plaintext";
+
+        if (language.toLowerCase() === "mermaid") {
+            return <MermaidDiagramBlock code={rawCode} />;
+        }
 
         return <ShikiCodeBlock code={rawCode} language={language} />;
     },
