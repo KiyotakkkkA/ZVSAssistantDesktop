@@ -301,6 +301,21 @@ class ChatsStore {
                               ...(typeof message.toolTrace.isAdmin === "boolean"
                                   ? { isAdmin: message.toolTrace.isAdmin }
                                   : {}),
+                              ...(typeof message.toolTrace.confirmationTitle ===
+                              "string"
+                                  ? {
+                                        confirmationTitle:
+                                            message.toolTrace.confirmationTitle,
+                                    }
+                                  : {}),
+                              ...(typeof message.toolTrace
+                                  .confirmationPrompt === "string"
+                                  ? {
+                                        confirmationPrompt:
+                                            message.toolTrace
+                                                .confirmationPrompt,
+                                    }
+                                  : {}),
                           },
                       }
                     : {}),

@@ -241,29 +241,14 @@ impl ChatCoreService {
                     args: args_value.clone(),
                 });
 
-                if tool_name == "command_exec" {
+                if self.tool_registry.tool_requires_confirmation(&tool_name) {
                     let approved = self
-                        .wait_command_approval(session_id, &call_id)
+                        .wait_tool_approval(session_id, &call_id)
                         .await
                         .unwrap_or(false);
 
                     if !approved {
-                        let command = args_value
-                            .get("command")
-                            .and_then(Value::as_str)
-                            .unwrap_or_default();
-                        let cwd = args_value
-                            .get("cwd")
-                            .and_then(Value::as_str)
-                            .unwrap_or_default();
-
-                        let result = serde_json::json!({
-                            "status": "cancelled",
-                            "command": command,
-                            "cwd": cwd,
-                            "isAdmin": false,
-                            "reason": "Пользователь отклонил выполнение",
-                        });
+                        let result = Self::build_tool_cancelled_result(&tool_name, &args_value);
 
                         self.event_sink.emit(ChatSessionEvent::ToolResult {
                             session_id: session_id.to_owned(),
@@ -379,7 +364,35 @@ impl ChatCoreService {
         self.resolve_session_approvals(session_id, false).await;
     }
 
-    async fn wait_command_approval(&self, session_id: &str, call_id: &str) -> Option<bool> {
+    fn build_tool_cancelled_result(tool_name: &str, args_value: &Value) -> Value {
+        if tool_name == "command_exec" {
+            let command = args_value
+                .get("command")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            let cwd = args_value
+                .get("cwd")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+
+            return json!({
+                "status": "cancelled",
+                "command": command,
+                "cwd": cwd,
+                "isAdmin": false,
+                "reason": "Пользователь отклонил выполнение",
+            });
+        }
+
+        json!({
+            "status": "cancelled",
+            "toolName": tool_name,
+            "args": args_value,
+            "reason": "Пользователь отклонил выполнение",
+        })
+    }
+
+    async fn wait_tool_approval(&self, session_id: &str, call_id: &str) -> Option<bool> {
         let (sender, receiver) = oneshot::channel::<bool>();
 
         {

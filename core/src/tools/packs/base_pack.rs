@@ -5,7 +5,8 @@ use serde_json::json;
 use crate::tools::builtin_tools::{
     array_of_objects_schema, array_of_strings_schema, enum_string_schema,
     number_schema, object_schema, package_tool_with_output, string_schema,
-    BuiltinToolPackage,
+    with_confirmation, BuiltinToolPackage,
+    confirmation_spec,
 };
 
 pub fn build_base_pack() -> BuiltinToolPackage {
@@ -106,24 +107,30 @@ pub fn build_base_pack() -> BuiltinToolPackage {
                     }
                 }),
             ),
-            package_tool_with_output(
-                "base-tools",
-                "Базовые инструменты",
-                "Набор базовых инструментов для взаимодействия модели с внешней средой",
-                "command_exec",
-                "Выполняет shell-команду после подтверждения пользователем",
-                object_schema(command_exec_props, &["command"]),
-                json!({
-                    "type": "object",
-                    "properties": {
-                        "command": { "type": "string" },
-                        "cwd": { "type": "string" },
-                        "isAdmin": { "type": "boolean" },
-                        "exitCode": { "type": "number" },
-                        "stdout": { "type": "string" },
-                        "stderr": { "type": "string" }
-                    }
-                }),
+            with_confirmation(
+                package_tool_with_output(
+                    "base-tools",
+                    "Базовые инструменты",
+                    "Набор базовых инструментов для взаимодействия модели с внешней средой",
+                    "command_exec",
+                    "Выполняет shell-команду после подтверждения пользователем",
+                    object_schema(command_exec_props, &["command"]),
+                    json!({
+                        "type": "object",
+                        "properties": {
+                            "command": { "type": "string" },
+                            "cwd": { "type": "string" },
+                            "isAdmin": { "type": "boolean" },
+                            "exitCode": { "type": "number" },
+                            "stdout": { "type": "string" },
+                            "stderr": { "type": "string" }
+                        }
+                    }),
+                ),
+                confirmation_spec(
+                    "Подтверждение выполнения команды",
+                    "Проверь shell-команду и рабочую директорию перед запуском.",
+                ),
             ),
             package_tool_with_output(
                 "base-tools",

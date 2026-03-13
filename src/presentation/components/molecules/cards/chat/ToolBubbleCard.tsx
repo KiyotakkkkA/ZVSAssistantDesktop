@@ -46,15 +46,24 @@ export function ToolBubbleCard({
 
     const isCommandExec = payload.toolName === "command_exec";
     const execStatus = payload.status;
+    const needsConfirmation = execStatus === "pending";
     const command = typeof payload.command === "string" ? payload.command : "";
     const cwd = typeof payload.cwd === "string" ? payload.cwd : ".";
     const isAdmin = payload.isAdmin === true;
+    const confirmationTitle =
+        typeof payload.confirmationTitle === "string"
+            ? payload.confirmationTitle
+            : "Подтверждение инструмента";
+    const confirmationPrompt =
+        typeof payload.confirmationPrompt === "string"
+            ? payload.confirmationPrompt
+            : "Проверь аргументы и подтвердите выполнение.";
 
     return (
         <div className="w-full text-xs leading-relaxed text-main-200">
             <Accordeon
                 title={
-                    execStatus === "pending"
+                    needsConfirmation
                         ? `ПОДТВЕРЖДЕНИЕ ${payload.toolName || "unknown"}`
                         : `Инструмент: ${payload.toolName || "unknown"}`
                 }
@@ -67,40 +76,52 @@ export function ToolBubbleCard({
                     </span>
                 }
                 subtitle={
-                    execStatus === "pending"
+                    needsConfirmation
                         ? `ИНСТРУМЕНТ ${payload.toolName || "unknown"} ТРЕБУЕТ РУЧНОГО ВМЕШАТЕЛЬСТВА : НАЖМИТЕ, ЧТОБЫ УВИДЕТЬ ПОДРОБНОСТИ`
                         : `Аргументы и результат вызова инструмента`
                 }
             >
                 <div className="space-y-3">
-                    {isCommandExec && (
+                    {(needsConfirmation || isCommandExec) && (
                         <div className="space-y-2 rounded-xl border border-main-700/60 bg-main-900/40 p-3">
                             <p className="text-[11px] font-semibold text-main-300">
-                                ЗАПРОС НА ВЫПОЛНЕНИЕ
+                                {needsConfirmation
+                                    ? confirmationTitle.toUpperCase()
+                                    : "ЗАПРОС НА ВЫПОЛНЕНИЕ"}
                             </p>
-                            <p className="text-[11px] text-main-300">
-                                Директория: {cwd}
-                            </p>
-                            <p className="text-[11px] text-main-400">
-                                <ShikiCodeBlock
-                                    code={command}
-                                    language="powershell"
-                                />
-                            </p>
-                            <p className="text-[11px] text-main-400">
-                                Права администратора:{" "}
-                                <span
-                                    className={
-                                        isAdmin
-                                            ? "text-green-400"
-                                            : "text-red-400"
-                                    }
-                                >
-                                    {isAdmin ? "Да" : "Нет"}
-                                </span>
-                            </p>
+                            {needsConfirmation && (
+                                <p className="text-[11px] text-main-300">
+                                    {confirmationPrompt}
+                                </p>
+                            )}
 
-                            {execStatus === "pending" && (
+                            {isCommandExec && (
+                                <>
+                                    <p className="text-[11px] text-main-300">
+                                        Директория: {cwd}
+                                    </p>
+                                    <p className="text-[11px] text-main-400">
+                                        <ShikiCodeBlock
+                                            code={command}
+                                            language="powershell"
+                                        />
+                                    </p>
+                                    <p className="text-[11px] text-main-400">
+                                        Права администратора:{" "}
+                                        <span
+                                            className={
+                                                isAdmin
+                                                    ? "text-green-400"
+                                                    : "text-red-400"
+                                            }
+                                        >
+                                            {isAdmin ? "Да" : "Нет"}
+                                        </span>
+                                    </p>
+                                </>
+                            )}
+
+                            {needsConfirmation && (
                                 <div className="flex items-center gap-2 pt-1">
                                     <Button
                                         variant="primary"
@@ -121,22 +142,23 @@ export function ToolBubbleCard({
                                 </div>
                             )}
 
-                            {(execStatus === "accepted" ||
-                                execStatus === "cancelled" ||
-                                execStatus === "failed") && (
-                                <p className="text-[11px] text-main-400">
-                                    Статус:{" "}
-                                    <span
-                                        className={`${execStatus === "accepted" ? "text-green-400" : "text-red-400"}`}
-                                    >
-                                        {execStatus === "accepted"
-                                            ? "Подтверждено"
-                                            : execStatus === "failed"
-                                              ? "Ошибка выполнения"
-                                              : "Отклонено"}
-                                    </span>
-                                </p>
-                            )}
+                            {(needsConfirmation || isCommandExec) &&
+                                (execStatus === "accepted" ||
+                                    execStatus === "cancelled" ||
+                                    execStatus === "failed") && (
+                                    <p className="text-[11px] text-main-400">
+                                        Статус:{" "}
+                                        <span
+                                            className={`${execStatus === "accepted" ? "text-green-400" : "text-red-400"}`}
+                                        >
+                                            {execStatus === "accepted"
+                                                ? "Подтверждено"
+                                                : execStatus === "failed"
+                                                  ? "Ошибка выполнения"
+                                                  : "Отклонено"}
+                                        </span>
+                                    </p>
+                                )}
                         </div>
                     )}
 

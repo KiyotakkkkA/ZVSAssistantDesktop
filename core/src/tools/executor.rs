@@ -32,6 +32,8 @@ pub trait BuiltinToolHostPort: Send + Sync {
         from_row: Option<u32>,
         to_row: Option<u32>,
     ) -> Result<Value, CoreError>;
+    async fn fs_delete_file(&self, file_path: &str) -> Result<Value, CoreError>;
+    async fn fs_text_search(&self, cwd: &str, exp: &str) -> Result<Value, CoreError>;
 }
 
 #[derive(Debug, Clone)]
@@ -177,6 +179,39 @@ impl BuiltinToolsExecutor {
         self.host_port
             .fs_read_file(file_path, read_all, from_row, to_row)
             .await
+    }
+
+    async fn execute_delete_file(&self, args: &Value) -> Result<Value, CoreError> {
+        let file_path = args
+            .get("filePath")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .unwrap_or_default();
+
+        if file_path.is_empty() {
+            return Ok(json!({ "error": "Необходимо указать filePath." }));
+        }
+
+        self.host_port.fs_delete_file(file_path).await
+    }
+
+    async fn execute_text_search(&self, args: &Value) -> Result<Value, CoreError> {
+        let cwd = args
+            .get("cwd")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .unwrap_or_default();
+        let exp = args
+            .get("exp")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .unwrap_or_default();
+
+        if cwd.is_empty() || exp.is_empty() {
+            return Ok(json!({ "error": "Необходимо указать cwd и exp." }));
+        }
+
+        self.host_port.fs_text_search(cwd, exp).await
     }
 
     fn format_plan_response(plan: &Plan) -> Value {
@@ -370,6 +405,8 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
             "create_file" => self.execute_create_file(&args).await,
             "create_dir" => self.execute_create_dir(&args).await,
             "read_file" => self.execute_read_file(&args).await,
+            "delete_file" => self.execute_delete_file(&args).await,
+            "text_search" => self.execute_text_search(&args).await,
             "qa_tool" => {
                 let questions = args
                     .get("questions")

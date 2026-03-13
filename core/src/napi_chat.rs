@@ -7,15 +7,20 @@ use async_stream::try_stream;
 use async_trait::async_trait;
 use futures::Stream;
 use futures_util::StreamExt;
+use grep::regex::RegexMatcher;
+use ignore::WalkBuilder;
 use napi::bindgen_prelude::{Error, Result as NapiResult};
 use napi::threadsafe_function::{
     ErrorStrategy, ThreadsafeFunction, ThreadsafeFunctionCallMode,
 };
 use napi_derive::napi;
+use regex::Regex;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use reqwest::{Client, Response};
 use serde::Serialize;
 use serde_json::{json, Value};
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 use tokio::fs;
 use tokio::process::Command;
 use tokio::sync::{Mutex, oneshot};
@@ -778,6 +783,113 @@ impl BuiltinToolHostPort for JsHostPort {
             "totalLines": total_lines,
             "fromLine": from_line,
             "toLine": to_line,
+        }))
+    }
+
+    async fn fs_delete_file(&self, file_path: &str) -> Result<Value, CoreError> {
+        let trimmed = file_path.trim();
+        if trimmed.is_empty() {
+            return Err(CoreError::Validation("filePath is required".to_owned()));
+        }
+
+        let path = Path::new(trimmed);
+        let metadata = fs::metadata(path)
+            .await
+            .map_err(|error| CoreError::Tool(error.to_string()))?;
+
+        if metadata.is_dir() {
+            return Err(CoreError::Validation(format!(
+                "Ожидался путь к файлу, передана директория: {}",
+                trimmed
+            )));
+        }
+
+        fs::remove_file(path)
+            .await
+            .map_err(|error| CoreError::Tool(error.to_string()))?;
+
+        Ok(json!({
+            "success": true,
+            "path": trimmed,
+        }))
+    }
+
+    async fn fs_text_search(&self, cwd: &str, exp: &str) -> Result<Value, CoreError> {
+        let trimmed_cwd = cwd.trim();
+        let trimmed_exp = exp.trim();
+
+        if trimmed_cwd.is_empty() || trimmed_exp.is_empty() {
+            return Err(CoreError::Validation("cwd and exp are required".to_owned()));
+        }
+
+        let root = PathBuf::from(trimmed_cwd);
+        if !root.exists() {
+            return Err(CoreError::Validation(format!(
+                "Каталог не существует: {}",
+                trimmed_cwd
+            )));
+        }
+
+        if !root.is_dir() {
+            return Err(CoreError::Validation(format!(
+                "cwd должен быть директорией: {}",
+                trimmed_cwd
+            )));
+        }
+
+        RegexMatcher::new(trimmed_exp).map_err(|error| {
+            CoreError::Validation(format!("Некорректное регулярное выражение: {}", error))
+        })?;
+
+        let regex = Regex::new(trimmed_exp).map_err(|error| {
+            CoreError::Validation(format!("Некорректное регулярное выражение: {}", error))
+        })?;
+
+        let mut matches = Vec::new();
+
+        let walker = WalkBuilder::new(&root)
+            .standard_filters(true)
+            .build();
+
+        for entry in walker {
+            let entry = match entry {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+
+            if !entry.file_type().map(|kind| kind.is_file()).unwrap_or(false) {
+                continue;
+            }
+
+            let path = entry.into_path();
+            let file = match File::open(&path) {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+            let reader = BufReader::new(file);
+
+            for (line_index, line_result) in reader.lines().enumerate() {
+                let line = match line_result {
+                    Ok(value) => value,
+                    Err(_) => break,
+                };
+
+                for capture in regex.find_iter(&line) {
+                    matches.push(json!({
+                        "filePath": path.to_string_lossy().to_string(),
+                        "line": line_index + 1,
+                        "column": capture.start() + 1,
+                        "text": line,
+                        "match": capture.as_str(),
+                    }));
+                }
+            }
+        }
+
+        Ok(json!({
+            "cwd": root.to_string_lossy().to_string(),
+            "exp": trimmed_exp,
+            "matches": matches,
         }))
     }
 

@@ -385,6 +385,8 @@ export function useChat() {
                             markFirstActivity();
                             const messageId = createMessageId();
                             toolTraceMessageIds.set(event.callId, messageId);
+                            const confirmationSpec =
+                                toolsStore.getToolConfirmation(event.toolName);
                             const commandMeta =
                                 event.toolName === "command_exec"
                                     ? getCommandRequestMeta(event.args)
@@ -402,9 +404,17 @@ export function useChat() {
                                         toolName: event.toolName,
                                         args: event.args,
                                         result: null,
-                                        ...(event.toolName === "command_exec"
+                                        ...(confirmationSpec
                                             ? {
                                                   status: "pending" as const,
+                                                  confirmationTitle:
+                                                      confirmationSpec.title,
+                                                  confirmationPrompt:
+                                                      confirmationSpec.prompt,
+                                              }
+                                            : {}),
+                                        ...(event.toolName === "command_exec"
+                                            ? {
                                                   command: commandMeta?.command,
                                                   cwd: commandMeta?.cwd,
                                                   isAdmin: commandMeta?.isAdmin,
@@ -422,6 +432,8 @@ export function useChat() {
                             chunkQueueManager.flushImmediate();
                             const toolStage = resolveToolStage(event.toolName);
                             setStreamStage(toolStage);
+                            const confirmationSpec =
+                                toolsStore.getToolConfirmation(event.toolName);
                             const messageId = toolTraceMessageIds.get(
                                 event.callId,
                             );
@@ -445,6 +457,18 @@ export function useChat() {
                                                 args: event.args,
                                                 result: event.result,
                                                 status: inferredStatus,
+                                                ...(confirmationSpec?.title
+                                                    ? {
+                                                          confirmationTitle:
+                                                              confirmationSpec.title,
+                                                      }
+                                                    : {}),
+                                                ...(confirmationSpec?.prompt
+                                                    ? {
+                                                          confirmationPrompt:
+                                                              confirmationSpec.prompt,
+                                                      }
+                                                    : {}),
                                                 ...(event.toolName ===
                                                 "command_exec"
                                                     ? getCommandRequestMeta(

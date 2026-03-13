@@ -12,6 +12,13 @@ use crate::tools::packs::{
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ToolConfirmationSpec {
+    pub title: String,
+    pub prompt: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BuiltinToolDescriptor {
     pub package_id: String,
     pub package_title: String,
@@ -19,6 +26,8 @@ pub struct BuiltinToolDescriptor {
     pub schema: OllamaToolDefinition,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output_scheme: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub confirmation: Option<ToolConfirmationSpec>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -152,6 +161,7 @@ pub fn package_tool(
         package_description: package_description.to_owned(),
         schema: tool(name, description, parameters),
         output_scheme: None,
+        confirmation: None,
     }
 }
 
@@ -170,7 +180,23 @@ pub fn package_tool_with_output(
         package_description: package_description.to_owned(),
         schema: tool(name, description, parameters),
         output_scheme: Some(output_scheme),
+        confirmation: None,
     }
+}
+
+pub fn confirmation_spec(title: &str, prompt: &str) -> ToolConfirmationSpec {
+    ToolConfirmationSpec {
+        title: title.to_owned(),
+        prompt: prompt.to_owned(),
+    }
+}
+
+pub fn with_confirmation(
+    mut descriptor: BuiltinToolDescriptor,
+    confirmation: ToolConfirmationSpec,
+) -> BuiltinToolDescriptor {
+    descriptor.confirmation = Some(confirmation);
+    descriptor
 }
 
 pub fn builtin_tool_packages() -> Vec<BuiltinToolPackage> {

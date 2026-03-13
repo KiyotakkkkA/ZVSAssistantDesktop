@@ -4,7 +4,7 @@ use serde_json::json;
 
 use crate::tools::builtin_tools::{
     boolean_schema, number_schema, object_schema, package_tool_with_output,
-    string_schema, BuiltinToolPackage,
+    string_schema, with_confirmation, confirmation_spec, BuiltinToolPackage,
 };
 
 pub fn build_filesystem_pack() -> BuiltinToolPackage {
@@ -25,6 +25,13 @@ pub fn build_filesystem_pack() -> BuiltinToolPackage {
     read_file_props.insert("readAll".to_owned(), boolean_schema("Читать весь файл"));
     read_file_props.insert("readFromRow".to_owned(), number_schema("Начальная строка"));
     read_file_props.insert("readToRow".to_owned(), number_schema("Конечная строка"));
+
+    let mut delete_file_props = BTreeMap::new();
+    delete_file_props.insert("filePath".to_owned(), string_schema("Путь к удаляемому файлу"));
+
+    let mut text_search_props = BTreeMap::new();
+    text_search_props.insert("cwd".to_owned(), string_schema("Каталог поиска"));
+    text_search_props.insert("exp".to_owned(), string_schema("Регулярное выражение поиска"));
 
     BuiltinToolPackage {
         id: "filesystem-tools".to_owned(),
@@ -91,6 +98,55 @@ pub fn build_filesystem_pack() -> BuiltinToolPackage {
                         "totalLines": { "type": "number" },
                         "fromLine": { "type": "number" },
                         "toLine": { "type": "number" }
+                    }
+                }),
+            ),
+            with_confirmation(
+                package_tool_with_output(
+                    "filesystem-tools",
+                    "Файловая система",
+                    "Инструменты для работы с файлами и директориями",
+                    "delete_file",
+                    "Удаляет существующий файл",
+                    object_schema(delete_file_props, &["filePath"]),
+                    json!({
+                        "type": "object",
+                        "properties": {
+                            "success": { "type": "boolean" },
+                            "path": { "type": "string" }
+                        }
+                    }),
+                ),
+                confirmation_spec(
+                    "Подтверждение удаления файла",
+                    "Проверь путь к удаляемому файлу перед подтверждением. Операция необратима.",
+                ),
+            ),
+            package_tool_with_output(
+                "filesystem-tools",
+                "Файловая система",
+                "Инструменты для работы с файлами и директориями",
+                "text_search",
+                "Ищет по регулярному выражению в текстовых файлах каталога",
+                object_schema(text_search_props, &["cwd", "exp"]),
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "cwd": { "type": "string" },
+                        "exp": { "type": "string" },
+                        "matches": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "filePath": { "type": "string" },
+                                    "line": { "type": "number" },
+                                    "column": { "type": "number" },
+                                    "text": { "type": "string" },
+                                    "match": { "type": "string" }
+                                }
+                            }
+                        }
                     }
                 }),
             ),

@@ -32,6 +32,13 @@ export type ToolTrace = {
     command?: string;
     cwd?: string;
     isAdmin?: boolean;
+    confirmationTitle?: string;
+    confirmationPrompt?: string;
+};
+
+export type ToolConfirmationSpec = {
+    title: string;
+    prompt: string;
 };
 
 export type TokenUsage = {
@@ -112,6 +119,7 @@ export type BuiltinToolDescriptor = {
     packageDescription: string;
     schema: OllamaToolDefinition;
     outputScheme?: Record<string, unknown>;
+    confirmation?: ToolConfirmationSpec;
 };
 
 export type BuiltinToolPackage = {

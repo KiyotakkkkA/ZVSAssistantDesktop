@@ -66,6 +66,17 @@ class ToolsStore {
                         !Array.isArray(tool.outputScheme)
                             ? { outputScheme: tool.outputScheme }
                             : {}),
+                        ...(tool.confirmation &&
+                        typeof tool.confirmation === "object" &&
+                        typeof tool.confirmation.title === "string" &&
+                        typeof tool.confirmation.prompt === "string"
+                            ? {
+                                  confirmation: {
+                                      title: tool.confirmation.title,
+                                      prompt: tool.confirmation.prompt,
+                                  },
+                              }
+                            : {}),
                     })),
                 };
             })
@@ -185,6 +196,13 @@ class ToolsStore {
         this.requiredPromptToolNames = new Set(
             toolNames.filter((toolName) => knownEnabled.has(toolName)),
         );
+    }
+
+    getToolConfirmation(toolName: string) {
+        const descriptor = this.allTools.find(
+            (tool) => tool.schema.function.name === toolName,
+        );
+        return descriptor?.confirmation;
     }
 
     get toolDefinitions(): OllamaToolDefinition[] {

@@ -1,11 +1,12 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::domain::chat::OllamaToolDefinition;
-use crate::tools::builtin_tools::builtin_tool_definitions;
+use crate::tools::builtin_tools::builtin_tool_packages;
 
 #[derive(Debug, Clone)]
 pub struct ToolRegistryService {
     by_name: HashMap<String, OllamaToolDefinition>,
+    requires_confirmation: HashSet<String>,
 }
 
 impl Default for ToolRegistryService {
@@ -17,12 +18,25 @@ impl Default for ToolRegistryService {
 impl ToolRegistryService {
     pub fn new() -> Self {
         let mut by_name = HashMap::new();
+        let mut requires_confirmation = HashSet::new();
 
-        for definition in builtin_tool_definitions() {
-            by_name.insert(definition.function.name.clone(), definition);
+        for package in builtin_tool_packages() {
+            for descriptor in package.tools {
+                let definition = descriptor.schema;
+                let tool_name = definition.function.name.clone();
+
+                if descriptor.confirmation.is_some() {
+                    requires_confirmation.insert(tool_name.clone());
+                }
+
+                by_name.insert(tool_name, definition);
+            }
         }
 
-        Self { by_name }
+        Self {
+            by_name,
+            requires_confirmation,
+        }
     }
 
     pub fn has_tool(&self, name: &str) -> bool {
@@ -70,5 +84,9 @@ impl ToolRegistryService {
             "You must use these tools while completing task: TOOLS - {}",
             known.join(", ")
         ))
+    }
+
+    pub fn tool_requires_confirmation(&self, tool_name: &str) -> bool {
+        self.requires_confirmation.contains(tool_name)
     }
 }

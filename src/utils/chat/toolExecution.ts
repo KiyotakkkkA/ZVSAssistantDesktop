@@ -110,14 +110,10 @@ export const isToolExecutionFailure = (
 };
 
 export const inferToolTraceStatus = (
-    toolName: string,
+    _toolName: string,
     result: unknown,
 ): ToolTraceStatus => {
-    if (
-        toolName === "command_exec" &&
-        isRecord(result) &&
-        result.status === "cancelled"
-    ) {
+    if (isRecord(result) && result.status === "cancelled") {
         return "cancelled";
     }
 
