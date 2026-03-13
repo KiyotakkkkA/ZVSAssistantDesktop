@@ -590,6 +590,7 @@ export function MessageFeed({
                         <span>Модель печатает...</span>
                     </div>
                 )}
+                <div ref={messagesEndRef} />
             </section>
 
             <Modal
