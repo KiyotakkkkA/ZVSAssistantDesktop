@@ -399,7 +399,6 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
             "open_url" => self.host_port.browser_open_url(&args).await,
             "get_page_snapshot" => self.host_port.browser_snapshot(&args).await,
             "interact_with" => self.host_port.browser_interact(&args).await,
-            "interract_with" => self.host_port.browser_interact(&args).await,
             "close_browser" => self.host_port.browser_close().await,
             "send_telegram_msg" => self.host_port.telegram_send(&args).await,
             "get_telegram_unread_msgs" => self.host_port.telegram_unread(&args).await,

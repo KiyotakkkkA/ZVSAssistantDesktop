@@ -843,56 +843,62 @@ impl BuiltinToolHostPort for JsHostPort {
             CoreError::Validation(format!("Некорректное регулярное выражение: {}", error))
         })?;
 
-        let regex = Regex::new(trimmed_exp).map_err(|error| {
-            CoreError::Validation(format!("Некорректное регулярное выражение: {}", error))
-        })?;
+        let trimmed_exp_owned = trimmed_exp.to_owned();
 
-        let mut matches = Vec::new();
+        task::spawn_blocking(move || {
+            let regex = Regex::new(&trimmed_exp_owned).map_err(|error| {
+                CoreError::Validation(format!("Некорректное регулярное выражение: {}", error))
+            })?;
 
-        let walker = WalkBuilder::new(&root)
-            .standard_filters(true)
-            .build();
+            let mut matches = Vec::new();
 
-        for entry in walker {
-            let entry = match entry {
-                Ok(value) => value,
-                Err(_) => continue,
-            };
+            let walker = WalkBuilder::new(&root)
+                .standard_filters(true)
+                .build();
 
-            if !entry.file_type().map(|kind| kind.is_file()).unwrap_or(false) {
-                continue;
-            }
-
-            let path = entry.into_path();
-            let file = match File::open(&path) {
-                Ok(value) => value,
-                Err(_) => continue,
-            };
-            let reader = BufReader::new(file);
-
-            for (line_index, line_result) in reader.lines().enumerate() {
-                let line = match line_result {
+            for entry in walker {
+                let entry = match entry {
                     Ok(value) => value,
-                    Err(_) => break,
+                    Err(_) => continue,
                 };
 
-                for capture in regex.find_iter(&line) {
-                    matches.push(json!({
-                        "filePath": path.to_string_lossy().to_string(),
-                        "line": line_index + 1,
-                        "column": capture.start() + 1,
-                        "text": line,
-                        "match": capture.as_str(),
-                    }));
+                if !entry.file_type().map(|kind| kind.is_file()).unwrap_or(false) {
+                    continue;
+                }
+
+                let path = entry.into_path();
+                let file = match File::open(&path) {
+                    Ok(value) => value,
+                    Err(_) => continue,
+                };
+                let reader = BufReader::new(file);
+
+                for (line_index, line_result) in reader.lines().enumerate() {
+                    let line = match line_result {
+                        Ok(value) => value,
+                        Err(_) => break,
+                    };
+
+                    for capture in regex.find_iter(&line) {
+                        matches.push(json!({
+                            "filePath": path.to_string_lossy().to_string(),
+                            "line": line_index + 1,
+                            "column": capture.start() + 1,
+                            "text": line,
+                            "match": capture.as_str(),
+                        }));
+                    }
                 }
             }
-        }
 
-        Ok(json!({
-            "cwd": root.to_string_lossy().to_string(),
-            "exp": trimmed_exp,
-            "matches": matches,
-        }))
+            Ok(json!({
+                "cwd": root.to_string_lossy().to_string(),
+                "exp": trimmed_exp_owned,
+                "matches": matches,
+            }))
+        })
+        .await
+        .map_err(|error| CoreError::Internal(error.to_string()))?
     }
 
     async fn tools_store_calling_doc(&self, payload: &Value) -> Result<Value, CoreError> {

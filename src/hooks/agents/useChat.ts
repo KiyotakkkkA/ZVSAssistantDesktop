@@ -608,8 +608,6 @@ export function useChat() {
                     const savedDialog = await chatsStore.saveSnapshot(snapshot);
                     activeDialogRef.current = savedDialog;
                     commitMessages(savedDialog.messages);
-
-                    stopChatEvents?.();
                 } catch (error) {
                     if (cancellationRequestedRef.current) {
                         chunkQueueManager.reset();
