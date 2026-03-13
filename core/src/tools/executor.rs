@@ -34,6 +34,8 @@ pub trait BuiltinToolHostPort: Send + Sync {
     ) -> Result<Value, CoreError>;
     async fn fs_delete_file(&self, file_path: &str) -> Result<Value, CoreError>;
     async fn fs_text_search(&self, cwd: &str, exp: &str) -> Result<Value, CoreError>;
+    async fn tools_store_calling_doc(&self, payload: &Value) -> Result<Value, CoreError>;
+    async fn tools_get_calling_doc(&self, doc_id: &str) -> Result<Value, CoreError>;
 }
 
 #[derive(Debug, Clone)]
@@ -389,7 +391,7 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
     async fn execute_tool(&self, request: ToolExecutionRequest) -> Result<Value, CoreError> {
         let args = &request.args;
 
-        match request.tool_name.as_str() {
+        let raw_result = match request.tool_name.as_str() {
             "command_exec" => self.execute_command_exec(&args).await,
             "vector_store_search_tool" => self.host_port.vector_search(&request).await,
             "web_search" => self.execute_web_search(&args).await,
@@ -407,6 +409,24 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
             "read_file" => self.execute_read_file(&args).await,
             "delete_file" => self.execute_delete_file(&args).await,
             "text_search" => self.execute_text_search(&args).await,
+            "get_tools_calling" => {
+                let doc_id = args
+                    .get("doc_id")
+                    .or_else(|| args.get("docId"))
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .unwrap_or_default();
+
+                if doc_id.is_empty() {
+                    return Ok(json!({
+                        "ok": false,
+                        "error": "validation",
+                        "message": "Необходимо передать doc_id",
+                    }));
+                }
+
+                return self.host_port.tools_get_calling_doc(doc_id).await;
+            }
             "qa_tool" => {
                 let questions = args
                     .get("questions")
@@ -486,6 +506,48 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
                 "Tool {} не поддерживается в core runtime",
                 request.tool_name
             ))),
+        }?;
+
+        let iteration = request
+            .call_id
+            .split("tool_call_")
+            .last()
+            .and_then(|value| value.parse::<u32>().ok())
+            .unwrap_or(1);
+
+        let tool_payload = json!({
+            "sessionId": request.session_id,
+            "callId": request.call_id,
+            "toolName": request.tool_name,
+            "iteration": iteration,
+            "args": request.args,
+            "result": raw_result,
+        });
+
+        let saved_doc = self.host_port.tools_store_calling_doc(&json!({
+            "sessionId": request.session_id,
+            "callId": request.call_id,
+            "toolName": request.tool_name,
+            "iteration": iteration,
+            "payload": tool_payload,
+        }))
+        .await
+        .ok();
+
+        let doc_id = saved_doc
+            .as_ref()
+            .and_then(|response| response.get("docId"))
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+
+        if doc_id.is_empty() {
+            return Ok(raw_result);
         }
+
+        Ok(json!({
+            "__toolDocId": doc_id,
+            "data": raw_result,
+        }))
     }
 }

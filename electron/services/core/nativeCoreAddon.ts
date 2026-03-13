@@ -18,6 +18,7 @@ type NativeCoreAddon = {
     cancelChatSessionCore: (sessionId: string) => Promise<boolean>;
     resolveCommandApprovalCore: (payloadJson: string) => Promise<boolean>;
     submitToolResult: (callId: string, resultJson: string) => Promise<boolean>;
+    calculateDialogContextUsageCore: (payloadJson: string) => Promise<string>;
     getBuiltinToolDefinitions: () => string;
     getBuiltinToolPackages: () => string;
 };

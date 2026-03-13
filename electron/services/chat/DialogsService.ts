@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createBaseDialog } from "../../static/data";
 import { DatabaseService } from "../storage/DatabaseService";
+import { getNativeCoreAddon } from "../core/nativeCoreAddon";
 import type {
     ChatDialog,
     ChatDialogListItem,
@@ -19,8 +20,16 @@ const ASSISTANT_STAGES = new Set([
     "answering",
 ]);
 const TOOL_STAGES = new Set(["planning", "questioning", "tools_calling"]);
+const coreAddon = getNativeCoreAddon();
 
 export class DialogsService {
+    private readonly dialogContextRevisions = new Map<string, number>();
+    private readonly dialogContextRecountTimers = new Map<
+        string,
+        ReturnType<typeof setTimeout>
+    >();
+    private readonly dialogContextRecountInFlight = new Set<string>();
+
     constructor(
         private readonly databaseService: DatabaseService,
         private readonly onActiveDialogContextUpdate: ActiveDialogContextUpdater,
@@ -94,6 +103,43 @@ export class DialogsService {
         }
 
         return this.getActiveDialog(activeDialogId);
+    }
+
+    getDialogContextById(
+        dialogId: string,
+        activeDialogId?: string,
+    ): ChatDialog {
+        const raw = this.databaseService.getDialogContextRaw(
+            dialogId,
+            this.createdBy,
+        ) as Partial<ChatDialog> | null;
+
+        if (!raw || !Array.isArray(raw.messages)) {
+            return this.getDialogById(dialogId, activeDialogId);
+        }
+
+        const normalizedMessages = raw.messages
+            .map((message) => this.normalizeMessage(message as ChatMessage))
+            .filter(Boolean);
+
+        return {
+            id: this.normalizeDialogId(raw.id),
+            title:
+                typeof raw.title === "string" && raw.title.trim()
+                    ? raw.title
+                    : "Новый диалог",
+            messages: normalizedMessages,
+            tokenUsage: this.normalizeTokenUsage(raw.tokenUsage),
+            forProjectId: this.normalizeForProjectId(raw.forProjectId),
+            createdAt:
+                typeof raw.createdAt === "string" && raw.createdAt
+                    ? raw.createdAt
+                    : new Date().toISOString(),
+            updatedAt:
+                typeof raw.updatedAt === "string" && raw.updatedAt
+                    ? raw.updatedAt
+                    : new Date().toISOString(),
+        };
     }
 
     createDialog(forProjectId: string | null = null): ChatDialog {
@@ -211,7 +257,7 @@ export class DialogsService {
             updatedAt: new Date().toISOString(),
         };
 
-        this.writeDialog(updatedDialog);
+        this.writeDialog(updatedDialog, { recountContextTokens: true });
         return updatedDialog;
     }
 
@@ -272,7 +318,7 @@ export class DialogsService {
             updatedAt: new Date().toISOString(),
         };
 
-        this.writeDialog(updatedDialog);
+        this.writeDialog(updatedDialog, { recountContextTokens: true });
         return updatedDialog;
     }
 
@@ -297,7 +343,7 @@ export class DialogsService {
             updatedAt: new Date().toISOString(),
         };
 
-        this.writeDialog(normalizedDialog);
+        this.writeDialog(normalizedDialog, { recountContextTokens: true });
         this.onActiveDialogContextUpdate({
             activeDialogId: normalizedDialog.id,
             activeProjectId: normalizedDialog.forProjectId,
@@ -348,8 +394,154 @@ export class DialogsService {
         return dialogs;
     }
 
-    private writeDialog(dialog: ChatDialog): void {
+    private writeDialog(
+        dialog: ChatDialog,
+        options?: { recountContextTokens?: boolean },
+    ): void {
         this.databaseService.upsertDialogRaw(dialog.id, dialog, this.createdBy);
+        this.databaseService.upsertDialogContextRaw(
+            dialog.id,
+            dialog,
+            this.createdBy,
+        );
+
+        if (options?.recountContextTokens) {
+            this.requestDialogContextTokenRecount(dialog.id);
+        }
+    }
+
+    private requestDialogContextTokenRecount(dialogId: string): void {
+        const nextRevision =
+            (this.dialogContextRevisions.get(dialogId) ?? 0) + 1;
+        this.dialogContextRevisions.set(dialogId, nextRevision);
+
+        this.enqueueDialogContextTokenRecount(dialogId);
+    }
+
+    private enqueueDialogContextTokenRecount(dialogId: string): void {
+        if (this.dialogContextRecountTimers.has(dialogId)) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            this.dialogContextRecountTimers.delete(dialogId);
+            void this.flushDialogContextTokenRecount(dialogId);
+        }, 0);
+
+        this.dialogContextRecountTimers.set(dialogId, timer);
+    }
+
+    private async flushDialogContextTokenRecount(
+        dialogId: string,
+    ): Promise<void> {
+        if (this.dialogContextRecountInFlight.has(dialogId)) {
+            this.enqueueDialogContextTokenRecount(dialogId);
+            return;
+        }
+
+        const revision = this.dialogContextRevisions.get(dialogId) ?? 0;
+
+        if (revision <= 0) {
+            return;
+        }
+
+        this.dialogContextRecountInFlight.add(dialogId);
+
+        try {
+            await this.recountDialogContextTokens(dialogId, revision);
+        } finally {
+            this.dialogContextRecountInFlight.delete(dialogId);
+
+            if ((this.dialogContextRevisions.get(dialogId) ?? 0) !== revision) {
+                this.enqueueDialogContextTokenRecount(dialogId);
+            }
+        }
+    }
+
+    private async recountDialogContextTokens(
+        dialogId: string,
+        revision: number,
+    ): Promise<void> {
+        try {
+            const dialogContext = this.databaseService.getDialogContextRaw(
+                dialogId,
+                this.createdBy,
+            );
+
+            if (!dialogContext) {
+                return;
+            }
+
+            const usageRaw = await coreAddon.calculateDialogContextUsageCore(
+                JSON.stringify(dialogContext),
+            );
+
+            if ((this.dialogContextRevisions.get(dialogId) ?? 0) !== revision) {
+                return;
+            }
+
+            const usageParsed = JSON.parse(usageRaw) as Partial<TokenUsage> & {
+                totalSpentTokens?: number;
+                contextWindow?: TokenUsage["contextWindow"];
+            };
+
+            const existingDialog = this.databaseService.getDialogRaw(
+                dialogId,
+                this.createdBy,
+            ) as Partial<ChatDialog> | null;
+
+            if (!existingDialog) {
+                return;
+            }
+
+            const mergedTokenUsage = this.normalizeTokenUsage({
+                ...(existingDialog.tokenUsage || {}),
+                ...(usageParsed || {}),
+            });
+
+            const now = new Date().toISOString();
+            const nextDialog: Partial<ChatDialog> = {
+                ...existingDialog,
+                tokenUsage: mergedTokenUsage,
+                updatedAt:
+                    typeof existingDialog.updatedAt === "string" &&
+                    existingDialog.updatedAt
+                        ? existingDialog.updatedAt
+                        : now,
+            };
+
+            this.databaseService.upsertDialogRaw(
+                dialogId,
+                nextDialog,
+                this.createdBy,
+            );
+
+            const existingContext = this.databaseService.getDialogContextRaw(
+                dialogId,
+                this.createdBy,
+            ) as Partial<ChatDialog> | null;
+
+            if (existingContext) {
+                this.databaseService.upsertDialogContextRaw(
+                    dialogId,
+                    {
+                        ...existingContext,
+                        tokenUsage: mergedTokenUsage,
+                        updatedAt:
+                            typeof existingContext.updatedAt === "string" &&
+                            existingContext.updatedAt
+                                ? existingContext.updatedAt
+                                : now,
+                    },
+                    this.createdBy,
+                );
+            }
+        } catch (error) {
+            console.warn(
+                "[DialogsService] failed to recount dialog context tokens:",
+                error,
+            );
+        }
     }
 
     private normalizeDialogId(id: unknown): string {
@@ -453,10 +645,58 @@ export class DialogsService {
                 ? Math.max(0, Math.floor(raw.totalTokens))
                 : promptTokens + completionTokens;
 
+        const totalSpentTokens =
+            typeof raw.totalSpentTokens === "number" &&
+            Number.isFinite(raw.totalSpentTokens)
+                ? Math.max(0, Math.floor(raw.totalSpentTokens))
+                : totalTokens;
+
+        const contextWindowRaw =
+            raw.contextWindow && typeof raw.contextWindow === "object"
+                ? raw.contextWindow
+                : undefined;
+
+        const contextWindow = contextWindowRaw
+            ? {
+                  system: Math.max(
+                      0,
+                      Math.floor(Number(contextWindowRaw.system) || 0),
+                  ),
+                  systemInstructions: Math.max(
+                      0,
+                      Math.floor(
+                          Number(contextWindowRaw.systemInstructions) || 0,
+                      ),
+                  ),
+                  toolDefinitions: Math.max(
+                      0,
+                      Math.floor(Number(contextWindowRaw.toolDefinitions) || 0),
+                  ),
+                  reservedOutput: Math.max(
+                      0,
+                      Math.floor(Number(contextWindowRaw.reservedOutput) || 0),
+                  ),
+                  userContext: Math.max(
+                      0,
+                      Math.floor(Number(contextWindowRaw.userContext) || 0),
+                  ),
+                  messages: Math.max(
+                      0,
+                      Math.floor(Number(contextWindowRaw.messages) || 0),
+                  ),
+                  toolResults: Math.max(
+                      0,
+                      Math.floor(Number(contextWindowRaw.toolResults) || 0),
+                  ),
+              }
+            : undefined;
+
         return {
             promptTokens,
             completionTokens,
             totalTokens,
+            totalSpentTokens,
+            ...(contextWindow ? { contextWindow } : {}),
         };
     }
 

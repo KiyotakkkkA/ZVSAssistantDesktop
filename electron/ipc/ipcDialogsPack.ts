@@ -26,6 +26,14 @@ export const registerIpcDialogsPack = ({
             (dialogId: string) =>
                 dialogsService.getDialogById(dialogId, getActiveDialogId()),
         ],
+        [
+            "app:get-dialog-context-by-id",
+            (dialogId: string) =>
+                dialogsService.getDialogContextById(
+                    dialogId,
+                    getActiveDialogId(),
+                ),
+        ],
         ["app:create-dialog", () => dialogsService.createDialog()],
         [
             "app:rename-dialog",

@@ -260,8 +260,13 @@ export const MessageComposer = observer(function MessageComposer({
     const activeDialogId = chatsStore.activeDialog?.id ?? null;
     const dialogMessagesCount = chatsStore.activeDialog?.messages.length ?? 0;
     const totalTokens = dialogTokenUsage?.totalTokens ?? 0;
+    const totalSpentTokens =
+        dialogTokenUsage?.totalSpentTokens ??
+        dialogTokenUsage?.totalTokens ??
+        0;
     const promptTokens = dialogTokenUsage?.promptTokens ?? 0;
     const completionTokens = dialogTokenUsage?.completionTokens ?? 0;
+    const contextWindow = dialogTokenUsage?.contextWindow;
     const toPercent = (value: number) => {
         if (totalTokens <= 0) {
             return 0;
@@ -272,6 +277,50 @@ export const MessageComposer = observer(function MessageComposer({
 
     const promptPercent = toPercent(promptTokens);
     const completionPercent = toPercent(completionTokens);
+    const contextWindowRows = [
+        {
+            key: "system",
+            label: "System",
+            value: contextWindow?.system ?? 0,
+        },
+        {
+            key: "systemInstructions",
+            label: "System Instructions",
+            value: contextWindow?.systemInstructions ?? 0,
+        },
+        {
+            key: "toolDefinitions",
+            label: "Tool Definitions",
+            value: contextWindow?.toolDefinitions ?? 0,
+        },
+        {
+            key: "reservedOutput",
+            label: "Reserved Output",
+            value: contextWindow?.reservedOutput ?? 0,
+        },
+        {
+            key: "userContext",
+            label: "User Context",
+            value: contextWindow?.userContext ?? 0,
+        },
+        {
+            key: "messages",
+            label: "Messages",
+            value: contextWindow?.messages ?? 0,
+        },
+        {
+            key: "toolResults",
+            label: "Tool Results",
+            value: contextWindow?.toolResults ?? 0,
+        },
+    ];
+    const contextWindowPercent = (value: number) => {
+        if (totalSpentTokens <= 0) {
+            return 0;
+        }
+
+        return Math.max(0, (value / totalSpentTokens) * 100);
+    };
 
     useEffect(() => {
         isVoiceChatModeRef.current = isVoiceChatMode;
@@ -1230,6 +1279,14 @@ export const MessageComposer = observer(function MessageComposer({
                                                         )}
                                                     </span>
                                                 </div>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span>Всего потрачено</span>
+                                                    <span className="text-main-200">
+                                                        {totalSpentTokens.toLocaleString(
+                                                            "ru-RU",
+                                                        )}
+                                                    </span>
+                                                </div>
 
                                                 <div className="rounded-lg border border-main-700/70 bg-main-900/60 p-2">
                                                     <div className="mb-1 flex items-center justify-between gap-2">
@@ -1272,6 +1329,45 @@ export const MessageComposer = observer(function MessageComposer({
                                                                 "ru-RU",
                                                             )}
                                                         </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="rounded-lg border border-main-700/70 bg-main-900/60 p-2">
+                                                    <div className="mb-1 flex items-center justify-between gap-2">
+                                                        <span className="text-main-300">
+                                                            Контекст диалога
+                                                        </span>
+                                                        <span className="text-main-200">
+                                                            {totalSpentTokens.toLocaleString(
+                                                                "ru-RU",
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        {contextWindowRows.map(
+                                                            (row) => (
+                                                                <div
+                                                                    key={
+                                                                        row.key
+                                                                    }
+                                                                    className="flex items-center justify-between gap-2"
+                                                                >
+                                                                    <span>
+                                                                        {
+                                                                            row.label
+                                                                        }
+                                                                    </span>
+                                                                    <span className="text-main-300">
+                                                                        {contextWindowPercent(
+                                                                            row.value,
+                                                                        ).toFixed(
+                                                                            1,
+                                                                        )}
+                                                                        %
+                                                                    </span>
+                                                                </div>
+                                                            ),
+                                                        )}
                                                     </div>
                                                 </div>
 

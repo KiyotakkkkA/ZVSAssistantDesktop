@@ -210,8 +210,25 @@ pub fn builtin_tool_packages() -> Vec<BuiltinToolPackage> {
 }
 
 pub fn builtin_tool_definitions() -> Vec<OllamaToolDefinition> {
-    builtin_tool_packages()
+    let mut definitions = builtin_tool_packages()
         .into_iter()
         .flat_map(|package| package.tools.into_iter().map(|tool| tool.schema))
-        .collect()
+        .collect::<Vec<_>>();
+
+    definitions.extend(internal_tool_definitions());
+    definitions
+}
+
+pub fn internal_tool_definitions() -> Vec<OllamaToolDefinition> {
+    let mut properties = BTreeMap::new();
+    properties.insert(
+        "doc_id".to_owned(),
+        string_schema("Document id вида doc_{uuid} из результата инструмента"),
+    );
+
+    vec![tool(
+        "get_tools_calling",
+        "Возвращает полный payload результата вызова инструмента по doc_id. Используй когда нужен полный контекст вместо сжатого результата.",
+        object_schema(properties, &["doc_id"]),
+    )]
 }

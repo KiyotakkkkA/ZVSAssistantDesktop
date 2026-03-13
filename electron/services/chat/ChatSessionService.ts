@@ -7,11 +7,13 @@ import { Config } from "../../../src/config";
 import { toToolErrorPayload } from "../../../src/utils/chat/toolExecution";
 import type { BrowserService } from "../BrowserService";
 import type { UserProfileService } from "../userData/UserProfileService";
+import type { DatabaseService } from "../storage/DatabaseService";
 import { getNativeCoreAddon } from "../core/nativeCoreAddon";
 
 type ChatSessionServiceDeps = {
     browserService: BrowserService;
     userProfileService: UserProfileService;
+    databaseService: DatabaseService;
 };
 
 type NativeChatCallbackPayload =
@@ -169,6 +171,79 @@ export class ChatSessionService {
         if (method === "browser.close") {
             return this.deps.browserService.closeSession();
         }
+
+        if (method === "tools.store_calling_doc") {
+            const sessionId =
+                typeof args.sessionId === "string" ? args.sessionId : "";
+            const callId = typeof args.callId === "string" ? args.callId : "";
+            const toolName =
+                typeof args.toolName === "string" ? args.toolName : "";
+            const iteration =
+                typeof args.iteration === "number" &&
+                Number.isFinite(args.iteration)
+                    ? Math.max(1, Math.floor(args.iteration))
+                    : 1;
+            const payload = args.payload ?? {};
+
+            if (!sessionId || !callId || !toolName) {
+                throw new Error(
+                    "tools.store_calling_doc requires sessionId, callId and toolName",
+                );
+            }
+
+            const createdBy = this.deps.userProfileService.getCurrentUserId();
+            const created = this.deps.databaseService.createToolCallingDocument(
+                {
+                    createdBy,
+                    sessionId,
+                    callId,
+                    toolName,
+                    iteration,
+                    payload,
+                },
+            );
+
+            return {
+                docId: created.docId,
+                createdAt: created.createdAt,
+            };
+        }
+
+        if (method === "tools.get_tools_calling") {
+            const docId =
+                typeof args.docId === "string" ? args.docId.trim() : "";
+
+            if (!docId) {
+                throw new Error("tools.get_tools_calling requires docId");
+            }
+
+            const createdBy = this.deps.userProfileService.getCurrentUserId();
+            const doc = this.deps.databaseService.getToolCallingDocument(
+                docId,
+                createdBy,
+            );
+
+            if (!doc) {
+                return {
+                    ok: false,
+                    docId,
+                    error: "not_found",
+                    message: "Документ не найден",
+                };
+            }
+
+            return {
+                ok: true,
+                docId: doc.docId,
+                callId: doc.callId,
+                toolName: doc.toolName,
+                iteration: doc.iteration,
+                sessionId: doc.sessionId,
+                createdAt: doc.createdAt,
+                payload: doc.payload,
+            };
+        }
+
         throw new Error(`Unsupported native host method: ${method}`);
     }
 }

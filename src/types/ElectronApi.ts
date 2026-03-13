@@ -245,6 +245,7 @@ export type AppApiDialogsNamespace = {
     getActiveDialog: () => Promise<ChatDialog>;
     getDialogsList: () => Promise<ChatDialogListItem[]>;
     getDialogById: (dialogId: string) => Promise<ChatDialog>;
+    getDialogContextById: (dialogId: string) => Promise<ChatDialog>;
     createDialog: () => Promise<ChatDialog>;
     renameDialog: (dialogId: string, title: string) => Promise<ChatDialog>;
     deleteDialog: (dialogId: string) => Promise<DeleteDialogResult>;
@@ -411,6 +412,7 @@ export type ChatSessionEvent =
           type: "tool.result";
           callId: string;
           toolName: string;
+          docId?: string;
           args: Record<string, unknown>;
           result: unknown;
       }

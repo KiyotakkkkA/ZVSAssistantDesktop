@@ -24,10 +24,12 @@ use std::io::{BufRead, BufReader};
 use tokio::fs;
 use tokio::process::Command;
 use tokio::sync::{Mutex, oneshot};
+use tokio::task;
 use uuid::Uuid;
 
 use crate::application::ports::{EventSinkPort, LlmPort};
 use crate::application::services::chat_core_service::ChatCoreService;
+use crate::application::services::token_usage_service::calculate_dialog_token_usage;
 use crate::application::services::tool_registry_service::ToolRegistryService;
 use crate::domain::chat::{
     ChatRuntimeContext, ChatSessionEvent, OllamaChatChunk, OllamaMessage,
@@ -893,6 +895,19 @@ impl BuiltinToolHostPort for JsHostPort {
         }))
     }
 
+    async fn tools_store_calling_doc(&self, payload: &Value) -> Result<Value, CoreError> {
+        self.request_host_method("tools.store_calling_doc", payload.clone())
+            .await
+    }
+
+    async fn tools_get_calling_doc(&self, doc_id: &str) -> Result<Value, CoreError> {
+        self.request_host_method(
+            "tools.get_tools_calling",
+            json!({ "docId": doc_id }),
+        )
+        .await
+    }
+
 }
 
 #[derive(Clone)]
@@ -918,7 +933,12 @@ impl OllamaHttpLlmPort {
         payload: &RunChatSessionPayload,
         messages: &[OllamaMessage],
     ) -> Result<Value, CoreError> {
-        let tool_names = Self::resolve_tool_names(payload);
+        let mut tool_names = Self::resolve_tool_names(payload);
+        for mandatory in self.tool_registry.mandatory_tool_names() {
+            if !tool_names.iter().any(|name| name == &mandatory) {
+                tool_names.push(mandatory);
+            }
+        }
         let tool_definitions = self.tool_registry.resolve_enabled(&tool_names);
 
         let mut request_payload = json!({
@@ -1187,4 +1207,19 @@ pub async fn submit_tool_result(call_id: String, result_json: String) -> NapiRes
         .unwrap_or_else(|_| Value::String(result_json));
 
     Ok(runtime().submit_host_result(&call_id, result).await)
+}
+
+#[napi(js_name = "calculateDialogContextUsageCore")]
+pub async fn calculate_dialog_context_usage_core(
+    payload_json: String,
+) -> NapiResult<String> {
+    let payload: Value = serde_json::from_str(&payload_json)
+        .map_err(|error| Error::from_reason(format!("Invalid payload JSON: {}", error)))?;
+
+    let usage = task::spawn_blocking(move || calculate_dialog_token_usage(&payload))
+        .await
+        .map_err(|error| Error::from_reason(format!("Token usage worker failed: {}", error)))?;
+
+    serde_json::to_string(&usage)
+        .map_err(|error| Error::from_reason(format!("Failed to serialize usage: {}", error)))
 }

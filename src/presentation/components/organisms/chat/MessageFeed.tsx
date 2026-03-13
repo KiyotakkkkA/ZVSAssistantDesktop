@@ -307,6 +307,10 @@ function AssistantResponseBlock({
                                 );
                             }
 
+                            if (renderedItems.length === 0) {
+                                return null;
+                            }
+
                             return (
                                 <div key={stageBlockKey} className="relative">
                                     {buildStageLineIcon({

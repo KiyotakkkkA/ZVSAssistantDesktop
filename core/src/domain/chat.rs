@@ -75,6 +75,8 @@ pub enum ChatSessionEvent {
         call_id: String,
         #[serde(rename = "toolName")]
         tool_name: String,
+        #[serde(rename = "docId", skip_serializing_if = "Option::is_none")]
+        doc_id: Option<String>,
         args: Value,
         result: Value,
     },

@@ -44,10 +44,15 @@ export function ToolBubbleCard({
         );
     }
 
+    if (payload.toolName === "get_tools_calling") {
+        return null;
+    }
+
     const isCommandExec = payload.toolName === "command_exec";
     const execStatus = payload.status;
     const needsConfirmation = execStatus === "pending";
     const command = typeof payload.command === "string" ? payload.command : "";
+    const docId = typeof payload.docId === "string" ? payload.docId : "";
     const cwd = typeof payload.cwd === "string" ? payload.cwd : ".";
     const isAdmin = payload.isAdmin === true;
     const confirmationTitle =
@@ -82,6 +87,17 @@ export function ToolBubbleCard({
                 }
             >
                 <div className="space-y-3">
+                    {docId && (
+                        <div className="rounded-xl border border-main-500/30 bg-main-800/40 px-3 py-2">
+                            <p className="text-[10px] uppercase tracking-wide text-main-400">
+                                DOC ID
+                            </p>
+                            <p className="font-mono text-[11px] text-main-100">
+                                {docId}
+                            </p>
+                        </div>
+                    )}
+
                     {(needsConfirmation || isCommandExec) && (
                         <div className="space-y-2 rounded-xl border border-main-700/60 bg-main-900/40 p-3">
                             <p className="text-[11px] font-semibold text-main-300">

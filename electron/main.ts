@@ -231,6 +231,7 @@ app.whenReady()
         chatSessionService = new ChatSessionService({
             browserService,
             userProfileService,
+            databaseService,
         });
 
         registerIpcCorePack({

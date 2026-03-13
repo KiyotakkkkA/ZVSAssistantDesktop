@@ -71,6 +71,9 @@ class ChatsStore {
     messages: ChatMessage[] = [];
 
     private isInitializing = false;
+    private contextUsageSyncTimer: ReturnType<typeof setTimeout> | null = null;
+    private isContextUsageSyncInFlight = false;
+    private pendingContextUsageSyncDialogId: string | null = null;
 
     constructor() {
         makeAutoObservable(this, {}, { autoBind: true });
@@ -130,6 +133,8 @@ class ChatsStore {
                 ...this.activeDialog,
                 messages: nextMessages,
             };
+
+            this.scheduleContextUsageSync(this.activeDialog.id, 120);
         }
     }
 
@@ -137,6 +142,8 @@ class ChatsStore {
         this.activeDialog = dialog;
         this.messages = dialog.messages;
         this.upsertDialogListItem(dialog);
+
+        this.scheduleContextUsageSync(dialog.id, 180);
     }
 
     async switchDialog(dialogId: string): Promise<void> {
@@ -266,6 +273,73 @@ class ChatsStore {
                               0,
                               Math.floor(dialog.tokenUsage.totalTokens || 0),
                           ),
+                          ...(typeof dialog.tokenUsage.totalSpentTokens ===
+                          "number"
+                              ? {
+                                    totalSpentTokens: Math.max(
+                                        0,
+                                        Math.floor(
+                                            dialog.tokenUsage
+                                                .totalSpentTokens || 0,
+                                        ),
+                                    ),
+                                }
+                              : {}),
+                          ...(dialog.tokenUsage.contextWindow
+                              ? {
+                                    contextWindow: {
+                                        system: Math.max(
+                                            0,
+                                            Math.floor(
+                                                dialog.tokenUsage.contextWindow
+                                                    .system || 0,
+                                            ),
+                                        ),
+                                        systemInstructions: Math.max(
+                                            0,
+                                            Math.floor(
+                                                dialog.tokenUsage.contextWindow
+                                                    .systemInstructions || 0,
+                                            ),
+                                        ),
+                                        toolDefinitions: Math.max(
+                                            0,
+                                            Math.floor(
+                                                dialog.tokenUsage.contextWindow
+                                                    .toolDefinitions || 0,
+                                            ),
+                                        ),
+                                        reservedOutput: Math.max(
+                                            0,
+                                            Math.floor(
+                                                dialog.tokenUsage.contextWindow
+                                                    .reservedOutput || 0,
+                                            ),
+                                        ),
+                                        userContext: Math.max(
+                                            0,
+                                            Math.floor(
+                                                dialog.tokenUsage.contextWindow
+                                                    .userContext || 0,
+                                            ),
+                                        ),
+                                        messages: Math.max(
+                                            0,
+                                            Math.floor(
+                                                dialog.tokenUsage.contextWindow
+                                                    .messages || 0,
+                                            ),
+                                        ),
+                                        toolResults: Math.max(
+                                            0,
+                                            Math.floor(
+                                                dialog.tokenUsage.contextWindow
+                                                    .toolResults || 0,
+                                            ),
+                                        ),
+                                    },
+                                }
+                              : {}),
                       },
                   }
                 : {}),
@@ -364,6 +438,75 @@ class ChatsStore {
             right.updatedAt.localeCompare(left.updatedAt),
         );
         this.dialogs = next;
+    }
+
+    private scheduleContextUsageSync(dialogId: string, delayMs = 160): void {
+        const api = window.appApi;
+
+        if (!api || !dialogId) {
+            return;
+        }
+
+        this.pendingContextUsageSyncDialogId = dialogId;
+
+        if (this.contextUsageSyncTimer) {
+            clearTimeout(this.contextUsageSyncTimer);
+        }
+
+        this.contextUsageSyncTimer = setTimeout(() => {
+            this.contextUsageSyncTimer = null;
+            void this.flushContextUsageSync();
+        }, delayMs);
+    }
+
+    private async flushContextUsageSync(): Promise<void> {
+        const api = window.appApi;
+
+        if (!api) {
+            return;
+        }
+
+        if (this.isContextUsageSyncInFlight) {
+            return;
+        }
+
+        const dialogId = this.pendingContextUsageSyncDialogId;
+
+        if (!dialogId) {
+            return;
+        }
+
+        this.isContextUsageSyncInFlight = true;
+        this.pendingContextUsageSyncDialogId = null;
+
+        try {
+            const contextDialog =
+                await api.dialogs.getDialogContextById(dialogId);
+
+            runInAction(() => {
+                if (this.activeDialog?.id !== contextDialog.id) {
+                    return;
+                }
+
+                this.activeDialog = {
+                    ...this.activeDialog,
+                    tokenUsage: contextDialog.tokenUsage,
+                };
+
+                this.upsertDialogListItem(this.activeDialog);
+            });
+        } catch {
+            // no-op: usage sync is best-effort and must not affect chat flow
+        } finally {
+            this.isContextUsageSyncInFlight = false;
+
+            if (this.pendingContextUsageSyncDialogId) {
+                this.scheduleContextUsageSync(
+                    this.pendingContextUsageSyncDialogId,
+                    120,
+                );
+            }
+        }
     }
 }
 

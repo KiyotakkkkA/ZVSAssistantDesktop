@@ -453,6 +453,11 @@ export function useChat() {
                                             answeringAt: userMessage.id,
                                             toolTrace: {
                                                 callId: event.callId,
+                                                ...(event.docId
+                                                    ? {
+                                                          docId: event.docId,
+                                                      }
+                                                    : {}),
                                                 toolName: event.toolName,
                                                 args: event.args,
                                                 result: event.result,
@@ -489,6 +494,11 @@ export function useChat() {
                                               assistantStage: toolStage,
                                               toolTrace: {
                                                   callId: event.callId,
+                                                  ...(event.docId
+                                                      ? {
+                                                            docId: event.docId,
+                                                        }
+                                                      : {}),
                                                   toolName: event.toolName,
                                                   args: event.args,
                                                   result: event.result,

@@ -24,6 +24,7 @@ export type QaToolState = {
 
 export type ToolTrace = {
     callId: string;
+    docId?: string;
     toolName: string;
     args: Record<string, unknown>;
     result: unknown;
@@ -45,6 +46,16 @@ export type TokenUsage = {
     promptTokens: number;
     completionTokens: number;
     totalTokens: number;
+    totalSpentTokens?: number;
+    contextWindow?: {
+        system: number;
+        systemInstructions: number;
+        toolDefinitions: number;
+        reservedOutput: number;
+        userContext: number;
+        messages: number;
+        toolResults: number;
+    };
 };
 
 export type ChatMessage = {

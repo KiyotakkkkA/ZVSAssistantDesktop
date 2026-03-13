@@ -132,10 +132,198 @@ export class DatabaseService {
             .filter((row) => row !== null);
     }
 
+    getDialogRaw(dialogId: string, createdBy: string): unknown | null {
+        const row = this.database
+            .prepare(
+                `SELECT payload_json
+                 FROM dialogs
+                 WHERE id = ?
+                   AND created_by = ?
+                 LIMIT 1`,
+            )
+            .get(dialogId, createdBy) as
+            | {
+                  payload_json: string;
+              }
+            | undefined;
+
+        if (!row) {
+            return null;
+        }
+
+        return this.tryParseJson(row.payload_json);
+    }
+
+    upsertDialogContextRaw(
+        dialogId: string,
+        payload: unknown,
+        createdBy: string,
+    ): void {
+        const payloadRecord =
+            payload && typeof payload === "object"
+                ? (payload as Record<string, unknown>)
+                : {};
+        const updatedAt =
+            typeof payloadRecord.updatedAt === "string" &&
+            payloadRecord.updatedAt
+                ? payloadRecord.updatedAt
+                : new Date().toISOString();
+
+        this.database
+            .prepare(
+                `
+                INSERT INTO dialogs_context (id, payload_json, updated_at, created_by)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    payload_json = excluded.payload_json,
+                    updated_at = excluded.updated_at,
+                    created_by = excluded.created_by
+                `,
+            )
+            .run(dialogId, JSON.stringify(payload), updatedAt, createdBy);
+    }
+
+    getDialogContextRaw(dialogId: string, createdBy: string): unknown | null {
+        const row = this.database
+            .prepare(
+                `SELECT payload_json
+                 FROM dialogs_context
+                 WHERE id = ?
+                   AND created_by = ?
+                 LIMIT 1`,
+            )
+            .get(dialogId, createdBy) as { payload_json: string } | undefined;
+
+        if (!row) {
+            return null;
+        }
+
+        return this.tryParseJson(row.payload_json);
+    }
+
     deleteDialog(dialogId: string, createdBy: string): void {
         this.database
             .prepare(`DELETE FROM dialogs WHERE id = ? AND created_by = ?`)
             .run(dialogId, createdBy);
+
+        this.database
+            .prepare(
+                `DELETE FROM dialogs_context WHERE id = ? AND created_by = ?`,
+            )
+            .run(dialogId, createdBy);
+    }
+
+    createToolCallingDocument(params: {
+        createdBy: string;
+        sessionId: string;
+        callId: string;
+        toolName: string;
+        iteration: number;
+        payload: unknown;
+    }): { docId: string; createdAt: string } {
+        const createdAt = new Date().toISOString();
+        const docId = `doc_${randomUUID().replace(/-/g, "")}`;
+
+        this.database
+            .prepare(
+                `
+                INSERT INTO tool_calling_documents (doc_id, payload_json, created_at, created_by)
+                VALUES (?, ?, ?, ?)
+                `,
+            )
+            .run(
+                docId,
+                JSON.stringify(params.payload),
+                createdAt,
+                params.createdBy,
+            );
+
+        this.database
+            .prepare(
+                `
+                INSERT INTO tools_calling_docs (
+                    id,
+                    session_id,
+                    call_id,
+                    tool_name,
+                    iteration,
+                    doc_id,
+                    created_at,
+                    created_by
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                `,
+            )
+            .run(
+                `tcd_${randomUUID().replace(/-/g, "")}`,
+                params.sessionId,
+                params.callId,
+                params.toolName,
+                params.iteration,
+                docId,
+                createdAt,
+                params.createdBy,
+            );
+
+        return { docId, createdAt };
+    }
+
+    getToolCallingDocument(
+        docId: string,
+        createdBy: string,
+    ): {
+        docId: string;
+        payload: unknown;
+        callId: string;
+        toolName: string;
+        iteration: number;
+        sessionId: string;
+        createdAt: string;
+    } | null {
+        const row = this.database
+            .prepare(
+                `
+                SELECT
+                    d.doc_id,
+                    d.payload_json,
+                    d.created_at,
+                    l.call_id,
+                    l.tool_name,
+                    l.iteration,
+                    l.session_id
+                FROM tool_calling_documents d
+                JOIN tools_calling_docs l ON l.doc_id = d.doc_id
+                WHERE d.doc_id = ?
+                  AND d.created_by = ?
+                ORDER BY l.created_at DESC
+                LIMIT 1
+                `,
+            )
+            .get(docId, createdBy) as
+            | {
+                  doc_id: string;
+                  payload_json: string;
+                  created_at: string;
+                  call_id: string;
+                  tool_name: string;
+                  iteration: number;
+                  session_id: string;
+              }
+            | undefined;
+
+        if (!row) {
+            return null;
+        }
+
+        return {
+            docId: row.doc_id,
+            payload: this.tryParseJson(row.payload_json),
+            callId: row.call_id,
+            toolName: row.tool_name,
+            iteration: row.iteration,
+            sessionId: row.session_id,
+            createdAt: row.created_at,
+        };
     }
 
     upsertProjectRaw(
@@ -823,6 +1011,35 @@ export class DatabaseService {
                 FOREIGN KEY(created_by) REFERENCES profiles(id) ON DELETE CASCADE
             );
 
+            CREATE TABLE IF NOT EXISTS dialogs_context (
+                id TEXT PRIMARY KEY,
+                payload_json TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                created_by TEXT NOT NULL,
+                FOREIGN KEY(created_by) REFERENCES profiles(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS tool_calling_documents (
+                doc_id TEXT PRIMARY KEY,
+                payload_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                created_by TEXT NOT NULL,
+                FOREIGN KEY(created_by) REFERENCES profiles(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS tools_calling_docs (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                call_id TEXT NOT NULL,
+                tool_name TEXT NOT NULL,
+                iteration INTEGER NOT NULL,
+                doc_id TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                created_by TEXT NOT NULL,
+                FOREIGN KEY(created_by) REFERENCES profiles(id) ON DELETE CASCADE,
+                FOREIGN KEY(doc_id) REFERENCES tool_calling_documents(doc_id) ON DELETE CASCADE
+            );
+
             CREATE TABLE IF NOT EXISTS projects (
                 id TEXT PRIMARY KEY,
                 payload_json TEXT NOT NULL,
@@ -887,6 +1104,12 @@ export class DatabaseService {
 
             CREATE INDEX IF NOT EXISTS idx_dialogs_created_by ON dialogs(created_by);
             CREATE INDEX IF NOT EXISTS idx_dialogs_updated_at ON dialogs(updated_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_dialogs_context_created_by ON dialogs_context(created_by);
+            CREATE INDEX IF NOT EXISTS idx_dialogs_context_updated_at ON dialogs_context(updated_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_tool_calling_documents_created_by ON tool_calling_documents(created_by);
+            CREATE INDEX IF NOT EXISTS idx_tools_calling_docs_doc_id ON tools_calling_docs(doc_id);
+            CREATE INDEX IF NOT EXISTS idx_tools_calling_docs_call_id ON tools_calling_docs(call_id);
+            CREATE INDEX IF NOT EXISTS idx_tools_calling_docs_created_by ON tools_calling_docs(created_by);
             CREATE INDEX IF NOT EXISTS idx_projects_created_by ON projects(created_by);
             CREATE INDEX IF NOT EXISTS idx_projects_updated_at ON projects(updated_at DESC);
             CREATE INDEX IF NOT EXISTS idx_scenarios_created_by ON scenarios(created_by);

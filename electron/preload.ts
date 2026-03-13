@@ -65,6 +65,8 @@ const appApi: AppApi = {
         getDialogsList: () => ipcRenderer.invoke("app:get-dialogs-list"),
         getDialogById: (dialogId: string) =>
             ipcRenderer.invoke("app:get-dialog-by-id", dialogId),
+        getDialogContextById: (dialogId: string) =>
+            ipcRenderer.invoke("app:get-dialog-context-by-id", dialogId),
         createDialog: () => ipcRenderer.invoke("app:create-dialog"),
         renameDialog: (dialogId: string, title: string) =>
             ipcRenderer.invoke("app:rename-dialog", dialogId, title),

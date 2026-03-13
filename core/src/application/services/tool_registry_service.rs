@@ -1,12 +1,15 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::domain::chat::OllamaToolDefinition;
-use crate::tools::builtin_tools::builtin_tool_packages;
+use crate::tools::builtin_tools::{builtin_tool_packages, internal_tool_definitions};
+
+const MANDATORY_INTERNAL_TOOLS: [&str; 1] = ["get_tools_calling"];
 
 #[derive(Debug, Clone)]
 pub struct ToolRegistryService {
     by_name: HashMap<String, OllamaToolDefinition>,
     requires_confirmation: HashSet<String>,
+    mandatory_tools: HashSet<String>,
 }
 
 impl Default for ToolRegistryService {
@@ -19,6 +22,10 @@ impl ToolRegistryService {
     pub fn new() -> Self {
         let mut by_name = HashMap::new();
         let mut requires_confirmation = HashSet::new();
+        let mandatory_tools = MANDATORY_INTERNAL_TOOLS
+            .iter()
+            .map(|name| (*name).to_owned())
+            .collect::<HashSet<_>>();
 
         for package in builtin_tool_packages() {
             for descriptor in package.tools {
@@ -33,9 +40,14 @@ impl ToolRegistryService {
             }
         }
 
+        for definition in internal_tool_definitions() {
+            by_name.insert(definition.function.name.clone(), definition);
+        }
+
         Self {
             by_name,
             requires_confirmation,
+            mandatory_tools,
         }
     }
 
@@ -54,11 +66,13 @@ impl ToolRegistryService {
     }
 
     pub fn resolve_enabled(&self, enabled_names: &[String]) -> Vec<OllamaToolDefinition> {
-        let enabled: HashSet<&str> = enabled_names.iter().map(String::as_str).collect();
+        let mut enabled: HashSet<String> = enabled_names.iter().cloned().collect();
+        enabled.extend(self.mandatory_tools.iter().cloned());
+
         let mut list: Vec<OllamaToolDefinition> = self
             .by_name
             .values()
-            .filter(|definition| enabled.contains(definition.function.name.as_str()))
+            .filter(|definition| enabled.contains(&definition.function.name))
             .cloned()
             .collect();
 
@@ -88,5 +102,11 @@ impl ToolRegistryService {
 
     pub fn tool_requires_confirmation(&self, tool_name: &str) -> bool {
         self.requires_confirmation.contains(tool_name)
+    }
+
+    pub fn mandatory_tool_names(&self) -> Vec<String> {
+        let mut names = self.mandatory_tools.iter().cloned().collect::<Vec<_>>();
+        names.sort();
+        names
     }
 }

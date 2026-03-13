@@ -126,6 +126,11 @@ impl ChatCoreService {
                 .into_iter()
                 .collect();
         }
+
+        for tool_name in self.tool_registry.mandatory_tool_names() {
+            config.allowed_tools.insert(tool_name);
+        }
+
         config
     }
 
@@ -254,6 +259,7 @@ impl ChatCoreService {
                             session_id: session_id.to_owned(),
                             call_id,
                             tool_name: tool_name.clone(),
+                            doc_id: None,
                             args: args_value,
                             result: result.clone(),
                         });
@@ -285,17 +291,65 @@ impl ChatCoreService {
                     Err(error) => Self::wrap_tool_error(&tool_name, &error),
                 };
 
+                let (result_for_ui, doc_id) = Self::extract_tool_result_payload(result);
+
                 self.event_sink.emit(ChatSessionEvent::ToolResult {
                     session_id: session_id.to_owned(),
                     call_id,
                     tool_name: tool_name.clone(),
+                    doc_id: doc_id.clone(),
                     args: args_value,
-                    result: result.clone(),
+                    result: result_for_ui.clone(),
                 });
+
+                let tool_content = if let Some(doc_id_value) = doc_id {
+                    if tool_name == "get_tools_calling" {
+                        Self::to_tool_message(&json!({
+                            "docId": doc_id_value,
+                            "status": "loaded",
+                            "message": format!(
+                                "Данные по doc_id={} загружены через get_tools_calling",
+                                doc_id_value
+                            ),
+                            "payload": result_for_ui,
+                        }))
+                    } else {
+                        Self::to_tool_message(&json!({
+                            "docId": doc_id_value,
+                            "status": "stored",
+                            "toolName": tool_name.clone(),
+                            "message": "Результат инструмента сжат и сохранен. Для полного payload вызови get_tools_calling с doc_id.",
+                        }))
+                    }
+                } else {
+                    if tool_name == "get_tools_calling" {
+                        let loaded_doc_id = result_for_ui
+                            .get("docId")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .to_owned();
+
+                        Self::to_tool_message(&json!({
+                            "docId": loaded_doc_id,
+                            "status": "loaded",
+                            "message": if loaded_doc_id.is_empty() {
+                                "Данные через get_tools_calling загружены".to_owned()
+                            } else {
+                                format!(
+                                    "Данные по doc_id={} загружены через get_tools_calling",
+                                    loaded_doc_id
+                                )
+                            },
+                            "payload": result_for_ui,
+                        }))
+                    } else {
+                        Self::to_tool_message(&result_for_ui)
+                    }
+                };
 
                 messages.push(OllamaMessage {
                     role: crate::domain::chat::OllamaRole::Tool,
-                    content: Self::to_tool_message(&result),
+                    content: tool_content,
                     tool_calls: None,
                     tool_name: Some(tool_name),
                     thinking: None,
@@ -316,6 +370,26 @@ impl ChatCoreService {
             result.as_str().unwrap_or_default().to_owned()
         } else {
             serde_json::to_string(result).unwrap_or_else(|_| "{}".to_owned())
+        }
+    }
+
+    fn extract_tool_result_payload(result: Value) -> (Value, Option<String>) {
+        let Some(object) = result.as_object() else {
+            return (result, None);
+        };
+
+        let doc_id = object
+            .get("__toolDocId")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned);
+
+        let data = object.get("data").cloned();
+
+        match (data, doc_id) {
+            (Some(payload), Some(found_doc_id)) => (payload, Some(found_doc_id)),
+            _ => (result, None),
         }
     }
 
