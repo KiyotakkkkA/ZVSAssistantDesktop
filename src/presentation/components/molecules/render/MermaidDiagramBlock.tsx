@@ -85,7 +85,7 @@ const toBase64 = (input: string) => {
 };
 
 const forceDarkSvgBackground = (svg: string) => {
-    return svg.replace(/<svg\b([^>]*)>/i, (fullMatch, attributes: string) => {
+    return svg.replace(/<svg\b([^>]*)>/i, (_, attributes: string) => {
         if (/\sstyle\s*=\s*"[^"]*"/i.test(attributes)) {
             return `<svg${attributes.replace(
                 /\sstyle\s*=\s*"([^"]*)"/i,
@@ -161,17 +161,17 @@ export function MermaidDiagramBlock({ code }: MermaidDiagramBlockProps) {
 
     return (
         <div className="last:mb-0">
-            <div className="mb-2 flex items-center justify-between rounded-xl border border-main-400/20 bg-main-900/80 p-2">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-main-400/20 bg-main-900/80 p-2">
                 <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-main-300">
                     <Icon icon="mdi:graph-outline" width="14" height="14" />
                     Mermaid
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 rounded-xl border border-main-400/20 bg-main-800/60 p-1">
                     <Button
                         variant="secondary"
                         label="Show diagram"
                         shape="rounded-lg"
-                        className={`p-1 text-xs gap-1 ${viewMode === "image" ? "border-main-300/40 bg-main-700/70" : ""}`}
+                        className={`p-1 text-xs gap-1 ${viewMode === "image" ? "border-main-300/40 bg-main-700/70 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.25)]" : ""}`}
                         onClick={() => setViewMode("image")}
                     >
                         <Icon icon="mdi:image-outline" width="14" height="14" />
@@ -181,7 +181,7 @@ export function MermaidDiagramBlock({ code }: MermaidDiagramBlockProps) {
                         variant="secondary"
                         label="Show source"
                         shape="rounded-lg"
-                        className={`p-1 text-xs gap-1 ${viewMode === "code" ? "border-main-300/40 bg-main-700/70" : ""}`}
+                        className={`p-1 text-xs gap-1 ${viewMode === "code" ? "border-main-300/40 bg-main-700/70 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.25)]" : ""}`}
                         onClick={() => setViewMode("code")}
                     >
                         <Icon icon="mdi:code-tags" width="14" height="14" />
