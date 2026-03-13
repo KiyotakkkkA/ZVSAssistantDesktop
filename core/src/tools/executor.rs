@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use regex::Regex;
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -59,14 +59,366 @@ pub struct BuiltinToolsExecutor {
 }
 
 impl BuiltinToolsExecutor {
-        fn with_extra_field(base: Value, key: &str, value: Value) -> Value {
-            if let Value::Object(mut map) = base {
-                map.insert(key.to_owned(), value);
+    fn with_extra_field(base: Value, key: &str, value: Value) -> Value {
+        if let Value::Object(mut map) = base {
+            map.insert(key.to_owned(), value);
+            Value::Object(map)
+        } else {
+            json!({ key: value })
+        }
+    }
+
+    fn truncate_text(text: &str, max_len: usize) -> String {
+        if text.chars().count() <= max_len {
+            return text.to_owned();
+        }
+
+        let truncated = text.chars().take(max_len).collect::<String>();
+        format!(
+            "{}... [truncated, total_chars={}]",
+            truncated,
+            text.chars().count()
+        )
+    }
+
+    fn sanitize_value_compact(value: &Value, max_text_len: usize) -> Value {
+        match value {
+            Value::String(text) => Value::String(Self::truncate_text(text, max_text_len)),
+            Value::Array(items) => {
+                Value::Array(items.iter().map(|item| Self::sanitize_value_compact(item, max_text_len)).collect())
+            }
+            Value::Object(object) => {
+                let mut map = Map::new();
+                for (key, item) in object {
+                    map.insert(key.clone(), Self::sanitize_value_compact(item, max_text_len));
+                }
                 Value::Object(map)
-            } else {
-                json!({ key: value })
+            }
+            _ => value.clone(),
+        }
+    }
+
+    fn pick_object_fields(object: &Map<String, Value>, keys: &[&str]) -> Map<String, Value> {
+        let mut selected = Map::new();
+        for key in keys {
+            if let Some(value) = object.get(*key) {
+                selected.insert((*key).to_owned(), value.clone());
             }
         }
+        selected
+    }
+
+    fn sanitize_schedule_result(value: Value) -> Value {
+        let Some(days) = value.as_object() else {
+            return value;
+        };
+
+        let mut normalized_days = Map::new();
+
+        for (date_key, day_info) in days {
+            let Some(day_object) = day_info.as_object() else {
+                continue;
+            };
+
+            let weekday = day_object
+                .get("weekday")
+                .cloned()
+                .unwrap_or(Value::String("".to_owned()));
+
+            let lessons = day_object
+                .get("lessons")
+                .and_then(Value::as_array)
+                .map(|items| {
+                    items
+                        .iter()
+                        .take(16)
+                        .filter_map(Value::as_object)
+                        .map(|lesson| {
+                            Value::Object(Self::pick_object_fields(
+                                lesson,
+                                &["time", "subject", "type", "teacher", "location"],
+                            ))
+                        })
+                        .collect::<Vec<Value>>()
+                })
+                .unwrap_or_default();
+
+            let mut day_payload = Map::new();
+            day_payload.insert("weekday".to_owned(), weekday);
+            day_payload.insert("lessons".to_owned(), Value::Array(lessons));
+
+            normalized_days.insert(date_key.clone(), Value::Object(day_payload));
+        }
+
+        Value::Object(normalized_days)
+    }
+
+    fn sanitize_tool_result_for_model(tool_name: &str, raw_result: Value) -> Value {
+        match tool_name {
+            "command_exec" => {
+                let Some(object) = raw_result.as_object() else {
+                    return Self::sanitize_value_compact(&raw_result, 3000);
+                };
+
+                let mut result = Self::pick_object_fields(
+                    object,
+                    &["command", "cwd", "isAdmin", "exitCode", "stdout", "stderr", "error"],
+                );
+
+                if let Some(Value::String(stdout)) = result.get("stdout") {
+                    result.insert("stdout".to_owned(), Value::String(Self::truncate_text(stdout, 5000)));
+                }
+                if let Some(Value::String(stderr)) = result.get("stderr") {
+                    result.insert("stderr".to_owned(), Value::String(Self::truncate_text(stderr, 3000)));
+                }
+
+                Value::Object(result)
+            }
+            "vector_store_search_tool" => {
+                let Some(object) = raw_result.as_object() else {
+                    return Self::sanitize_value_compact(&raw_result, 2500);
+                };
+
+                let mut result = Map::new();
+                if let Some(vector_storage_id) = object.get("vectorStorageId") {
+                    result.insert("vectorStorageId".to_owned(), vector_storage_id.clone());
+                }
+
+                let hits = object
+                    .get("hits")
+                    .and_then(Value::as_array)
+                    .map(|items| {
+                        items
+                            .iter()
+                            .take(8)
+                            .filter_map(Value::as_object)
+                            .map(|hit| {
+                                let mut hit_obj = Self::pick_object_fields(
+                                    hit,
+                                    &["id", "score", "fileName", "chunkIndex", "text"],
+                                );
+                                if let Some(Value::String(text)) = hit_obj.get("text") {
+                                    hit_obj.insert("text".to_owned(), Value::String(Self::truncate_text(text, 700)));
+                                }
+                                Value::Object(hit_obj)
+                            })
+                            .collect::<Vec<Value>>()
+                    })
+                    .unwrap_or_default();
+
+                result.insert("hits".to_owned(), Value::Array(hits));
+                Value::Object(result)
+            }
+            "web_search" => Self::sanitize_value_compact(&raw_result, 4000),
+            "web_fetch" => {
+                let Some(object) = raw_result.as_object() else {
+                    return Self::sanitize_value_compact(&raw_result, 6000);
+                };
+
+                let mut result = Self::pick_object_fields(object, &["url", "title", "content", "error"]);
+                if let Some(Value::String(content)) = result.get("content") {
+                    result.insert("content".to_owned(), Value::String(Self::truncate_text(content, 8000)));
+                }
+                Value::Object(result)
+            }
+            "open_url" => {
+                let Some(object) = raw_result.as_object() else {
+                    return raw_result;
+                };
+                Value::Object(Self::pick_object_fields(
+                    object,
+                    &["success", "requestedUrl", "finalUrl", "title", "statusCode", "error"],
+                ))
+            }
+            "get_page_snapshot" => {
+                let Some(object) = raw_result.as_object() else {
+                    return Self::sanitize_value_compact(&raw_result, 3000);
+                };
+
+                let mut result = Self::pick_object_fields(
+                    object,
+                    &["url", "title", "headings", "textPreview", "capturedAt"],
+                );
+
+                if let Some(Value::String(text_preview)) = result.get("textPreview") {
+                    result.insert(
+                        "textPreview".to_owned(),
+                        Value::String(Self::truncate_text(text_preview, 3000)),
+                    );
+                }
+
+                if let Some(elements) = object.get("elements").and_then(Value::as_array) {
+                    let compact_elements = elements
+                        .iter()
+                        .take(24)
+                        .filter_map(Value::as_object)
+                        .map(|item| {
+                            Value::Object(Self::pick_object_fields(
+                                item,
+                                &["tag", "role", "selector", "text", "href", "value"],
+                            ))
+                        })
+                        .collect::<Vec<Value>>();
+
+                    result.insert("elements".to_owned(), Value::Array(compact_elements));
+                }
+
+                Value::Object(result)
+            }
+            "interact_with" => {
+                let Some(object) = raw_result.as_object() else {
+                    return raw_result;
+                };
+                Value::Object(Self::pick_object_fields(
+                    object,
+                    &["success", "action", "selector", "url", "title", "error"],
+                ))
+            }
+            "close_browser" => {
+                let Some(object) = raw_result.as_object() else {
+                    return raw_result;
+                };
+                Value::Object(Self::pick_object_fields(object, &["success", "hadSession"]))
+            }
+            "send_telegram_msg" => {
+                let Some(object) = raw_result.as_object() else {
+                    return raw_result;
+                };
+                Value::Object(Self::pick_object_fields(
+                    object,
+                    &["success", "message", "error", "message_id"],
+                ))
+            }
+            "get_telegram_unread_msgs" => {
+                let Some(object) = raw_result.as_object() else {
+                    return raw_result;
+                };
+
+                let mut result = Self::pick_object_fields(
+                    object,
+                    &["success", "message", "error", "unread_count"],
+                );
+
+                let messages = object
+                    .get("messages")
+                    .and_then(Value::as_array)
+                    .map(|items| {
+                        items
+                            .iter()
+                            .take(12)
+                            .filter_map(Value::as_object)
+                            .map(|item| {
+                                let mut msg = Self::pick_object_fields(
+                                    item,
+                                    &["text", "date", "message_id"],
+                                );
+
+                                if let Some(Value::Object(chat)) = item.get("chat") {
+                                    msg.insert(
+                                        "chat".to_owned(),
+                                        Value::Object(Self::pick_object_fields(
+                                            chat,
+                                            &["id", "title", "username"],
+                                        )),
+                                    );
+                                }
+
+                                if let Some(Value::Object(from)) = item.get("from") {
+                                    msg.insert(
+                                        "from".to_owned(),
+                                        Value::Object(Self::pick_object_fields(
+                                            from,
+                                            &["id", "first_name", "username"],
+                                        )),
+                                    );
+                                }
+
+                                Value::Object(msg)
+                            })
+                            .collect::<Vec<Value>>()
+                    })
+                    .unwrap_or_default();
+
+                result.insert("messages".to_owned(), Value::Array(messages));
+                Value::Object(result)
+            }
+            "list_directory" => {
+                let Some(object) = raw_result.as_object() else {
+                    return raw_result;
+                };
+
+                let mut result = Map::new();
+                if let Some(path) = object.get("path") {
+                    result.insert("path".to_owned(), path.clone());
+                }
+                let entries = object
+                    .get("entries")
+                    .and_then(Value::as_array)
+                    .map(|items| {
+                        items
+                            .iter()
+                            .take(200)
+                            .filter_map(Value::as_object)
+                            .map(|entry| {
+                                Value::Object(Self::pick_object_fields(entry, &["name", "type"]))
+                            })
+                            .collect::<Vec<Value>>()
+                    })
+                    .unwrap_or_default();
+                result.insert("entries".to_owned(), Value::Array(entries));
+                Value::Object(result)
+            }
+            "create_file" | "create_dir" | "delete_file" => {
+                let Some(object) = raw_result.as_object() else {
+                    return raw_result;
+                };
+                Value::Object(Self::pick_object_fields(object, &["success", "path", "error"]))
+            }
+            "read_file" => {
+                let Some(object) = raw_result.as_object() else {
+                    return Self::sanitize_value_compact(&raw_result, 8000);
+                };
+                let mut result = Self::pick_object_fields(
+                    object,
+                    &["path", "content", "totalLines", "fromLine", "toLine"],
+                );
+                if let Some(Value::String(content)) = result.get("content") {
+                    result.insert("content".to_owned(), Value::String(Self::truncate_text(content, 8000)));
+                }
+                Value::Object(result)
+            }
+            "text_search" => {
+                let Some(object) = raw_result.as_object() else {
+                    return raw_result;
+                };
+                let mut result = Self::pick_object_fields(object, &["cwd", "exp", "error"]);
+                let matches = object
+                    .get("matches")
+                    .and_then(Value::as_array)
+                    .map(|items| {
+                        items
+                            .iter()
+                            .take(120)
+                            .filter_map(Value::as_object)
+                            .map(|item| {
+                                Value::Object(Self::pick_object_fields(
+                                    item,
+                                    &["filePath", "line", "text", "match"],
+                                ))
+                            })
+                            .collect::<Vec<Value>>()
+                    })
+                    .unwrap_or_default();
+                result.insert("matches".to_owned(), Value::Array(matches));
+                Value::Object(result)
+            }
+            "schedule_mirea_tool" => Self::sanitize_schedule_result(raw_result),
+            "qa_tool" | "planning_tool" | "get_tools_calling" => {
+                Self::sanitize_value_compact(&raw_result, 3000)
+            }
+            _ => Self::sanitize_value_compact(&raw_result, 3000),
+        }
+    }
 
     pub fn new(host_port: Arc<dyn BuiltinToolHostPort>) -> Self {
         Self {
@@ -523,13 +875,16 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
             .unwrap_or(request.session_id.as_str())
             .to_owned();
 
+        let sanitized_result =
+            Self::sanitize_tool_result_for_model(request.tool_name.as_str(), raw_result);
+
         let tool_payload = json!({
             "sessionId": request.session_id,
             "callId": request.call_id,
             "toolName": request.tool_name,
             "iteration": iteration,
             "args": request.args,
-            "result": raw_result,
+            "result": sanitized_result,
         });
 
         let saved_doc = self.host_port.tools_store_calling_doc(&json!({
@@ -551,12 +906,12 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
             .to_owned();
 
         if doc_id.is_empty() {
-            return Ok(raw_result);
+            return Ok(sanitized_result);
         }
 
         Ok(json!({
             "__toolDocId": doc_id,
-            "data": raw_result,
+            "data": sanitized_result,
         }))
     }
 }

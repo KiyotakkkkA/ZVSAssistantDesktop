@@ -99,15 +99,35 @@ fn parse_schedule(ical_content: &str, target_date: Option<&str>) -> Value {
         let Some(start_raw) = read_property_optional(&event, "DTSTART") else {
             continue;
         };
-        let Some((date_key, time_text)) = parse_event_start(&start_raw) else {
+        let Some((start_date_key, time_text)) = parse_event_start(&start_raw) else {
             continue;
         };
 
-        if let Some(target) = target_date {
-            if date_key != target {
-                continue;
+        let rrule_raw = read_property_optional(&event, "RRULE");
+        let exdate_raw = read_property_optional(&event, "EXDATE");
+
+        let date_key = if let Some(target) = target_date {
+            if let Some(rule) = rrule_raw.as_deref() {
+                if !matches_weekly_rrule_for_target(
+                    &start_date_key,
+                    target,
+                    rule,
+                    exdate_raw.as_deref(),
+                ) {
+                    continue;
+                }
+
+                target.to_owned()
+            } else {
+                if start_date_key != target {
+                    continue;
+                }
+
+                start_date_key.clone()
             }
-        }
+        } else {
+            start_date_key.clone()
+        };
 
         let description = read_property(&event, "DESCRIPTION");
         let location = read_property(&event, "LOCATION");
@@ -134,6 +154,142 @@ fn parse_schedule(ical_content: &str, target_date: Option<&str>) -> Value {
     }
 
     Value::Object(grouped)
+}
+
+fn matches_weekly_rrule_for_target(
+    start_date_key: &str,
+    target_date_key: &str,
+    rrule_raw: &str,
+    exdate_raw: Option<&str>,
+) -> bool {
+    let (start_year, start_month, start_day) = match parse_date_key(start_date_key) {
+        Some(value) => value,
+        None => return false,
+    };
+
+    let (target_year, target_month, target_day) = match parse_date_key(target_date_key) {
+        Some(value) => value,
+        None => return false,
+    };
+
+    if weekday_from_date(start_year, start_month, start_day)
+        != weekday_from_date(target_year, target_month, target_day)
+    {
+        return false;
+    }
+
+    let start_ordinal = date_to_ordinal(start_year, start_month, start_day);
+    let target_ordinal = date_to_ordinal(target_year, target_month, target_day);
+
+    if target_ordinal < start_ordinal {
+        return false;
+    }
+
+    let mut freq_weekly = false;
+    let mut interval_weeks: i32 = 1;
+    let mut until_date: Option<(i32, i32, i32)> = None;
+
+    for part in rrule_raw.split(';') {
+        let Some((key, value)) = part.split_once('=') else {
+            continue;
+        };
+
+        match key.trim() {
+            "FREQ" => {
+                freq_weekly = value.trim().eq_ignore_ascii_case("WEEKLY");
+            }
+            "INTERVAL" => {
+                interval_weeks = value.trim().parse::<i32>().ok().filter(|v| *v > 0).unwrap_or(1);
+            }
+            "UNTIL" => {
+                until_date = parse_until_date(value.trim());
+            }
+            _ => {}
+        }
+    }
+
+    if !freq_weekly {
+        return false;
+    }
+
+    if let Some((until_y, until_m, until_d)) = until_date {
+        let until_ordinal = date_to_ordinal(until_y, until_m, until_d);
+        if target_ordinal > until_ordinal {
+            return false;
+        }
+    }
+
+    let day_delta = target_ordinal - start_ordinal;
+
+    if day_delta % 7 != 0 {
+        return false;
+    }
+
+    let weeks_since_start = day_delta / 7;
+
+    if weeks_since_start % interval_weeks != 0 {
+        return false;
+    }
+
+    if exdate_contains_date(exdate_raw, target_date_key) {
+        return false;
+    }
+
+    true
+}
+
+fn exdate_contains_date(exdate_raw: Option<&str>, target_date_key: &str) -> bool {
+    let Some(raw) = exdate_raw else {
+        return false;
+    };
+
+    raw.split(',').any(|item| {
+        let digits = item
+            .chars()
+            .filter(|ch| ch.is_ascii_digit())
+            .collect::<String>();
+
+        if digits.len() < 8 {
+            return false;
+        }
+
+        let date_key = format!("{}-{}-{}", &digits[0..4], &digits[4..6], &digits[6..8]);
+        date_key == target_date_key
+    })
+}
+
+fn parse_until_date(raw: &str) -> Option<(i32, i32, i32)> {
+    let digits = raw
+        .chars()
+        .filter(|ch| ch.is_ascii_digit())
+        .collect::<String>();
+
+    if digits.len() < 8 {
+        return None;
+    }
+
+    let year = digits[0..4].parse::<i32>().ok()?;
+    let month = digits[4..6].parse::<i32>().ok()?;
+    let day = digits[6..8].parse::<i32>().ok()?;
+
+    Some((year, month, day))
+}
+
+fn parse_date_key(value: &str) -> Option<(i32, i32, i32)> {
+    let mut parts = value.split('-');
+    let year = parts.next()?.parse::<i32>().ok()?;
+    let month = parts.next()?.parse::<i32>().ok()?;
+    let day = parts.next()?.parse::<i32>().ok()?;
+
+    Some((year, month, day))
+}
+
+fn date_to_ordinal(year: i32, month: i32, day: i32) -> i32 {
+    let a = (14 - month) / 12;
+    let y = year + 4800 - a;
+    let m = month + 12 * a - 3;
+
+    day + ((153 * m + 2) / 5) + 365 * y + (y / 4) - (y / 100) + (y / 400) - 32045
 }
 
 fn unfold_lines(input: &str) -> Vec<String> {
