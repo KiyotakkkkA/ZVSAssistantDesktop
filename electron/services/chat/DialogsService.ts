@@ -406,10 +406,17 @@ export class DialogsService {
         options?: { recountContextTokens?: boolean },
     ): void {
         this.databaseService.upsertDialogRaw(dialog.id, dialog, this.createdBy);
+
+        const contextMessages = dialog.messages.filter(
+            (message) => message.assistantStage !== "thinking",
+        );
+
         const dialogContextPayload: ChatDialog = {
             ...dialog,
+            messages: contextMessages,
             tokenUsage: undefined,
         };
+
         this.databaseService.upsertDialogContextRaw(
             dialog.id,
             dialogContextPayload,
