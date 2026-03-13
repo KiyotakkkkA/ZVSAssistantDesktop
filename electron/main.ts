@@ -106,10 +106,17 @@ function createWindow() {
 
 app.on("window-all-closed", () => {
     if (process.platform !== "darwin") {
-        void mistralService?.stopAll();
-        void jobService?.shutdown();
-        app.quit();
-        win = null;
+        Promise.all([
+            mistralService?.stopAll() ?? Promise.resolve(),
+            jobService?.shutdown() ?? Promise.resolve(),
+        ])
+            .catch((error) => {
+                console.error("[main] Error during shutdown:", error);
+            })
+            .finally(() => {
+                app.quit();
+                win = null;
+            });
     }
 });
 

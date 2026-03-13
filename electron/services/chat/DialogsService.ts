@@ -177,13 +177,12 @@ export class DialogsService {
         const targetIndex = dialog.messages.findIndex(
             (message) => message.id === messageId,
         );
-        const targetMessage = dialog.messages.find(
-            (message) => message.id === messageId,
-        );
 
-        if (!targetMessage || targetIndex === -1) {
+        if (targetIndex === -1) {
             return dialog;
         }
+
+        const targetMessage = dialog.messages[targetIndex];
 
         const deletedIds = new Set<string>([messageId]);
         const previousMessage = dialog.messages[targetIndex - 1];

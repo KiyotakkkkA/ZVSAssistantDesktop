@@ -166,6 +166,11 @@ export const useNotifications = (
         [toasts],
     );
 
+    const notifyJobCompletionRef = useRef(notifyJobCompletion);
+    useEffect(() => {
+        notifyJobCompletionRef.current = notifyJobCompletion;
+    });
+
     useEffect(() => {
         if (!shouldListenJobCompletion) {
             return;
@@ -182,13 +187,13 @@ export const useNotifications = (
                 return;
             }
 
-            void notifyJobCompletion(event.job);
+            void notifyJobCompletionRef.current(event.job);
         });
 
         return () => {
             unsubscribe();
         };
-    }, [notifyJobCompletion, shouldListenJobCompletion]);
+    }, [shouldListenJobCompletion]);
 
     return useObserver(() => ({
         isReady: userProfileStore.isReady,

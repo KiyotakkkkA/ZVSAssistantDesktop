@@ -79,9 +79,12 @@ export class ChatSessionService {
                     return;
                 }
 
-                void this.handleHostCall(payloadEnvelope).catch(
-                    () => undefined,
-                );
+                void this.handleHostCall(payloadEnvelope).catch((error) => {
+                    console.error(
+                        "[ChatSessionService] handleHostCall failed:",
+                        error,
+                    );
+                });
             },
         );
     }

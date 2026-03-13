@@ -118,6 +118,14 @@ export class PiperService {
                 resolve();
             });
 
+            child.stdin.on("error", (error) => {
+                reject(
+                    new Error(
+                        `Ошибка записи в stdin Piper (${error.message})`,
+                    ),
+                );
+            });
+
             child.stdin.write(text);
             child.stdin.end();
         });

@@ -219,12 +219,14 @@ export class BrowserService {
             onCompleted,
         );
 
+        let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+
         const loadResult = await Promise.race([
             webContents
                 .loadURL(requestedUrl)
                 .then(() => ({ ok: true as const })),
             new Promise<{ ok: false; error: Error }>((resolve) => {
-                setTimeout(
+                timeoutHandle = setTimeout(
                     () =>
                         resolve({
                             ok: false,
@@ -235,10 +237,14 @@ export class BrowserService {
                     timeoutMs,
                 );
             }),
-        ]).catch((error) => ({
-            ok: false as const,
-            error: error instanceof Error ? error : new Error(String(error)),
-        }));
+        ])
+            .catch((error) => ({
+                ok: false as const,
+                error: error instanceof Error ? error : new Error(String(error)),
+            }))
+            .finally(() => {
+                clearTimeout(timeoutHandle);
+            });
 
         const finalUrl = webContents.getURL() || currentUrl || requestedUrl;
         const title = webContents.getTitle();
