@@ -101,6 +101,11 @@ export class ChatSessionService {
         return true;
     }
 
+    interruptCommandExec(callId: string): boolean {
+        void coreAddon.interruptCommandExecCore(callId);
+        return true;
+    }
+
     private async handleHostCall(
         payload: Extract<NativeChatCallbackPayload, { kind: "host_call" }>,
     ): Promise<void> {

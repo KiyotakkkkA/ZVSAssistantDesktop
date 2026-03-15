@@ -60,24 +60,23 @@ fn count_json_tokens(encoder: Option<&CoreBPE>, value: &Value) -> usize {
     }
 }
 
-fn find_array_field<'a>(object: &'a serde_json::Map<String, Value>, keys: &[&str]) -> Option<&'a Vec<Value>> {
-    for key in keys {
-        if let Some(items) = object.get(*key).and_then(Value::as_array) {
-            return Some(items);
-        }
-    }
-
-    None
+fn find_first_field<'a>(object: &'a serde_json::Map<String, Value>, keys: &[&str]) -> Option<&'a Value> {
+    keys.iter().find_map(|key| object.get(*key))
 }
 
-fn find_value_field<'a>(object: &'a serde_json::Map<String, Value>, keys: &[&str]) -> Option<&'a Value> {
-    for key in keys {
-        if let Some(value) = object.get(*key) {
-            return Some(value);
-        }
-    }
+fn find_array_field<'a>(object: &'a serde_json::Map<String, Value>, keys: &[&str]) -> Option<&'a Vec<Value>> {
+    find_first_field(object, keys).and_then(Value::as_array)
+}
 
-    None
+fn apply_role_content_tokens(acc: &mut Accumulator, role: &str, content_tokens: usize) {
+    acc.messages += content_tokens;
+
+    match role {
+        "system" => acc.system_instructions += content_tokens,
+        "assistant" => acc.completion_tokens += content_tokens,
+        "user" => acc.user_context += content_tokens,
+        _ => {}
+    }
 }
 
 fn count_get_tools_calling_meta_tokens(
@@ -122,25 +121,25 @@ pub fn calculate_dialog_token_usage(payload: &Value) -> DialogTokenUsageSummary 
     let mut acc = Accumulator::default();
 
     if let Some(object) = payload.as_object() {
-        if let Some(system_value) = find_value_field(object, &["system", "systemPrompt"]) {
+        if let Some(system_value) = find_first_field(object, &["system", "systemPrompt"]) {
             acc.system += count_json_tokens(encoder_ref, system_value);
         }
 
         if let Some(system_instructions) =
-            find_value_field(object, &["systemInstructions", "instructions"]) {
+            find_first_field(object, &["systemInstructions", "instructions"]) {
             acc.system_instructions += count_json_tokens(encoder_ref, system_instructions);
         }
 
         if let Some(runtime_context) =
-            find_value_field(object, &["runtimeContext", "userContext", "context"]) {
+            find_first_field(object, &["runtimeContext", "userContext", "context"]) {
             acc.user_context += count_json_tokens(encoder_ref, runtime_context);
         }
 
-        if let Some(tool_definitions) = find_value_field(object, &["toolDefinitions", "tools"]) {
+        if let Some(tool_definitions) = find_first_field(object, &["toolDefinitions", "tools"]) {
             acc.tool_definitions += count_json_tokens(encoder_ref, tool_definitions);
         }
 
-        if let Some(reserved_output) = find_value_field(object, &["reservedOutput", "maxOutputTokens"]) {
+        if let Some(reserved_output) = find_first_field(object, &["reservedOutput", "maxOutputTokens"]) {
             acc.reserved_output += match reserved_output {
                 Value::Number(number) => number
                     .as_u64()
@@ -157,29 +156,13 @@ pub fn calculate_dialog_token_usage(payload: &Value) -> DialogTokenUsageSummary 
                     continue;
                 };
 
-                let role = find_value_field(message_object, &["author", "role"])
+                let role = find_first_field(message_object, &["author", "role"])
                     .and_then(Value::as_str)
                     .unwrap_or_default();
 
-                if let Some(content) = find_value_field(message_object, &["content", "text"]) {
+                if let Some(content) = find_first_field(message_object, &["content", "text"]) {
                     let content_tokens = count_json_tokens(encoder_ref, content);
-                    match role {
-                        "system" => {
-                            acc.system_instructions += content_tokens;
-                            acc.messages += content_tokens;
-                        }
-                        "assistant" => {
-                            acc.messages += content_tokens;
-                            acc.completion_tokens += content_tokens;
-                        }
-                        "user" => {
-                            acc.messages += content_tokens;
-                            acc.user_context += content_tokens;
-                        }
-                        _ => {
-                            acc.messages += content_tokens;
-                        }
-                    }
+                    apply_role_content_tokens(&mut acc, role, content_tokens);
                 }
 
                 if let Some(thinking) = message_object.get("thinking") {

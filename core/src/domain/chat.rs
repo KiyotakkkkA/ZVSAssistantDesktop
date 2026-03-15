@@ -5,6 +5,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
+use tokio::sync::Notify;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -188,12 +189,14 @@ pub struct OllamaChunkMessage {
 #[derive(Debug, Clone)]
 pub struct SessionState {
     cancelled: Arc<AtomicBool>,
+    cancel_notify: Arc<Notify>,
 }
 
 impl Default for SessionState {
     fn default() -> Self {
         Self {
             cancelled: Arc::new(AtomicBool::new(false)),
+            cancel_notify: Arc::new(Notify::new()),
         }
     }
 }
@@ -201,10 +204,19 @@ impl Default for SessionState {
 impl SessionState {
     pub fn cancel(&self) {
         self.cancelled.store(true, Ordering::Relaxed);
+        self.cancel_notify.notify_waiters();
     }
 
     pub fn is_cancelled(&self) -> bool {
         self.cancelled.load(Ordering::Relaxed)
+    }
+
+    pub async fn cancelled(&self) {
+        if self.is_cancelled() {
+            return;
+        }
+
+        self.cancel_notify.notified().await;
     }
 }
 

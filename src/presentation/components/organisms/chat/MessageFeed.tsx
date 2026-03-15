@@ -23,6 +23,7 @@ interface MessageFeedProps {
     showLoader?: boolean;
     activeStage?: AssistantStage | null;
     activeResponseToId?: string | null;
+    contextKey?: string;
 }
 
 type AssistantStageBlock = {
@@ -85,6 +86,7 @@ function AssistantResponseBlock({
     setQaActiveQuestion,
     onApproveCommandExec,
     onRejectCommandExec,
+    onInterruptCommandExec,
     activeStage,
     isActive,
 }: {
@@ -98,6 +100,7 @@ function AssistantResponseBlock({
     setQaActiveQuestion: (qaMessageId: string, questionIndex: number) => void;
     onApproveCommandExec: (messageId: string) => void;
     onRejectCommandExec: (messageId: string) => void;
+    onInterruptCommandExec: (messageId: string) => void;
     activeStage?: AssistantStage | null;
     isActive?: boolean;
 }) {
@@ -297,6 +300,11 @@ function AssistantResponseBlock({
                                             onRejectCommandExec={() =>
                                                 onRejectCommandExec(message.id)
                                             }
+                                            onInterruptCommandExec={() =>
+                                                onInterruptCommandExec(
+                                                    message.id,
+                                                )
+                                            }
                                             isLoading={
                                                 isToolBlockLoading &&
                                                 toolIndex ===
@@ -399,6 +407,7 @@ export function MessageFeed({
     showLoader = false,
     activeStage = null,
     activeResponseToId = null,
+    contextKey,
 }: MessageFeedProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const previousLastMessageIdRef = useRef<string | null>(null);
@@ -442,10 +451,15 @@ export function MessageFeed({
         confirmDeleteMessage,
         approveCommandExec,
         rejectCommandExec,
+        interruptCommandExec,
         saveQaAnswer,
         setQaActiveQuestion,
         sendQaAnswer,
     } = useMessages({ sendMessage });
+
+    useEffect(() => {
+        previousLastMessageIdRef.current = null;
+    }, [contextKey]);
 
     useEffect(() => {
         const lastMessage = messages[messages.length - 1];
@@ -462,8 +476,11 @@ export function MessageFeed({
             isNewLastMessage &&
             lastMessage.author === "user";
 
-        if (shouldSmoothScroll) {
-            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        if (shouldSmoothScroll && scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({
+                top: scrollContainerRef.current.scrollHeight,
+                behavior: "smooth",
+            });
         }
 
         previousLastMessageIdRef.current = lastMessage.id;
@@ -546,6 +563,9 @@ export function MessageFeed({
                                             onRejectCommandExec={
                                                 rejectCommandExec
                                             }
+                                            onInterruptCommandExec={
+                                                interruptCommandExec
+                                            }
                                             activeStage={activeStage}
                                             isActive={isActiveResponse}
                                         />
@@ -574,6 +594,9 @@ export function MessageFeed({
                                             approveCommandExec
                                         }
                                         onRejectCommandExec={rejectCommandExec}
+                                        onInterruptCommandExec={
+                                            interruptCommandExec
+                                        }
                                         activeStage={null}
                                         isActive={false}
                                     />

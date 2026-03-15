@@ -440,6 +440,7 @@ export type AppApiLlmNamespace = {
     resolveCommandApproval: (
         payload: ResolveCommandApprovalPayload,
     ) => Promise<boolean>;
+    interruptCommandExec: (callId: string) => Promise<boolean>;
     onChatEvent: (listener: (event: ChatSessionEvent) => void) => () => void;
 };
 

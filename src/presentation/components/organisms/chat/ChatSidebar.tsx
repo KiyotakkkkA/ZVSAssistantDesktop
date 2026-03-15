@@ -17,6 +17,7 @@ import {
     ScenarioItem,
 } from "../../molecules/cards/workspace";
 import { Icon } from "@iconify/react";
+import { chatRuntimeStore } from "../../../../stores/chatRuntimeStore";
 
 export const ChatSidebar = observer(function ChatSidebar() {
     const navigate = useNavigate();
@@ -63,6 +64,11 @@ export const ChatSidebar = observer(function ChatSidebar() {
     const [editScenarioId, setEditScenarioId] = useState<string | null>(null);
     const [scenarioName, setScenarioName] = useState("");
     const [scenarioDescription, setScenarioDescription] = useState("");
+    const [isChatNavigationWarningOpen, setIsChatNavigationWarningOpen] =
+        useState(false);
+    const [pendingNavigation, setPendingNavigation] = useState<
+        (() => void | Promise<void>) | null
+    >(null);
 
     const editModalTitle =
         editMode === "create" ? "Создать диалог" : "Переименовать диалог";
@@ -81,33 +87,73 @@ export const ChatSidebar = observer(function ChatSidebar() {
         return "dialogs";
     }, [location.pathname]);
 
+    const requestChatSafeNavigation = (action: () => void | Promise<void>) => {
+        if (!chatRuntimeStore.isChatBusy) {
+            void action();
+            return;
+        }
+
+        setPendingNavigation(() => action);
+        setIsChatNavigationWarningOpen(true);
+    };
+
+    const closeChatNavigationWarning = () => {
+        setIsChatNavigationWarningOpen(false);
+        setPendingNavigation(null);
+    };
+
+    const confirmInterruptedNavigation = async () => {
+        const nextNavigation = pendingNavigation;
+
+        closeChatNavigationWarning();
+
+        if (!nextNavigation) {
+            return;
+        }
+
+        await chatRuntimeStore.interruptActiveSession();
+        await nextNavigation();
+    };
+
     const openCreateModal = () => {
-        navigate("/workspace/dialogs");
-        setEditMode("create");
-        setDialogName("");
-        setTargetDialogId(null);
-        setIsEditModalOpen(true);
+        requestChatSafeNavigation(() => {
+            navigate("/workspace/dialogs");
+            setEditMode("create");
+            setDialogName("");
+            setTargetDialogId(null);
+            setIsEditModalOpen(true);
+        });
     };
 
     const openProjectsPage = () => {
-        navigate("/workspace/projects/create");
+        requestChatSafeNavigation(() => {
+            navigate("/workspace/projects/create");
+        });
     };
 
     const openScenarioPage = () => {
-        navigate("/workspace/scenario/create");
+        requestChatSafeNavigation(() => {
+            navigate("/workspace/scenario/create");
+        });
     };
 
     const selectDialogAndOpenPage = (dialogId: string) => {
-        navigate("/workspace/dialogs");
-        void switchDialog(dialogId);
+        requestChatSafeNavigation(() => {
+            navigate("/workspace/dialogs");
+            void switchDialog(dialogId);
+        });
     };
 
     const selectProjectAndOpenPage = (projectId: string) => {
-        navigate(`/workspace/projects/${projectId}`);
+        requestChatSafeNavigation(() => {
+            navigate(`/workspace/projects/${projectId}`);
+        });
     };
 
     const selectScenarioAndOpenPage = (scenarioId: string) => {
-        navigate(`/workspace/scenario/${scenarioId}`);
+        requestChatSafeNavigation(() => {
+            navigate(`/workspace/scenario/${scenarioId}`);
+        });
     };
 
     const createOptionsList = [
@@ -645,6 +691,40 @@ export const ChatSidebar = observer(function ChatSidebar() {
             >
                 <p className="text-sm text-main-300">
                     Подтвердите удаление выбранного сценария.
+                </p>
+            </Modal>
+
+            <Modal
+                open={isChatNavigationWarningOpen}
+                onClose={closeChatNavigationWarning}
+                title="Переход недоступен"
+                className="max-w-md"
+                footer={
+                    <>
+                        <Button
+                            variant="secondary"
+                            shape="rounded-lg"
+                            className="h-9 px-4"
+                            onClick={closeChatNavigationWarning}
+                        >
+                            Отмена
+                        </Button>
+                        <Button
+                            variant="primary"
+                            shape="rounded-lg"
+                            className="h-9 px-4"
+                            onClick={() => {
+                                void confirmInterruptedNavigation();
+                            }}
+                        >
+                            Прервать
+                        </Button>
+                    </>
+                }
+            >
+                <p className="text-sm text-main-300">
+                    Модель находится в процессе ответа, прервите процесс чтобы
+                    перейти.
                 </p>
             </Modal>
         </aside>

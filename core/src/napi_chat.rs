@@ -1,7 +1,9 @@
 use std::collections::HashMap;
+use std::process::Stdio;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::{Arc, OnceLock};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use async_stream::try_stream;
 use async_trait::async_trait;
@@ -21,6 +23,7 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::fs;
 use tokio::process::Command;
 use tokio::sync::{Mutex, oneshot};
@@ -33,7 +36,8 @@ use crate::application::services::token_usage_service::calculate_dialog_token_us
 use crate::application::services::tool_registry_service::ToolRegistryService;
 use crate::domain::chat::{
     ChatRuntimeContext, ChatSessionEvent, OllamaChatChunk, OllamaMessage,
-    ResolveCommandApprovalPayload, RunChatSessionPayload, ToolExecutionRequest,
+    ResolveCommandApprovalPayload, RunChatSessionPayload, SessionState,
+    ToolExecutionRequest,
 };
 use crate::domain::error::CoreError;
 use crate::napi_ollama::{
@@ -43,13 +47,39 @@ use crate::napi_ollama::{
 use crate::tools::executor::{BuiltinToolHostPort, BuiltinToolsExecutor};
 
 type PendingHostResults = HashMap<String, (String, oneshot::Sender<Value>)>;
+type RunningCommands = HashMap<String, RunningCommand>;
 
 const DEFAULT_ZVS_BASE_URL: &str = "http://localhost:8080";
+
+#[derive(Clone)]
+struct RunningCommand {
+    session_id: String,
+    pid: u32,
+    child: Arc<Mutex<tokio::process::Child>>,
+    interrupted: Arc<AtomicBool>,
+}
+
+fn take_pending_host_senders(
+    pending: &mut PendingHostResults,
+    session_id: &str,
+) -> Vec<oneshot::Sender<Value>> {
+    let keys = pending
+        .iter()
+        .filter_map(|(request_id, (owner_session_id, _))| {
+            (owner_session_id == session_id).then(|| request_id.clone())
+        })
+        .collect::<Vec<_>>();
+
+    keys.into_iter()
+        .filter_map(|key| pending.remove(&key).map(|(_, sender)| sender))
+        .collect()
+}
 
 #[derive(Default)]
 struct NapiChatRuntime {
     services: Mutex<HashMap<String, ChatCoreService>>,
     pending_host_results: Mutex<PendingHostResults>,
+    running_commands: Mutex<RunningCommands>,
 }
 
 impl NapiChatRuntime {
@@ -98,28 +128,50 @@ impl NapiChatRuntime {
     async fn cancel_pending_host_results(&self, session_id: &str) {
         let senders = {
             let mut pending = self.pending_host_results.lock().await;
-            let keys = pending
-                .iter()
-                .filter_map(|(request_id, (owner_session_id, _))| {
-                    if owner_session_id == session_id {
-                        Some(request_id.clone())
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<_>>();
-
-            let mut senders = Vec::new();
-            for key in keys {
-                if let Some((_, sender)) = pending.remove(&key) {
-                    senders.push(sender);
-                }
-            }
-
-            senders
+            take_pending_host_senders(&mut pending, session_id)
         };
 
         drop(senders);
+    }
+
+    async fn register_running_command(&self, call_id: String, command: RunningCommand) {
+        let mut commands = self.running_commands.lock().await;
+        commands.insert(call_id, command);
+    }
+
+    async fn remove_running_command(&self, call_id: &str) -> Option<RunningCommand> {
+        let mut commands = self.running_commands.lock().await;
+        commands.remove(call_id)
+    }
+
+    async fn interrupt_command(&self, call_id: &str) -> bool {
+        let command = {
+            let commands = self.running_commands.lock().await;
+            commands.get(call_id).cloned()
+        };
+
+        let Some(command) = command else {
+            return false;
+        };
+
+        command.interrupted.store(true, Ordering::Relaxed);
+        kill_running_command(&command).await
+    }
+
+    async fn interrupt_session_commands(&self, session_id: &str) {
+        let commands = {
+            let commands = self.running_commands.lock().await;
+            commands
+                .values()
+                .filter(|command| command.session_id == session_id)
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+
+        for command in commands {
+            command.interrupted.store(true, Ordering::Relaxed);
+            let _ = kill_running_command(&command).await;
+        }
     }
 
     async fn cancel_session(&self, session_id: &str) -> bool {
@@ -132,8 +184,10 @@ impl NapiChatRuntime {
             return false;
         };
 
+        let cancelled = service.cancel_chat_session(session_id).await;
+        self.interrupt_session_commands(session_id).await;
         self.cancel_pending_host_results(session_id).await;
-        service.cancel_chat_session(session_id).await
+        cancelled
     }
 
     async fn resolve_command_approval(&self, payload: ResolveCommandApprovalPayload) -> bool {
@@ -208,6 +262,22 @@ struct JsHostPort {
 }
 
 impl JsHostPort {
+    async fn read_child_pipe<R>(pipe: Option<R>) -> Result<String, CoreError>
+    where
+        R: AsyncRead + Unpin + Send + 'static,
+    {
+        let Some(mut pipe) = pipe else {
+            return Ok(String::new());
+        };
+
+        let mut buffer = Vec::new();
+        pipe.read_to_end(&mut buffer)
+            .await
+            .map_err(|error| CoreError::Tool(error.to_string()))?;
+
+        Ok(Self::decode_output(&buffer))
+    }
+
     async fn request_host_method(&self, method: &str, args: Value) -> Result<Value, CoreError> {
         let request_id = format!("host_{}", Uuid::new_v4().simple());
 
@@ -308,7 +378,12 @@ impl JsHostPort {
 
 #[async_trait]
 impl BuiltinToolHostPort for JsHostPort {
-    async fn exec_shell(&self, command: &str, cwd: Option<&str>) -> Result<Value, CoreError> {
+    async fn exec_shell(
+        &self,
+        request: &ToolExecutionRequest,
+        command: &str,
+        cwd: Option<&str>,
+    ) -> Result<Value, CoreError> {
         let trimmed_command = command.trim();
         if trimmed_command.is_empty() {
             return Err(CoreError::Validation(
@@ -318,30 +393,86 @@ impl BuiltinToolHostPort for JsHostPort {
 
         let resolved_cwd = Self::resolved_cwd(cwd)?;
 
-        let output = if cfg!(windows) {
-            Command::new("cmd")
+        let mut shell_command = if cfg!(windows) {
+            let mut command = Command::new("cmd");
+            command
                 .arg("/C")
-                .arg(format!("chcp 65001>nul & {}", trimmed_command))
-                .current_dir(&resolved_cwd)
-                .output()
-                .await
+                .arg(format!("chcp 65001>nul & {}", trimmed_command));
+            command
         } else {
-            Command::new("sh")
-                .arg("-lc")
-                .arg(trimmed_command)
-                .current_dir(&resolved_cwd)
-                .output()
+            let mut command = Command::new("sh");
+            command.arg("-lc").arg(trimmed_command);
+            command
+        };
+
+        shell_command
+            .current_dir(&resolved_cwd)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        let mut child = shell_command
+            .spawn()
+            .map_err(|error| CoreError::Tool(error.to_string()))?;
+
+        let pid = child
+            .id()
+            .ok_or_else(|| CoreError::Tool("Не удалось получить PID процесса".to_owned()))?;
+
+        let stdout_task = tokio::spawn(Self::read_child_pipe(child.stdout.take()));
+        let stderr_task = tokio::spawn(Self::read_child_pipe(child.stderr.take()));
+        let child = Arc::new(Mutex::new(child));
+        let interrupted = Arc::new(AtomicBool::new(false));
+
+        self.runtime
+            .register_running_command(
+                request.call_id.clone(),
+                RunningCommand {
+                    session_id: request.session_id.clone(),
+                    pid,
+                    child: child.clone(),
+                    interrupted: interrupted.clone(),
+                },
+            )
+            .await;
+
+        let exit_status = {
+            let mut child = child.lock().await;
+            child
+                .wait()
                 .await
+                .map_err(|error| CoreError::Tool(error.to_string()))?
+        };
+
+        self.runtime.remove_running_command(&request.call_id).await;
+
+        let stdout = stdout_task
+            .await
+            .map_err(|error| CoreError::Tool(error.to_string()))??;
+        let stderr = stderr_task
+            .await
+            .map_err(|error| CoreError::Tool(error.to_string()))??;
+
+        if interrupted.load(Ordering::Relaxed) {
+            return Ok(json!({
+                "status": "cancelled",
+                "command": trimmed_command,
+                "cwd": resolved_cwd.to_string_lossy().to_string(),
+                "isAdmin": false,
+                "exitCode": exit_status.code().unwrap_or(-1),
+                "stdout": stdout,
+                "stderr": stderr,
+                "interrupted": true,
+                "reason": "Команда прервана пользователем",
+            }));
         }
-        .map_err(|error| CoreError::Tool(error.to_string()))?;
 
         Ok(json!({
             "command": trimmed_command,
             "cwd": resolved_cwd.to_string_lossy().to_string(),
             "isAdmin": false,
-            "exitCode": output.status.code().unwrap_or(-1),
-            "stdout": Self::decode_output(&output.stdout),
-            "stderr": Self::decode_output(&output.stderr),
+            "exitCode": exit_status.code().unwrap_or(-1),
+            "stdout": stdout,
+            "stderr": stderr,
         }))
     }
 
@@ -986,6 +1117,7 @@ impl OllamaHttpLlmPort {
         &self,
         endpoint_url: &str,
         body_value: &Value,
+        state: &SessionState,
     ) -> Result<Response, CoreError> {
         let modes = if self.token.trim().is_empty() {
             vec!["none"]
@@ -1009,8 +1141,15 @@ impl OllamaHttpLlmPort {
                 .build()
                 .map_err(|error| CoreError::Llm(error.to_string()))?;
 
-            let response = match client.post(endpoint_url).json(body_value).send().await {
+            let response = match tokio::select! {
+                biased;
+                _ = state.cancelled() => Err(CoreError::Cancelled),
+                response = client.post(endpoint_url).json(body_value).send() => {
+                    response.map_err(|error| CoreError::Llm(error.to_string()))
+                }
+            } {
                 Ok(response) => response,
+                Err(CoreError::Cancelled) if state.is_cancelled() => return Err(CoreError::Cancelled),
                 Err(error) => {
                     last_error = error.to_string();
                     continue;
@@ -1019,7 +1158,11 @@ impl OllamaHttpLlmPort {
 
             let status = response.status();
             if !status.is_success() {
-                let text = response.text().await.unwrap_or_default();
+                let text = tokio::select! {
+                    biased;
+                    _ = state.cancelled() => return Err(CoreError::Cancelled),
+                    text = response.text() => text.unwrap_or_default(),
+                };
                 if is_unauthorized(Some(status), &text) {
                     last_error = text;
                     continue;
@@ -1049,22 +1192,34 @@ impl LlmPort for OllamaHttpLlmPort {
         &self,
         payload: &RunChatSessionPayload,
         messages: &[OllamaMessage],
+        state: &SessionState,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<OllamaChatChunk, CoreError>> + Send>>, CoreError>
     {
         let request_payload = self.build_chat_payload(payload, messages)?;
         let endpoint_url = format!("{}/api/chat", self.base_url);
         let response = self
-            .open_streaming_response(&endpoint_url, &request_payload)
+            .open_streaming_response(&endpoint_url, &request_payload, state)
             .await?;
         let token = self.token.clone();
         let stream_request_payload = request_payload.clone();
+        let state = state.clone();
 
         let stream = try_stream! {
             let mut buffer = String::new();
             let mut bytes_stream = response.bytes_stream();
             let mut got_done = false;
 
-            'outer: while let Some(chunk_result) = bytes_stream.next().await {
+            'outer: loop {
+                let next_chunk = tokio::select! {
+                    biased;
+                    _ = state.cancelled() => None,
+                    chunk_result = bytes_stream.next() => chunk_result,
+                };
+
+                let Some(chunk_result) = next_chunk else {
+                    break;
+                };
+
                 let bytes = chunk_result.map_err(|error| CoreError::Llm(error.to_string()))?;
                 buffer.push_str(&String::from_utf8_lossy(&bytes));
 
@@ -1110,17 +1265,24 @@ impl LlmPort for OllamaHttpLlmPort {
                     object.insert("stream".to_owned(), Value::Bool(false));
                 }
 
-                let fallback = post_non_stream_with_auth_fallback(
-                    &endpoint_url,
-                    token.trim(),
-                    &fallback_payload,
-                )
-                .await
-                .map_err(|error| CoreError::Llm(error.to_string()))?;
+                let fallback = tokio::select! {
+                    biased;
+                    _ = state.cancelled() => None,
+                    response = post_non_stream_with_auth_fallback(
+                        &endpoint_url,
+                        token.trim(),
+                        &fallback_payload,
+                    ) => Some(response),
+                };
 
-                let parsed = serde_json::from_value::<OllamaChatChunk>(fallback)
-                    .map_err(|error| CoreError::Llm(format!("Invalid JSON: {}", error)))?;
-                yield parsed;
+                if let Some(fallback) = fallback {
+                    let fallback = fallback
+                        .map_err(|error| CoreError::Llm(error.to_string()))?;
+
+                    let parsed = serde_json::from_value::<OllamaChatChunk>(fallback)
+                        .map_err(|error| CoreError::Llm(format!("Invalid JSON: {}", error)))?;
+                    yield parsed;
+                }
             }
         };
 
@@ -1201,6 +1363,17 @@ pub async fn resolve_command_approval_core(payload_json: String) -> NapiResult<b
     Ok(runtime().resolve_command_approval(payload).await)
 }
 
+#[napi(js_name = "interruptCommandExecCore")]
+pub async fn interrupt_command_exec_core(call_id: String) -> NapiResult<bool> {
+    let call_id = call_id.trim().to_owned();
+
+    if call_id.is_empty() {
+        return Ok(false);
+    }
+
+    Ok(runtime().interrupt_command(&call_id).await)
+}
+
 #[napi(js_name = "submitToolResult")]
 pub async fn submit_tool_result(call_id: String, result_json: String) -> NapiResult<bool> {
     let call_id = call_id.trim().to_owned();
@@ -1228,4 +1401,26 @@ pub async fn calculate_dialog_context_usage_core(
 
     serde_json::to_string(&usage)
         .map_err(|error| Error::from_reason(format!("Failed to serialize usage: {}", error)))
+}
+
+async fn kill_running_command(command: &RunningCommand) -> bool {
+    if cfg!(windows) {
+        let taskkill_status = Command::new("taskkill")
+            .args(["/PID", &command.pid.to_string(), "/T", "/F"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .await;
+
+        if matches!(taskkill_status, Ok(status) if status.success()) {
+            return true;
+        }
+    }
+
+    let mut child = command.child.lock().await;
+    if child.id().is_none() {
+        return true;
+    }
+
+    child.start_kill().is_ok()
 }

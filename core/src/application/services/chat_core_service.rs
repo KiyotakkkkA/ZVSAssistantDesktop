@@ -149,9 +149,23 @@ impl ChatCoreService {
             let mut round_tool_calls = Vec::new();
             let mut round_usage: Option<(u32, u32, u32)> = None;
 
-            let mut stream = self.llm_port.stream_chat(payload, messages).await?;
+            let mut stream = match self.llm_port.stream_chat(payload, messages, state).await {
+                Ok(stream) => stream,
+                Err(CoreError::Cancelled) if state.is_cancelled() => break,
+                Err(error) => return Err(error),
+            };
 
-            while let Some(chunk_result) = stream.next().await {
+            loop {
+                let chunk_result = tokio::select! {
+                    biased;
+                    _ = state.cancelled() => break,
+                    chunk_result = stream.next() => chunk_result,
+                };
+
+                let Some(chunk_result) = chunk_result else {
+                    break;
+                };
+
                 let chunk = chunk_result?;
 
                 if state.is_cancelled() {
@@ -159,27 +173,23 @@ impl ChatCoreService {
                 }
 
                 if let Some(message) = chunk.message {
-                    if let Some(thinking) = message.thinking {
-                        if !thinking.is_empty() {
-                            round_thinking.push_str(&thinking);
-                            self.event_sink.emit(ChatSessionEvent::ThinkingDelta {
-                                session_id: session_id.to_owned(),
-                                chunk_text: thinking,
-                            });
-                        }
+                    if let Some(thinking) = Self::take_non_empty(message.thinking) {
+                        round_thinking.push_str(&thinking);
+                        self.event_sink.emit(ChatSessionEvent::ThinkingDelta {
+                            session_id: session_id.to_owned(),
+                            chunk_text: thinking,
+                        });
                     }
 
-                    if let Some(content) = message.content {
-                        if !content.is_empty() {
-                            round_content.push_str(&content);
-                            self.event_sink.emit(ChatSessionEvent::ContentDelta {
-                                session_id: session_id.to_owned(),
-                                chunk_text: content,
-                            });
-                        }
+                    if let Some(content) = Self::take_non_empty(message.content) {
+                        round_content.push_str(&content);
+                        self.event_sink.emit(ChatSessionEvent::ContentDelta {
+                            session_id: session_id.to_owned(),
+                            chunk_text: content,
+                        });
                     }
 
-                    if let Some(tool_calls) = message.tool_calls {
+                    if let Some(tool_calls) = message.tool_calls.filter(|calls| !calls.is_empty()) {
                         round_tool_calls.extend(tool_calls);
                     }
                 }
@@ -247,12 +257,13 @@ impl ChatCoreService {
                 });
 
                 if self.tool_registry.tool_requires_confirmation(&tool_name) {
-                    let approved = self
-                        .wait_tool_approval(session_id, &call_id)
-                        .await
-                        .unwrap_or(false);
+                    let approved = self.wait_tool_approval(session_id, &call_id, state).await;
 
-                    if !approved {
+                    if state.is_cancelled() {
+                        break;
+                    }
+
+                    if !approved.unwrap_or(false) {
                         let result = Self::build_tool_cancelled_result(&tool_name, &args_value);
 
                         self.event_sink.emit(ChatSessionEvent::ToolResult {
@@ -286,20 +297,23 @@ impl ChatCoreService {
                     runtime_context: payload.runtime_context.clone(),
                 };
 
-                let result = match self.tool_executor_port.execute_tool(request).await {
+                let result = match tokio::select! {
+                    biased;
+                    _ = state.cancelled() => Err(CoreError::Cancelled),
+                    result = self.tool_executor_port.execute_tool(request) => result,
+                } {
                     Ok(result) => result,
+                    Err(CoreError::Cancelled) if state.is_cancelled() => break,
                     Err(error) => Self::wrap_tool_error(&tool_name, &error),
                 };
 
+                if state.is_cancelled() {
+                    break;
+                }
+
                 let (result_for_ui, doc_id) = Self::extract_tool_result_payload(result);
-                let result_for_event = if tool_name == "get_tools_calling" {
-                    Self::build_get_tools_calling_event_result(
-                        &result_for_ui,
-                        doc_id.as_deref(),
-                    )
-                } else {
-                    result_for_ui.clone()
-                };
+                let result_for_event =
+                    Self::build_tool_result_for_event(&tool_name, &result_for_ui, doc_id.as_deref());
 
                 self.event_sink.emit(ChatSessionEvent::ToolResult {
                     session_id: session_id.to_owned(),
@@ -310,50 +324,8 @@ impl ChatCoreService {
                     result: result_for_event,
                 });
 
-                let tool_content = if let Some(doc_id_value) = doc_id {
-                    if tool_name == "get_tools_calling" {
-                        Self::to_tool_message(&json!({
-                            "docId": doc_id_value,
-                            "status": "loaded",
-                            "message": format!(
-                                "Данные по doc_id={} загружены через get_tools_calling",
-                                doc_id_value
-                            ),
-                            "payload": result_for_ui,
-                        }))
-                    } else {
-                        Self::to_tool_message(&json!({
-                            "docId": doc_id_value,
-                            "status": "stored",
-                            "toolName": tool_name.clone(),
-                            "message": "Результат инструмента сжат и сохранен. Для полного payload вызови get_tools_calling с doc_id.",
-                        }))
-                    }
-                } else {
-                    if tool_name == "get_tools_calling" {
-                        let loaded_doc_id = result_for_ui
-                            .get("docId")
-                            .and_then(Value::as_str)
-                            .unwrap_or_default()
-                            .to_owned();
-
-                        Self::to_tool_message(&json!({
-                            "docId": loaded_doc_id,
-                            "status": "loaded",
-                            "message": if loaded_doc_id.is_empty() {
-                                "Данные через get_tools_calling загружены".to_owned()
-                            } else {
-                                format!(
-                                    "Данные по doc_id={} загружены через get_tools_calling",
-                                    loaded_doc_id
-                                )
-                            },
-                            "payload": result_for_ui,
-                        }))
-                    } else {
-                        Self::to_tool_message(&result_for_ui)
-                    }
-                };
+                let tool_content =
+                    Self::build_tool_message_content(&tool_name, &result_for_ui, doc_id.as_deref());
 
                 messages.push(OllamaMessage {
                     role: crate::domain::chat::OllamaRole::Tool,
@@ -381,17 +353,25 @@ impl ChatCoreService {
         }
     }
 
+    fn take_non_empty(value: Option<String>) -> Option<String> {
+        value.filter(|value| !value.is_empty())
+    }
+
+    fn normalize_non_empty(value: Option<&str>) -> Option<String> {
+        value
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned)
+    }
+
     fn extract_tool_result_payload(result: Value) -> (Value, Option<String>) {
         let Some(object) = result.as_object() else {
             return (result, None);
         };
 
-        let doc_id = object
-            .get("__toolDocId")
-            .and_then(Value::as_str)
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .map(str::to_owned);
+        let doc_id = Self::normalize_non_empty(
+            object.get("__toolDocId").and_then(Value::as_str),
+        );
 
         let data = object.get("data").cloned();
 
@@ -401,21 +381,56 @@ impl ChatCoreService {
         }
     }
 
-    fn build_get_tools_calling_event_result(
+    fn build_tool_result_for_event(
+        tool_name: &str,
+        raw_result: &Value,
+        doc_id: Option<&str>,
+    ) -> Value {
+        if tool_name == "get_tools_calling" {
+            Self::build_get_tools_calling_event_result(raw_result, doc_id)
+        } else {
+            raw_result.clone()
+        }
+    }
+
+    fn build_tool_message_content(
+        tool_name: &str,
+        raw_result: &Value,
+        doc_id: Option<&str>,
+    ) -> String {
+        if tool_name == "get_tools_calling" {
+            let (doc_id, status, message) =
+                Self::build_get_tools_calling_meta(raw_result, doc_id);
+
+            return Self::to_tool_message(&json!({
+                "docId": doc_id,
+                "status": status,
+                "message": message,
+                "payload": raw_result,
+            }));
+        }
+
+        if let Some(doc_id) = Self::normalize_non_empty(doc_id) {
+            return Self::to_tool_message(&json!({
+                "docId": doc_id,
+                "status": "stored",
+                "toolName": tool_name,
+                "message": "Результат инструмента сжат и сохранен. Для полного payload вызови get_tools_calling с doc_id.",
+            }));
+        }
+
+        Self::to_tool_message(raw_result)
+    }
+
+    fn build_get_tools_calling_meta(
         raw_result: &Value,
         doc_id_from_executor: Option<&str>,
-    ) -> Value {
-        let doc_id = doc_id_from_executor
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .map(str::to_owned)
+    ) -> (String, String, String) {
+        let doc_id = Self::normalize_non_empty(doc_id_from_executor)
             .or_else(|| {
-                raw_result
-                    .get("docId")
-                    .and_then(Value::as_str)
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                    .map(str::to_owned)
+                Self::normalize_non_empty(
+                    raw_result.get("docId").and_then(Value::as_str),
+                )
             })
             .unwrap_or_default();
 
@@ -425,13 +440,27 @@ impl ChatCoreService {
             .unwrap_or("loaded")
             .to_owned();
 
-        let message = if let Some(text) = raw_result.get("message").and_then(Value::as_str) {
-            text.to_owned()
-        } else if doc_id.is_empty() {
-            "Данные через get_tools_calling загружены".to_owned()
-        } else {
-            format!("Данные по doc_id={} загружены через get_tools_calling", doc_id)
-        };
+        let message = raw_result
+            .get("message")
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+            .unwrap_or_else(|| {
+                if doc_id.is_empty() {
+                    "Данные через get_tools_calling загружены".to_owned()
+                } else {
+                    format!("Данные по doc_id={} загружены через get_tools_calling", doc_id)
+                }
+            });
+
+        (doc_id, status, message)
+    }
+
+    fn build_get_tools_calling_event_result(
+        raw_result: &Value,
+        doc_id_from_executor: Option<&str>,
+    ) -> Value {
+        let (doc_id, status, message) =
+            Self::build_get_tools_calling_meta(raw_result, doc_id_from_executor);
 
         json!({
             "docId": doc_id,
@@ -513,7 +542,12 @@ impl ChatCoreService {
         })
     }
 
-    async fn wait_tool_approval(&self, session_id: &str, call_id: &str) -> Option<bool> {
+    async fn wait_tool_approval(
+        &self,
+        session_id: &str,
+        call_id: &str,
+        state: &SessionState,
+    ) -> Option<bool> {
         let (sender, receiver) = oneshot::channel::<bool>();
 
         {
@@ -521,26 +555,26 @@ impl ChatCoreService {
             approvals.insert(call_id.to_owned(), (session_id.to_owned(), sender));
         }
 
-        receiver.await.ok()
+        tokio::select! {
+            biased;
+            _ = state.cancelled() => None,
+            result = receiver => result.ok(),
+        }
     }
 
     async fn resolve_session_approvals(&self, session_id: &str, accepted: bool) {
         let senders = {
             let mut approvals = self.pending_approvals.lock().await;
-            let mut keys = Vec::new();
-            for (call_id, (owner_session, _)) in approvals.iter() {
-                if owner_session == session_id {
-                    keys.push(call_id.clone());
-                }
-            }
+            let keys = approvals
+                .iter()
+                .filter_map(|(call_id, (owner_session, _))| {
+                    (owner_session == session_id).then(|| call_id.clone())
+                })
+                .collect::<Vec<_>>();
 
-            let mut pending = Vec::new();
-            for key in keys {
-                if let Some((_, sender)) = approvals.remove(&key) {
-                    pending.push(sender);
-                }
-            }
-            pending
+            keys.into_iter()
+                .filter_map(|key| approvals.remove(&key).map(|(_, sender)| sender))
+                .collect::<Vec<_>>()
         };
 
         for sender in senders {

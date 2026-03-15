@@ -12,7 +12,12 @@ use crate::tools::packs::studying_pack::fetch_mirea_schedule_by_date;
 
 #[async_trait]
 pub trait BuiltinToolHostPort: Send + Sync {
-    async fn exec_shell(&self, command: &str, cwd: Option<&str>) -> Result<Value, CoreError>;
+    async fn exec_shell(
+        &self,
+        request: &ToolExecutionRequest,
+        command: &str,
+        cwd: Option<&str>,
+    ) -> Result<Value, CoreError>;
     async fn vector_search(&self, request: &ToolExecutionRequest) -> Result<Value, CoreError>;
     async fn web_search(&self, query: &str) -> Result<Value, CoreError>;
     async fn web_fetch(&self, url: &str) -> Result<Value, CoreError>;
@@ -427,7 +432,11 @@ impl BuiltinToolsExecutor {
         }
     }
 
-    async fn execute_command_exec(&self, args: &Value) -> Result<Value, CoreError> {
+    async fn execute_command_exec(
+        &self,
+        request: &ToolExecutionRequest,
+    ) -> Result<Value, CoreError> {
+        let args = &request.args;
         let command = args
             .get("command")
             .and_then(Value::as_str)
@@ -443,7 +452,7 @@ impl BuiltinToolsExecutor {
             .map(str::trim)
             .filter(|value| !value.is_empty());
 
-        self.host_port.exec_shell(command, cwd).await
+        self.host_port.exec_shell(request, command, cwd).await
     }
 
     async fn execute_web_search(&self, args: &Value) -> Result<Value, CoreError> {
@@ -744,7 +753,7 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
         let args = &request.args;
 
         let raw_result = match request.tool_name.as_str() {
-            "command_exec" => self.execute_command_exec(&args).await,
+            "command_exec" => self.execute_command_exec(&request).await,
             "vector_store_search_tool" => self.host_port.vector_search(&request).await,
             "web_search" => self.execute_web_search(&args).await,
             "web_fetch" => self.execute_web_fetch(&args).await,

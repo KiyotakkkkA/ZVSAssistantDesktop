@@ -9,6 +9,7 @@ import type {
     RunChatSessionPayload,
 } from "../../types/ElectronApi";
 import { chatsStore } from "../../stores/chatsStore";
+import { chatRuntimeStore } from "../../stores/chatRuntimeStore.ts";
 import { toolsStore } from "../../stores/toolsStore";
 import { projectsStore } from "../../stores/projectsStore";
 import { parseScenarioLaunchPayload } from "../../utils/scenario/scenarioLaunchEnvelope";
@@ -327,6 +328,7 @@ export function useChat() {
                     const llmApi = window.appApi.llm;
 
                     chatSessionIdRef.current = sessionId;
+                    chatRuntimeStore.startSession(sessionId);
                     let sessionError: Error | null = null;
                     let isTerminalEventReceived = false;
                     let resolveTerminalEvent: (() => void) | null = null;
@@ -412,7 +414,11 @@ export function useChat() {
                                                   confirmationPrompt:
                                                       confirmationSpec.prompt,
                                               }
-                                            : {}),
+                                            : event.toolName === "command_exec"
+                                              ? {
+                                                    status: "running" as const,
+                                                }
+                                              : {}),
                                         ...(event.toolName === "command_exec"
                                             ? {
                                                   command: commandMeta?.command,
@@ -532,6 +538,9 @@ export function useChat() {
 
                         if (event.type === "done") {
                             setIsAwaitingFirstChunk(false);
+                            chatRuntimeStore.updateStreamingState({
+                                isAwaitingFirstChunk: false,
+                            });
                             settleTerminalEvent();
                             return;
                         }
@@ -654,6 +663,7 @@ export function useChat() {
                     stopChatEvents?.();
                     chunkQueueManager.reset();
                     chatSessionIdRef.current = null;
+                    chatRuntimeStore.clearSession();
                     cancellationRequestedRef.current = false;
                     setIsAwaitingFirstChunk(false);
                     setIsStreaming(false);
@@ -676,6 +686,13 @@ export function useChat() {
         cancellationRequestedRef.current = true;
         void window.appApi?.llm?.cancelChatSession(sessionId);
     };
+
+    useEffect(() => {
+        chatRuntimeStore.updateStreamingState({
+            isStreaming,
+            isAwaitingFirstChunk,
+        });
+    }, [isAwaitingFirstChunk, isStreaming]);
 
     return {
         messages: visibleMessages,

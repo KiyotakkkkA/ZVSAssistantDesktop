@@ -148,7 +148,10 @@ export const useMessages = ({ sendMessage }: UseMessagesParams) => {
     }, []);
 
     const setToolTraceStatus = useCallback(
-        (messageId: string, status: "accepted" | "cancelled" | "answered") => {
+        (
+            messageId: string,
+            status: "accepted" | "running" | "cancelled" | "answered",
+        ) => {
             const dialog = chatsStore.activeDialog;
             if (!dialog) return;
 
@@ -379,7 +382,7 @@ export const useMessages = ({ sendMessage }: UseMessagesParams) => {
 
     const approveCommandExec = useCallback(
         (messageId: string) => {
-            setToolTraceStatus(messageId, "accepted");
+            setToolTraceStatus(messageId, "running");
             const dialog = chatsStore.activeDialog;
             const message = dialog?.messages.find(
                 (item) => item.id === messageId,
@@ -397,6 +400,18 @@ export const useMessages = ({ sendMessage }: UseMessagesParams) => {
         },
         [setToolTraceStatus],
     );
+
+    const interruptCommandExec = useCallback((messageId: string) => {
+        const dialog = chatsStore.activeDialog;
+        const message = dialog?.messages.find((item) => item.id === messageId);
+        const callId = message?.toolTrace?.callId;
+
+        if (!callId) {
+            return;
+        }
+
+        void window.appApi?.llm?.interruptCommandExec(callId);
+    }, []);
 
     const rejectCommandExec = useCallback(
         (messageId: string) => {
@@ -434,6 +449,7 @@ export const useMessages = ({ sendMessage }: UseMessagesParams) => {
         confirmDeleteMessage,
         approveCommandExec,
         rejectCommandExec,
+        interruptCommandExec,
         saveQaAnswer,
         setQaActiveQuestion,
         sendQaAnswer,

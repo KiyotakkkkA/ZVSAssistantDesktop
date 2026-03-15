@@ -47,6 +47,10 @@ export const registerIpcAgentsPack = ({
         },
     );
 
+    handleIpc("app:chat-interrupt-command-exec", async (callId: string) => {
+        return chatSessionService.interruptCommandExec(callId);
+    });
+
     handleIpc(
         "app:proxy-http-request",
         async (payload: ProxyHttpRequestPayload) => {

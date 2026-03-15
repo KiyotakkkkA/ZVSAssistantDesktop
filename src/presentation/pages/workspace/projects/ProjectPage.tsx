@@ -260,6 +260,7 @@ export const ProjectPage = observer(function ProjectPage() {
                 showLoader={isAwaitingFirstChunk}
                 activeStage={activeStage}
                 activeResponseToId={activeResponseToId}
+                contextKey={projectId}
             />
             <MessageComposer
                 onMessageSend={sendMessage}

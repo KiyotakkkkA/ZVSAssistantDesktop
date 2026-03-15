@@ -224,6 +224,8 @@ const appApi: AppApi = {
                 "app:chat-resolve-command-approval",
                 JSON.stringify(payload),
             ),
+        interruptCommandExec: (callId) =>
+            ipcRenderer.invoke("app:chat-interrupt-command-exec", callId),
         onChatEvent: (listener) => {
             const handler = (_event: unknown, payload: unknown) => {
                 if (typeof payload !== "string") {

@@ -113,7 +113,10 @@ export const inferToolTraceStatus = (
     _toolName: string,
     result: unknown,
 ): ToolTraceStatus => {
-    if (isRecord(result) && result.status === "cancelled") {
+    if (
+        isRecord(result) &&
+        (result.status === "cancelled" || result.status === "interrupted")
+    ) {
         return "cancelled";
     }
 

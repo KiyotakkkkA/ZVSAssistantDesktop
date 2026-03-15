@@ -8,6 +8,7 @@ type ToolBubbleCardProps = {
     toolTrace?: ToolTrace;
     onApproveCommandExec?: () => void;
     onRejectCommandExec?: () => void;
+    onInterruptCommandExec?: () => void;
     isLoading?: boolean;
 };
 
@@ -30,6 +31,7 @@ export function ToolBubbleCard({
     toolTrace,
     onApproveCommandExec,
     onRejectCommandExec,
+    onInterruptCommandExec,
     isLoading = false,
 }: ToolBubbleCardProps) {
     const payload = toolTrace ?? parseToolTrace(content);
@@ -51,6 +53,7 @@ export function ToolBubbleCard({
     const isCommandExec = payload.toolName === "command_exec";
     const execStatus = payload.status;
     const needsConfirmation = execStatus === "pending";
+    const isCommandRunning = isCommandExec && execStatus === "running";
     const command = typeof payload.command === "string" ? payload.command : "";
     const docId = typeof payload.docId === "string" ? payload.docId : "";
     const cwd = typeof payload.cwd === "string" ? payload.cwd : ".";
@@ -158,20 +161,36 @@ export function ToolBubbleCard({
                                 </div>
                             )}
 
+                            {isCommandRunning && (
+                                <div className="flex items-center gap-2 pt-1">
+                                    <Button
+                                        variant="secondary"
+                                        shape="rounded-lg"
+                                        className="h-8 px-3"
+                                        onClick={onInterruptCommandExec}
+                                    >
+                                        Прервать выполнение
+                                    </Button>
+                                </div>
+                            )}
+
                             {(needsConfirmation || isCommandExec) &&
                                 (execStatus === "accepted" ||
+                                    execStatus === "running" ||
                                     execStatus === "cancelled" ||
                                     execStatus === "failed") && (
                                     <p className="text-[11px] text-main-400">
                                         Статус:{" "}
                                         <span
-                                            className={`${execStatus === "accepted" ? "text-green-400" : "text-red-400"}`}
+                                            className={`${execStatus === "accepted" ? "text-green-400" : execStatus === "running" ? "text-yellow-400" : "text-red-400"}`}
                                         >
                                             {execStatus === "accepted"
                                                 ? "Подтверждено"
-                                                : execStatus === "failed"
-                                                  ? "Ошибка выполнения"
-                                                  : "Отклонено"}
+                                                : execStatus === "running"
+                                                  ? "Выполняется"
+                                                  : execStatus === "failed"
+                                                    ? "Ошибка выполнения"
+                                                    : "Остановлено"}
                                         </span>
                                     </p>
                                 )}

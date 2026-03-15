@@ -28,7 +28,13 @@ export type ToolTrace = {
     toolName: string;
     args: Record<string, unknown>;
     result: unknown;
-    status?: "pending" | "accepted" | "cancelled" | "answered" | "failed";
+    status?:
+        | "pending"
+        | "running"
+        | "accepted"
+        | "cancelled"
+        | "answered"
+        | "failed";
     qaState?: QaToolState;
     command?: string;
     cwd?: string;

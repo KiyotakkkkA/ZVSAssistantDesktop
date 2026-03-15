@@ -56,6 +56,7 @@ export const ChatPage = observer(function ChatPage() {
                     showLoader={isAwaitingFirstChunk}
                     activeStage={activeStage}
                     activeResponseToId={activeResponseToId}
+                    contextKey={chatsStore.activeDialog?.id}
                 />
             )}
             <MessageComposer
