@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs";
 
 import { app, BrowserWindow } from "electron";
 import { fileURLToPath } from "node:url";
@@ -30,7 +31,7 @@ import { registerIpcJobsPack } from "./ipc/ipcJobsPack";
 import { registerIpcAgentsPack } from "./ipc/ipcAgentsPack";
 import { registerIpcCommunicationsPack } from "./ipc/ipcCommunicationsPack";
 import { registerIpcSystemPack } from "./ipc/ipcSystemPack";
-import { getNativeCoreAddon } from "./services/core/nativeCoreAddon";
+import { CoreIpcProcessClient } from "./services/core/CoreIpcProcessClient";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -63,6 +64,8 @@ let piperService: PiperService;
 let jobService: JobService;
 let extensionsService: ExtensionsService;
 let chatSessionService: ChatSessionService;
+let coreClient: CoreIpcProcessClient;
+let isShuttingDown = false;
 
 app.setAppUserModelId(APP_ID);
 
@@ -106,18 +109,23 @@ function createWindow() {
 
 app.on("window-all-closed", () => {
     if (process.platform !== "darwin") {
-        Promise.all([
-            mistralService?.stopAll() ?? Promise.resolve(),
-            jobService?.shutdown() ?? Promise.resolve(),
-        ])
-            .catch((error) => {
-                console.error("[main] Error during shutdown:", error);
-            })
-            .finally(() => {
-                app.quit();
-                win = null;
-            });
+        void shutdownApplication().finally(() => {
+            app.quit();
+            win = null;
+        });
     }
+});
+
+app.on("before-quit", (event) => {
+    if (isShuttingDown) {
+        return;
+    }
+
+    event.preventDefault();
+
+    void shutdownApplication().finally(() => {
+        app.quit();
+    });
 });
 
 app.on("activate", () => {
@@ -141,6 +149,41 @@ app.on("second-instance", () => {
 
 app.whenReady()
     .then(() => {
+        const resolveExistingPath = (...candidates: string[]) => {
+            const existingPath = candidates.find((candidate) =>
+                fs.existsSync(candidate),
+            );
+
+            return existingPath ?? candidates[0];
+        };
+
+        const appPath = app.getAppPath();
+        const coreWorkerScriptPath = resolveExistingPath(
+            path.join(
+                appPath,
+                "electron",
+                "services",
+                "core",
+                "coreWorker.mjs",
+            ),
+            path.join(
+                process.cwd(),
+                "electron",
+                "services",
+                "core",
+                "coreWorker.mjs",
+            ),
+        );
+        const coreAddonLoaderPath = resolveExistingPath(
+            path.join(appPath, "native", "core", "index.cjs"),
+            path.join(process.cwd(), "native", "core", "index.cjs"),
+        );
+
+        coreClient = new CoreIpcProcessClient({
+            workerScriptPath: coreWorkerScriptPath,
+            addonLoaderPath: coreAddonLoaderPath,
+        });
+
         const appPaths = createElectronPaths(app.getPath("userData"));
         const initDirectoriesService = new InitService(appPaths);
         const fSystemService = new FSystemService();
@@ -167,6 +210,8 @@ app.whenReady()
                 });
             },
             currentUserId,
+            (payloadJson) =>
+                coreClient.calculateDialogContextUsage(payloadJson),
         );
         const projectsService = new ProjectsService(
             databaseService,
@@ -232,13 +277,13 @@ app.whenReady()
             browserService,
             userProfileService,
             databaseService,
+            coreClient,
         });
 
         registerIpcCorePack({
             getBootData,
             extensionsService,
-            getBuiltinToolPackages: () =>
-                getNativeCoreAddon().getBuiltinToolPackages(),
+            getBuiltinToolPackages: () => coreClient.getBuiltinToolPackages(),
             themesService,
             userProfileService,
         });
@@ -278,9 +323,29 @@ app.whenReady()
             fSystemService,
         });
 
-        createWindow();
+        return coreClient.start().then(() => {
+            createWindow();
+        });
     })
     .catch((error) => {
         console.error("Failed to initialize Electron app", error);
         app.quit();
     });
+
+async function shutdownApplication(): Promise<void> {
+    if (isShuttingDown) {
+        return;
+    }
+
+    isShuttingDown = true;
+
+    try {
+        await Promise.all([
+            mistralService?.stopAll() ?? Promise.resolve(),
+            jobService?.shutdown() ?? Promise.resolve(),
+            coreClient?.shutdown() ?? Promise.resolve(),
+        ]);
+    } catch (error) {
+        console.error("[main] Error during shutdown:", error);
+    }
+}

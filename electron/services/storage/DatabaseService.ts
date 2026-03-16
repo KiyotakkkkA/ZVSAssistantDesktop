@@ -298,20 +298,6 @@ export class DatabaseService {
         this.database
             .prepare(
                 `
-                INSERT INTO tool_calling_documents (doc_id, payload_json, created_at, created_by)
-                VALUES (?, ?, ?, ?)
-                `,
-            )
-            .run(
-                docId,
-                JSON.stringify(params.payload),
-                createdAt,
-                params.createdBy,
-            );
-
-        this.database
-            .prepare(
-                `
                 INSERT INTO tools_calling_docs (
                     id,
                     dialog_id,
@@ -319,7 +305,7 @@ export class DatabaseService {
                     call_id,
                     tool_name,
                     iteration,
-                    doc_id,
+                    payload_json,
                     created_at,
                     created_by
                 )
@@ -333,7 +319,7 @@ export class DatabaseService {
                 params.callId,
                 params.toolName,
                 params.iteration,
-                docId,
+                JSON.stringify(params.payload),
                 createdAt,
                 params.createdBy,
             );
@@ -358,25 +344,23 @@ export class DatabaseService {
             .prepare(
                 `
                 SELECT
-                    d.doc_id,
-                    d.payload_json,
-                    d.created_at,
-                    l.dialog_id,
-                    l.call_id,
-                    l.tool_name,
-                    l.iteration,
-                    l.session_id
-                FROM tool_calling_documents d
-                JOIN tools_calling_docs l ON l.doc_id = d.doc_id
-                WHERE d.doc_id = ?
-                  AND d.created_by = ?
-                ORDER BY l.created_at DESC
+                                        id,
+                                        payload_json,
+                                        created_at,
+                                        dialog_id,
+                                        call_id,
+                                        tool_name,
+                                        iteration,
+                                        session_id
+                                FROM tools_calling_docs
+                                WHERE id = ?
+                                    AND created_by = ?
                 LIMIT 1
                 `,
             )
             .get(docId, createdBy) as
             | {
-                  doc_id: string;
+                  id: string;
                   payload_json: string;
                   created_at: string;
                   dialog_id: string;
@@ -392,7 +376,7 @@ export class DatabaseService {
         }
 
         return {
-            docId: row.doc_id,
+            docId: row.id,
             payload: this.tryParseJson(row.payload_json),
             dialogId: row.dialog_id,
             callId: row.call_id,
@@ -1097,14 +1081,6 @@ export class DatabaseService {
                 FOREIGN KEY(created_by) REFERENCES profiles(id) ON DELETE CASCADE
             );
 
-            CREATE TABLE IF NOT EXISTS tool_calling_documents (
-                doc_id TEXT PRIMARY KEY,
-                payload_json TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                created_by TEXT NOT NULL,
-                FOREIGN KEY(created_by) REFERENCES profiles(id) ON DELETE CASCADE
-            );
-
             CREATE TABLE IF NOT EXISTS tools_calling_docs (
                 id TEXT PRIMARY KEY,
                 dialog_id TEXT NOT NULL,
@@ -1112,11 +1088,10 @@ export class DatabaseService {
                 call_id TEXT NOT NULL,
                 tool_name TEXT NOT NULL,
                 iteration INTEGER NOT NULL,
-                doc_id TEXT NOT NULL,
+                payload_json TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 created_by TEXT NOT NULL,
-                FOREIGN KEY(created_by) REFERENCES profiles(id) ON DELETE CASCADE,
-                FOREIGN KEY(doc_id) REFERENCES tool_calling_documents(doc_id) ON DELETE CASCADE
+                FOREIGN KEY(created_by) REFERENCES profiles(id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS projects (
@@ -1185,8 +1160,6 @@ export class DatabaseService {
             CREATE INDEX IF NOT EXISTS idx_dialogs_updated_at ON dialogs(updated_at DESC);
             CREATE INDEX IF NOT EXISTS idx_dialogs_context_created_by ON dialogs_context(created_by);
             CREATE INDEX IF NOT EXISTS idx_dialogs_context_updated_at ON dialogs_context(updated_at DESC);
-            CREATE INDEX IF NOT EXISTS idx_tool_calling_documents_created_by ON tool_calling_documents(created_by);
-            CREATE INDEX IF NOT EXISTS idx_tools_calling_docs_doc_id ON tools_calling_docs(doc_id);
             CREATE INDEX IF NOT EXISTS idx_tools_calling_docs_call_id ON tools_calling_docs(call_id);
             CREATE INDEX IF NOT EXISTS idx_tools_calling_docs_created_by ON tools_calling_docs(created_by);
             CREATE INDEX IF NOT EXISTS idx_projects_created_by ON projects(created_by);

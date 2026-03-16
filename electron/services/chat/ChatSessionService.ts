@@ -8,12 +8,13 @@ import { toToolErrorPayload } from "../../../src/utils/chat/toolExecution";
 import type { BrowserService } from "../BrowserService";
 import type { UserProfileService } from "../userData/UserProfileService";
 import type { DatabaseService } from "../storage/DatabaseService";
-import { getNativeCoreAddon } from "../core/nativeCoreAddon";
+import type { CoreIpcProcessClient } from "../core/CoreIpcProcessClient";
 
 type ChatSessionServiceDeps = {
     browserService: BrowserService;
     userProfileService: UserProfileService;
     databaseService: DatabaseService;
+    coreClient: CoreIpcProcessClient;
 };
 
 type NativeChatCallbackPayload =
@@ -28,8 +29,6 @@ type NativeChatCallbackPayload =
           method: string;
           args: Record<string, unknown>;
       };
-
-const coreAddon = getNativeCoreAddon();
 
 export class ChatSessionService {
     constructor(private readonly deps: ChatSessionServiceDeps) {}
@@ -47,7 +46,7 @@ export class ChatSessionService {
         const ollamaToken =
             this.deps.userProfileService.getUserProfile().ollamaToken;
 
-        await coreAddon.runChatSessionCore(
+        await this.deps.coreClient.runChatSession(
             JSON.stringify(payload),
             ollamaToken,
             Config.OLLAMA_BASE_URL.trim(),
@@ -91,19 +90,20 @@ export class ChatSessionService {
         );
     }
 
-    cancelSession(sessionId: string): boolean {
-        void coreAddon.cancelChatSessionCore(sessionId);
-        return true;
+    async cancelSession(sessionId: string): Promise<boolean> {
+        return this.deps.coreClient.cancelChatSession(sessionId);
     }
 
-    resolveCommandApproval(payload: ResolveCommandApprovalPayload): boolean {
-        void coreAddon.resolveCommandApprovalCore(JSON.stringify(payload));
-        return true;
+    async resolveCommandApproval(
+        payload: ResolveCommandApprovalPayload,
+    ): Promise<boolean> {
+        return this.deps.coreClient.resolveCommandApproval(
+            JSON.stringify(payload),
+        );
     }
 
-    interruptCommandExec(callId: string): boolean {
-        void coreAddon.interruptCommandExecCore(callId);
-        return true;
+    async interruptCommandExec(callId: string): Promise<boolean> {
+        return this.deps.coreClient.interruptCommandExec(callId);
     }
 
     private async handleHostCall(
@@ -114,12 +114,12 @@ export class ChatSessionService {
                 payload.method,
                 payload.args,
             );
-            await coreAddon.submitToolResult(
+            await this.deps.coreClient.submitToolResult(
                 payload.request_id,
                 JSON.stringify(result),
             );
         } catch (error) {
-            await coreAddon.submitToolResult(
+            await this.deps.coreClient.submitToolResult(
                 payload.request_id,
                 JSON.stringify({
                     __hostError: toToolErrorPayload(payload.method, error),

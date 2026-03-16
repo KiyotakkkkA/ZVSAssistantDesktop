@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createBaseDialog } from "../../static/data";
 import { DatabaseService } from "../storage/DatabaseService";
-import { getNativeCoreAddon } from "../core/nativeCoreAddon";
 import type {
     ChatDialog,
     ChatDialogListItem,
@@ -20,7 +19,6 @@ const ASSISTANT_STAGES = new Set([
     "answering",
 ]);
 const TOOL_STAGES = new Set(["planning", "questioning", "tools_calling"]);
-const coreAddon = getNativeCoreAddon();
 
 export class DialogsService {
     private readonly dialogContextRevisions = new Map<string, number>();
@@ -34,6 +32,9 @@ export class DialogsService {
         private readonly databaseService: DatabaseService,
         private readonly onActiveDialogContextUpdate: ActiveDialogContextUpdater,
         private readonly createdBy: string,
+        private readonly calculateDialogContextUsage: (
+            payloadJson: string,
+        ) => Promise<string>,
     ) {}
 
     getActiveDialog(activeDialogId?: string): ChatDialog {
@@ -490,7 +491,7 @@ export class DialogsService {
                 return;
             }
 
-            const usageRaw = await coreAddon.calculateDialogContextUsageCore(
+            const usageRaw = await this.calculateDialogContextUsage(
                 JSON.stringify(dialogContext),
             );
 

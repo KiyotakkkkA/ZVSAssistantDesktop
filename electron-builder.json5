@@ -10,7 +10,12 @@
     directories: {
         output: "release/${version}",
     },
-    files: ["dist", "dist-electron", "native/core"],
+    files: [
+        "dist",
+        "dist-electron",
+        "native/core",
+        "electron/services/core/coreWorker.mjs",
+    ],
     extraMetadata: {
         main: "dist-electron/main.js",
     },
