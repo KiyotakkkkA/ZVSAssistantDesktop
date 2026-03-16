@@ -86,6 +86,24 @@ export class CoreIpcProcessClient {
         const requestId = randomUUID();
         this.chatEventHandlers.set(requestId, onEvent);
 
+        let timeout: NodeJS.Timeout | undefined;
+        let finished = false;
+
+        const finish = () => {
+            if (timeout) clearTimeout(timeout);
+            this.chatEventHandlers.delete(requestId);
+            finished = true;
+        };
+
+        const wrappedOnEvent = (error: null | Error, rawPayload: string) => {
+            if (finished) return;
+            onEvent(error, rawPayload);
+            if (error || this.isTerminalChatEventPayload(rawPayload)) {
+                finish();
+            }
+        };
+        this.chatEventHandlers.set(requestId, wrappedOnEvent);
+
         try {
             await this.sendRequest<void>("run_session", {
                 requestId,
@@ -94,7 +112,7 @@ export class CoreIpcProcessClient {
                 baseUrl,
             });
         } catch (error) {
-            this.chatEventHandlers.delete(requestId);
+            finish();
             throw error;
         }
     }
@@ -260,11 +278,9 @@ export class CoreIpcProcessClient {
             typeof message.requestId === "string"
         ) {
             const handler = this.chatEventHandlers.get(message.requestId);
-
             if (!handler) {
                 return;
             }
-
             const rawPayload =
                 typeof message.rawPayload === "string"
                     ? message.rawPayload
@@ -273,13 +289,8 @@ export class CoreIpcProcessClient {
                 typeof message.error === "string" && message.error
                     ? new Error(message.error)
                     : null;
-
             handler(error, rawPayload);
-
-            if (error || this.isTerminalChatEventPayload(rawPayload)) {
-                this.chatEventHandlers.delete(message.requestId);
-            }
-
+            // Удаление обработчика теперь только внутри wrappedOnEvent
             return;
         }
 
