@@ -289,194 +289,116 @@ export class ChatSessionService {
                 };
             }
 
-            if (action === "create_block") {
-                const nextBlock = this.readJsonArg(args.block);
-                if (!nextBlock || typeof nextBlock !== "object") {
-                    throw new Error("create_block requires object in block");
-                }
-
-                const block = {
-                    ...(nextBlock as Record<string, unknown>),
-                    id:
-                        typeof (nextBlock as Record<string, unknown>).id ===
-                        "string"
-                            ? (nextBlock as Record<string, unknown>).id
-                            : `block_${randomUUID().replace(/-/g, "")}`,
-                };
-
-                scene.blocks.push(block);
-                const updated = this.persistScenarioScene(scenario.id, scene);
-
-                return {
-                    ok: true,
-                    action,
-                    scenarioId: updated.id,
-                    block,
-                    message: `Блок ${String(block.id)} создан`,
-                    blocksCount: scene.blocks.length,
-                    connectionsCount: scene.connections.length,
-                };
-            }
-
-            if (action === "update_block") {
-                const block = this.readJsonArg(args.block);
-                const blockId =
-                    typeof args.blockId === "string" ? args.blockId.trim() : "";
-                const patch =
-                    block && typeof block === "object"
-                        ? (block as Record<string, unknown>)
-                        : null;
-
-                const targetId =
-                    blockId || (typeof patch?.id === "string" ? patch.id : "");
-                if (!targetId || !patch) {
-                    throw new Error(
-                        "update_block requires blockId or block.id and block patch",
-                    );
-                }
-
-                const index = scene.blocks.findIndex(
-                    (item) =>
-                        typeof item.id === "string" && item.id === targetId,
+            if (action === "apply_batch") {
+                const operationsRaw = this.readJsonArg(
+                    args.operations ?? args.batch,
                 );
-                if (index < 0) {
-                    return {
-                        ok: false,
-                        action,
-                        scenarioId: scenario.id,
-                        error: "not_found",
-                        message: `Блок ${targetId} не найден`,
-                    };
-                }
-
-                scene.blocks[index] = {
-                    ...scene.blocks[index],
-                    ...patch,
-                    id: targetId,
-                };
-
-                const updated = this.persistScenarioScene(scenario.id, scene);
-                return {
-                    ok: true,
-                    action,
-                    scenarioId: updated.id,
-                    block: scene.blocks[index],
-                    message: `Блок ${targetId} обновлён`,
-                    blocksCount: scene.blocks.length,
-                    connectionsCount: scene.connections.length,
-                };
-            }
-
-            if (action === "delete_block") {
-                const blockId =
-                    typeof args.blockId === "string" ? args.blockId.trim() : "";
-                if (!blockId) {
-                    throw new Error("delete_block requires blockId");
-                }
-
-                scene.blocks = scene.blocks.filter(
-                    (item) => item.id !== blockId,
-                );
-                scene.connections = scene.connections.filter(
-                    (item) =>
-                        item.fromBlockId !== blockId &&
-                        item.toBlockId !== blockId,
-                );
-
-                const updated = this.persistScenarioScene(scenario.id, scene);
-                return {
-                    ok: true,
-                    action,
-                    scenarioId: updated.id,
-                    message: `Блок ${blockId} удалён`,
-                    blocksCount: scene.blocks.length,
-                    connectionsCount: scene.connections.length,
-                };
-            }
-
-            if (action === "create_connection") {
-                const input = this.readJsonArg(args.connection);
-                if (!input || typeof input !== "object") {
-                    throw new Error(
-                        "create_connection requires object in connection",
-                    );
-                }
-
-                const connection = {
-                    ...(input as Record<string, unknown>),
-                    id:
-                        typeof (input as Record<string, unknown>).id ===
-                        "string"
-                            ? (input as Record<string, unknown>).id
-                            : `connection_${randomUUID().replace(/-/g, "")}`,
-                } as Record<string, unknown>;
 
                 if (
-                    typeof connection.fromBlockId !== "string" ||
-                    typeof connection.toBlockId !== "string"
+                    !Array.isArray(operationsRaw) ||
+                    operationsRaw.length === 0
                 ) {
                     throw new Error(
-                        "create_connection requires fromBlockId and toBlockId",
+                        "apply_batch requires non-empty operations array",
                     );
                 }
 
-                scene.connections.push(connection);
+                const applied: Record<string, unknown>[] = [];
+
+                for (let index = 0; index < operationsRaw.length; index += 1) {
+                    const operation = operationsRaw[index];
+
+                    if (
+                        !operation ||
+                        typeof operation !== "object" ||
+                        Array.isArray(operation)
+                    ) {
+                        return {
+                            ok: false,
+                            action,
+                            scenarioId: scenario.id,
+                            error: "validation",
+                            message: `Некорректная операция в apply_batch на шаге ${index + 1}`,
+                            failedStep: index + 1,
+                            applied,
+                        };
+                    }
+
+                    const operationArgs = operation as Record<string, unknown>;
+                    const opAction =
+                        typeof operationArgs.action === "string"
+                            ? operationArgs.action.trim()
+                            : "";
+
+                    if (
+                        !opAction ||
+                        opAction === "get_state" ||
+                        opAction === "apply_batch"
+                    ) {
+                        return {
+                            ok: false,
+                            action,
+                            scenarioId: scenario.id,
+                            error: "validation",
+                            message: `Недопустимое действие '${opAction || ""}' в apply_batch на шаге ${index + 1}`,
+                            failedStep: index + 1,
+                            applied,
+                        };
+                    }
+
+                    const opResult = this.applyScenarioBuilderAction({
+                        action: opAction,
+                        args: operationArgs,
+                        scene,
+                        scenarioId: scenario.id,
+                        persist: false,
+                    });
+
+                    if (opResult === null || opResult.ok !== true) {
+                        return {
+                            ok: false,
+                            action,
+                            scenarioId: scenario.id,
+                            error: "validation",
+                            message: `Операция apply_batch не выполнена на шаге ${index + 1}`,
+                            failedStep: index + 1,
+                            stepResult: opResult,
+                            applied,
+                        };
+                    }
+
+                    applied.push({
+                        step: index + 1,
+                        action: opAction,
+                        ...(typeof opResult.message === "string"
+                            ? { message: opResult.message }
+                            : {}),
+                    });
+                }
+
                 const updated = this.persistScenarioScene(scenario.id, scene);
 
                 return {
                     ok: true,
                     action,
                     scenarioId: updated.id,
-                    connection,
-                    message: `Соединение ${String(connection.id)} создано`,
+                    applied,
+                    message: `Применено операций: ${applied.length}`,
                     blocksCount: scene.blocks.length,
                     connectionsCount: scene.connections.length,
                 };
             }
 
-            if (action === "delete_connection") {
-                const connectionId =
-                    typeof args.connectionId === "string"
-                        ? args.connectionId.trim()
-                        : "";
-                if (!connectionId) {
-                    throw new Error("delete_connection requires connectionId");
-                }
+            const singleResult = this.applyScenarioBuilderAction({
+                action,
+                args,
+                scene,
+                scenarioId: scenario.id,
+                persist: true,
+            });
 
-                scene.connections = scene.connections.filter(
-                    (item) => item.id !== connectionId,
-                );
-                const updated = this.persistScenarioScene(scenario.id, scene);
-
-                return {
-                    ok: true,
-                    action,
-                    scenarioId: updated.id,
-                    message: `Соединение ${connectionId} удалено`,
-                    blocksCount: scene.blocks.length,
-                    connectionsCount: scene.connections.length,
-                };
-            }
-
-            if (action === "set_viewport") {
-                const viewportPatch = this.readJsonArg(args.viewport);
-                if (!viewportPatch || typeof viewportPatch !== "object") {
-                    throw new Error("set_viewport requires object in viewport");
-                }
-
-                scene.viewport = {
-                    ...scene.viewport,
-                    ...(viewportPatch as Record<string, unknown>),
-                };
-
-                const updated = this.persistScenarioScene(scenario.id, scene);
-                return {
-                    ok: true,
-                    action,
-                    scenarioId: updated.id,
-                    viewport: scene.viewport,
-                    message: "Параметры viewport обновлены",
-                };
+            if (singleResult) {
+                return singleResult;
             }
 
             return {
@@ -489,6 +411,226 @@ export class ChatSessionService {
         }
 
         throw new Error(`Unsupported native host method: ${method}`);
+    }
+
+    private applyScenarioBuilderAction({
+        action,
+        args,
+        scene,
+        scenarioId,
+        persist,
+    }: {
+        action: string;
+        args: Record<string, unknown>;
+        scene: {
+            version: 1;
+            blocks: Record<string, unknown>[];
+            connections: Record<string, unknown>[];
+            viewport: Record<string, unknown>;
+        };
+        scenarioId: string;
+        persist: boolean;
+    }): Record<string, unknown> | null {
+        const finalizeScenarioId = () =>
+            persist
+                ? this.persistScenarioScene(scenarioId, scene).id
+                : scenarioId;
+
+        if (action === "create_block") {
+            const nextBlock = this.readJsonArg(args.block);
+            if (!nextBlock || typeof nextBlock !== "object") {
+                throw new Error("create_block requires object in block");
+            }
+
+            const inputBlock = nextBlock as Record<string, unknown>;
+            const blockKind =
+                typeof inputBlock.kind === "string"
+                    ? inputBlock.kind.trim()
+                    : "";
+
+            if (blockKind === "start" || blockKind === "end") {
+                return {
+                    ok: false,
+                    action,
+                    scenarioId,
+                    error: "validation",
+                    message:
+                        "Создание start/end блоков запрещено: используйте существующие системные блоки сцены.",
+                };
+            }
+
+            const blockPayload = { ...inputBlock };
+            delete blockPayload.id;
+
+            const block = {
+                ...blockPayload,
+                id: `block_${randomUUID().replace(/-/g, "")}`,
+            };
+
+            scene.blocks.push(block);
+            return {
+                ok: true,
+                action,
+                scenarioId: finalizeScenarioId(),
+                block,
+                message: `Блок ${String(block.id)} создан`,
+                blocksCount: scene.blocks.length,
+                connectionsCount: scene.connections.length,
+            };
+        }
+
+        if (action === "update_block") {
+            const block = this.readJsonArg(args.block);
+            const blockId =
+                typeof args.blockId === "string" ? args.blockId.trim() : "";
+            const patch =
+                block && typeof block === "object"
+                    ? (block as Record<string, unknown>)
+                    : null;
+
+            const targetId =
+                blockId || (typeof patch?.id === "string" ? patch.id : "");
+            if (!targetId || !patch) {
+                throw new Error(
+                    "update_block requires blockId or block.id and block patch",
+                );
+            }
+
+            const index = scene.blocks.findIndex(
+                (item) => typeof item.id === "string" && item.id === targetId,
+            );
+            if (index < 0) {
+                return {
+                    ok: false,
+                    action,
+                    scenarioId,
+                    error: "not_found",
+                    message: `Блок ${targetId} не найден`,
+                };
+            }
+
+            scene.blocks[index] = {
+                ...scene.blocks[index],
+                ...patch,
+                id: targetId,
+            };
+
+            return {
+                ok: true,
+                action,
+                scenarioId: finalizeScenarioId(),
+                block: scene.blocks[index],
+                message: `Блок ${targetId} обновлён`,
+                blocksCount: scene.blocks.length,
+                connectionsCount: scene.connections.length,
+            };
+        }
+
+        if (action === "delete_block") {
+            const blockId =
+                typeof args.blockId === "string" ? args.blockId.trim() : "";
+            if (!blockId) {
+                throw new Error("delete_block requires blockId");
+            }
+
+            scene.blocks = scene.blocks.filter((item) => item.id !== blockId);
+            scene.connections = scene.connections.filter(
+                (item) =>
+                    item.fromBlockId !== blockId && item.toBlockId !== blockId,
+            );
+
+            return {
+                ok: true,
+                action,
+                scenarioId: finalizeScenarioId(),
+                message: `Блок ${blockId} удалён`,
+                blocksCount: scene.blocks.length,
+                connectionsCount: scene.connections.length,
+            };
+        }
+
+        if (action === "create_connection") {
+            const input = this.readJsonArg(args.connection);
+            if (!input || typeof input !== "object") {
+                throw new Error(
+                    "create_connection requires object in connection",
+                );
+            }
+
+            const connectionInput = input as Record<string, unknown>;
+            const connectionPayload = { ...connectionInput };
+            delete connectionPayload.id;
+
+            const connection = {
+                ...connectionPayload,
+                id: `connection_${randomUUID().replace(/-/g, "")}`,
+            } as Record<string, unknown>;
+
+            if (
+                typeof connection.fromBlockId !== "string" ||
+                typeof connection.toBlockId !== "string"
+            ) {
+                throw new Error(
+                    "create_connection requires fromBlockId and toBlockId",
+                );
+            }
+
+            scene.connections.push(connection);
+            return {
+                ok: true,
+                action,
+                scenarioId: finalizeScenarioId(),
+                connection,
+                message: `Соединение ${String(connection.id)} создано`,
+                blocksCount: scene.blocks.length,
+                connectionsCount: scene.connections.length,
+            };
+        }
+
+        if (action === "delete_connection") {
+            const connectionId =
+                typeof args.connectionId === "string"
+                    ? args.connectionId.trim()
+                    : "";
+            if (!connectionId) {
+                throw new Error("delete_connection requires connectionId");
+            }
+
+            scene.connections = scene.connections.filter(
+                (item) => item.id !== connectionId,
+            );
+
+            return {
+                ok: true,
+                action,
+                scenarioId: finalizeScenarioId(),
+                message: `Соединение ${connectionId} удалено`,
+                blocksCount: scene.blocks.length,
+                connectionsCount: scene.connections.length,
+            };
+        }
+
+        if (action === "set_viewport") {
+            const viewportPatch = this.readJsonArg(args.viewport);
+            if (!viewportPatch || typeof viewportPatch !== "object") {
+                throw new Error("set_viewport requires object in viewport");
+            }
+
+            scene.viewport = {
+                ...scene.viewport,
+                ...(viewportPatch as Record<string, unknown>),
+            };
+
+            return {
+                ok: true,
+                action,
+                scenarioId: finalizeScenarioId(),
+                viewport: scene.viewport,
+                message: "Параметры viewport обновлены",
+            };
+        }
+
+        return null;
     }
 
     private resolveScenarioId(args: Record<string, unknown>): string {

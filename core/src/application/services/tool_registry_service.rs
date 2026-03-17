@@ -4,7 +4,7 @@ use crate::domain::chat::OllamaToolDefinition;
 use crate::tools::builtin_tools::{builtin_tool_packages_ref, internal_tool_definitions_ref};
 
 const MANDATORY_INTERNAL_TOOLS: [&str; 1] = ["get_tools_calling"];
-const SCENARIO_BUILDER_ONLY_TOOLS: [&str; 1] = ["scenario_builder_tool"];
+const SCENARIO_BUILDER_ONLY_TOOLS: [&str; 2] = ["scenario_builder_tool", "get_components"];
 const SCENARIO_BUILDER_BASE_TOOLS: [&str; 2] = ["qa_tool", "planning_tool"];
 
 #[derive(Debug, Clone)]

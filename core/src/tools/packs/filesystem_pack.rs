@@ -20,6 +20,10 @@ pub fn build_filesystem_pack() -> BuiltinToolPackage {
     create_dir_props.insert("cwd".to_owned(), string_schema("Базовый каталог"));
     create_dir_props.insert("dirname".to_owned(), string_schema("Имя директории"));
 
+    let mut edit_file_props = BTreeMap::new();
+    edit_file_props.insert("filePath".to_owned(), string_schema("Путь к файлу"));
+    edit_file_props.insert("newContent".to_owned(), string_schema("Новое содержимое файла"));
+
     let mut read_file_props = BTreeMap::new();
     read_file_props.insert("filePath".to_owned(), string_schema("Путь к файлу"));
     read_file_props.insert("readAll".to_owned(), boolean_schema("Читать весь файл"));
@@ -80,6 +84,22 @@ pub fn build_filesystem_pack() -> BuiltinToolPackage {
                     "properties": {
                         "success": { "type": "boolean" },
                         "path": { "type": "string" }
+                    }
+                }),
+            ),
+            package_tool_with_output(
+                "filesystem-tools",
+                "Файловая система",
+                "Инструменты для работы с файлами и директориями",
+                "edit_file",
+                "Перезаписывает содержимое существующего файла",
+                object_schema(edit_file_props, &["filePath", "newContent"]),
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "success": { "type": "boolean" },
+                        "path": { "type": "string" },
+                        "updatedBytes": { "type": "number" }
                     }
                 }),
             ),

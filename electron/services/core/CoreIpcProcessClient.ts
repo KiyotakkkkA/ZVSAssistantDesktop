@@ -290,7 +290,6 @@ export class CoreIpcProcessClient {
                     ? new Error(message.error)
                     : null;
             handler(error, rawPayload);
-            // Удаление обработчика теперь только внутри wrappedOnEvent
             return;
         }
 

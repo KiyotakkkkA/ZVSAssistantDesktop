@@ -9,6 +9,7 @@ use tokio::sync::Mutex;
 use crate::application::ports::ToolExecutorPort;
 use crate::domain::chat::ToolExecutionRequest;
 use crate::domain::error::CoreError;
+use crate::tools::builtin_tools::builtin_tool_packages_ref;
 use crate::tools::packs::studying_pack::fetch_mirea_schedule_by_date;
 
 #[async_trait]
@@ -30,6 +31,7 @@ pub trait BuiltinToolHostPort: Send + Sync {
     async fn telegram_unread(&self, args: &Value) -> Result<Value, CoreError>;
     async fn fs_list_directory(&self, cwd: &str) -> Result<Value, CoreError>;
     async fn fs_create_file(&self, cwd: &str, filename: &str, content: &str) -> Result<Value, CoreError>;
+    async fn fs_edit_file(&self, file_path: &str, new_content: &str) -> Result<Value, CoreError>;
     async fn fs_create_dir(&self, cwd: &str, dirname: &str) -> Result<Value, CoreError>;
     async fn fs_read_file(
         &self,
@@ -394,6 +396,15 @@ impl BuiltinToolsExecutor {
                 };
                 Value::Object(Self::pick_object_fields(object, &["success", "path", "error"]))
             }
+            "edit_file" => {
+                let Some(object) = raw_result.as_object() else {
+                    return raw_result;
+                };
+                Value::Object(Self::pick_object_fields(
+                    object,
+                    &["success", "path", "updatedBytes", "error"],
+                ))
+            }
             "read_file" => {
                 let Some(object) = raw_result.as_object() else {
                     return Self::sanitize_value_compact(&raw_result, 8000);
@@ -437,6 +448,7 @@ impl BuiltinToolsExecutor {
                 Self::sanitize_value_compact(&raw_result, 3000)
             }
             "scenario_builder_tool" => Self::sanitize_value_compact(&raw_result, 12000),
+            "get_components" => Self::sanitize_value_compact(&raw_result, 20000),
             _ => Self::sanitize_value_compact(&raw_result, 3000),
         }
     }
@@ -541,6 +553,24 @@ impl BuiltinToolsExecutor {
         self.host_port.fs_create_dir(cwd, dirname).await
     }
 
+    async fn execute_edit_file(&self, args: &Value) -> Result<Value, CoreError> {
+        let file_path = args
+            .get("filePath")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .unwrap_or_default();
+        let new_content = args
+            .get("newContent")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+
+        if file_path.is_empty() {
+            return Ok(json!({ "error": "Необходимо указать filePath." }));
+        }
+
+        self.host_port.fs_edit_file(file_path, new_content).await
+    }
+
     async fn execute_read_file(&self, args: &Value) -> Result<Value, CoreError> {
         let file_path = args
             .get("filePath")
@@ -591,6 +621,97 @@ impl BuiltinToolsExecutor {
         }
 
         self.host_port.fs_text_search(cwd, exp).await
+    }
+
+    async fn execute_get_components(&self) -> Result<Value, CoreError> {
+        let mut blocks = vec![
+            json!({
+                "kind": "start",
+                "blockType": "start",
+                "title": "Стартовый",
+                "description": "Начальная точка сценария.",
+                "canCreate": false,
+                "input": { "required": [], "optional": [] },
+                "output": { "ports": ["next"] }
+            }),
+            json!({
+                "kind": "end",
+                "blockType": "end",
+                "title": "Конечный",
+                "description": "Финальная точка сценария.",
+                "canCreate": false,
+                "input": { "required": ["from connection"], "optional": [] },
+                "output": { "ports": [] }
+            }),
+            json!({
+                "kind": "prompt",
+                "blockType": "prompt",
+                "title": "Инструкция",
+                "description": "Текстовая инструкция/промпт для шага.",
+                "canCreate": true,
+                "input": { "required": ["instruction:string"], "optional": [] },
+                "output": { "ports": ["next"] }
+            }),
+            json!({
+                "kind": "condition",
+                "blockType": "condition",
+                "title": "Условие",
+                "description": "Ветвление по правилам (операнды и операторы сравнения).",
+                "canCreate": true,
+                "input": {
+                    "required": ["fields[]", "rules[]"],
+                    "optional": []
+                },
+                "output": { "ports": ["true", "false", "custom"] }
+            }),
+            json!({
+                "kind": "variable",
+                "blockType": "variable",
+                "title": "Переменная",
+                "description": "Подстановка системных переменных в контекст сценария.",
+                "canCreate": true,
+                "input": {
+                    "required": ["selectedVariables[]"],
+                    "optional": []
+                },
+                "output": { "ports": ["next"] }
+            }),
+        ];
+
+        let mut tool_components = Vec::new();
+
+        for package in builtin_tool_packages_ref() {
+            for descriptor in &package.tools {
+                tool_components.push(json!({
+                    "kind": "tool",
+                    "blockType": "tool",
+                    "title": descriptor.schema.function.name,
+                    "toolType": descriptor.schema.function.name,
+                    "description": descriptor
+                        .schema
+                        .function
+                        .description
+                        .clone()
+                        .unwrap_or_default(),
+                    "canCreate": true,
+                    "package": {
+                        "id": descriptor.package_id,
+                        "title": descriptor.package_title,
+                        "description": descriptor.package_description,
+                    },
+                    "input": descriptor.schema.function.parameters,
+                    "output": descriptor.output_scheme,
+                    "requiresConfirmation": descriptor.confirmation.is_some(),
+                }));
+            }
+        }
+
+        blocks.extend(tool_components);
+
+        Ok(json!({
+            "ok": true,
+            "components": blocks,
+        }))
     }
 
     fn format_plan_response(plan: &Plan) -> Value {
@@ -775,10 +896,12 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
             "get_telegram_unread_msgs" => self.host_port.telegram_unread(args).await,
             "list_directory" => self.execute_list_directory(args).await,
             "create_file" => self.execute_create_file(args).await,
+            "edit_file" => self.execute_edit_file(args).await,
             "create_dir" => self.execute_create_dir(args).await,
             "read_file" => self.execute_read_file(args).await,
             "delete_file" => self.execute_delete_file(args).await,
             "text_search" => self.execute_text_search(args).await,
+            "get_components" => self.execute_get_components().await,
             "scenario_builder_tool" => self.host_port.scenario_builder(&request, args).await,
             "get_tools_calling" => {
                 let doc_id = args

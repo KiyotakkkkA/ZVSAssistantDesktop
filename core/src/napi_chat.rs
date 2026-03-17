@@ -866,6 +866,35 @@ impl BuiltinToolHostPort for JsHostPort {
         }))
     }
 
+    async fn fs_edit_file(&self, file_path: &str, new_content: &str) -> Result<Value, CoreError> {
+        let trimmed = file_path.trim();
+        if trimmed.is_empty() {
+            return Err(CoreError::Validation("filePath is required".to_owned()));
+        }
+
+        let path = Path::new(trimmed);
+        let metadata = fs::metadata(path)
+            .await
+            .map_err(|error| CoreError::Tool(error.to_string()))?;
+
+        if metadata.is_dir() {
+            return Err(CoreError::Validation(format!(
+                "Ожидался путь к файлу, передана директория: {}",
+                trimmed
+            )));
+        }
+
+        fs::write(path, new_content)
+            .await
+            .map_err(|error| CoreError::Tool(error.to_string()))?;
+
+        Ok(json!({
+            "success": true,
+            "path": trimmed,
+            "updatedBytes": new_content.as_bytes().len(),
+        }))
+    }
+
     async fn fs_create_dir(&self, cwd: &str, dirname: &str) -> Result<Value, CoreError> {
         let dir_path = Path::new(cwd).join(dirname);
         fs::create_dir_all(&dir_path)

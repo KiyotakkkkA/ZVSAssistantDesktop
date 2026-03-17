@@ -13,6 +13,9 @@ export function ScenarioAiChatPanel() {
         activeStage,
         activeResponseToId,
         sendMessage,
+        saveQaAnswer,
+        sendQaAnswer,
+        setQaActiveQuestion,
         clearChat,
         approveCommandExec,
         rejectCommandExec,
@@ -66,9 +69,13 @@ export function ScenarioAiChatPanel() {
 
                 <div className="min-h-0 flex-1 overflow-hidden">
                     <ScenarioBuilderMessageFeed
+                        sendMessage={sendMessage}
                         messages={messages}
                         activeStage={activeStage}
                         activeResponseToId={activeResponseToId}
+                        saveQaAnswer={saveQaAnswer}
+                        sendQaAnswer={sendQaAnswer}
+                        setQaActiveQuestion={setQaActiveQuestion}
                         onApproveCommandExec={approveCommandExec}
                         onRejectCommandExec={rejectCommandExec}
                         onInterruptCommandExec={interruptCommandExec}

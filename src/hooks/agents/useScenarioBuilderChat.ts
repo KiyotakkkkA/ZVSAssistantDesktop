@@ -13,6 +13,10 @@ import { readAccessTokenFromLocalStorage } from "../../services/api/authTokens";
 import { Config } from "../../config";
 import { inferToolTraceStatus } from "../../utils/chat/toolExecution";
 import {
+    buildQaToolSubmission,
+    normalizeQaToolState,
+} from "../../utils/chat/qaTool";
+import {
     getCommandRequestMeta,
     getTimeStamp,
 } from "../../utils/chat/chatStream";
@@ -23,6 +27,7 @@ const BUILDER_TOOL_NAMES = [
     "qa_tool",
     "planning_tool",
     "scenario_builder_tool",
+    "get_components",
     "get_tools_calling",
 ];
 
@@ -35,6 +40,28 @@ const resolveToolStage = (toolName: string): AssistantStage => {
     return TOOL_STAGE_BY_NAME[toolName] || "tools_calling";
 };
 
+const normalizeForStreamCompare = (value: string) =>
+    value.replace(/\s+/g, " ").trim();
+
+const collapseDuplicateWords = (value: string): string => {
+    if (!value.trim()) {
+        return value;
+    }
+
+    let normalized = value;
+
+    // collapse glued duplicates like "wordword" when produced by chunk overlap artifacts
+    normalized = normalized.replace(/(\b[\p{L}\p{N}_-]{3,})\1\b/giu, "$1");
+
+    // collapse adjacent duplicates like "word word" or repeated runs
+    normalized = normalized.replace(
+        /\b([\p{L}\p{N}_-]{2,})(?:\s+\1\b)+/giu,
+        "$1",
+    );
+
+    return normalized;
+};
+
 const mergeStreamChunkText = (current: string, incoming: string): string => {
     if (!incoming) {
         return current;
@@ -44,7 +71,6 @@ const mergeStreamChunkText = (current: string, incoming: string): string => {
         return incoming;
     }
 
-    // Some providers emit cumulative text instead of strict deltas.
     if (incoming.startsWith(current)) {
         return incoming;
     }
@@ -53,14 +79,41 @@ const mergeStreamChunkText = (current: string, incoming: string): string => {
         return current;
     }
 
+    const normalizedCurrent = normalizeForStreamCompare(current);
+    const normalizedIncoming = normalizeForStreamCompare(incoming);
+
+    if (
+        normalizedIncoming &&
+        normalizedCurrent &&
+        normalizedIncoming === normalizedCurrent
+    ) {
+        return current;
+    }
+
+    if (
+        normalizedIncoming.startsWith(normalizedCurrent) &&
+        incoming.length >= current.length
+    ) {
+        return incoming;
+    }
+
+    if (
+        normalizedCurrent.startsWith(normalizedIncoming) &&
+        current.length >= incoming.length
+    ) {
+        return current;
+    }
+
     const maxOverlap = Math.min(current.length, incoming.length);
     for (let overlap = maxOverlap; overlap > 0; overlap -= 1) {
         if (current.slice(-overlap) === incoming.slice(0, overlap)) {
-            return `${current}${incoming.slice(overlap)}`;
+            return collapseDuplicateWords(
+                `${current}${incoming.slice(overlap)}`,
+            );
         }
     }
 
-    return `${current}${incoming}`;
+    return collapseDuplicateWords(`${current}${incoming}`);
 };
 
 const createMessage = (
@@ -138,6 +191,7 @@ export function useScenarioBuilderChat() {
             let sessionError: Error | null = null;
             let hasFirstChunk = false;
             let firstChunkTimeout: ReturnType<typeof setTimeout> | null = null;
+            const lastChunkByStage = new Map<AssistantStage, string>();
 
             const appendOrUpdateStageMessage = (
                 stage: AssistantStage,
@@ -161,6 +215,41 @@ export function useScenarioBuilderChat() {
                         return updated;
                     }
 
+                    if (stage === "answering" || stage === "thinking") {
+                        const previousStageMessage = [...updated]
+                            .reverse()
+                            .find(
+                                (message) =>
+                                    message.author === "assistant" &&
+                                    !message.toolTrace &&
+                                    message.answeringAt === userMessage.id &&
+                                    message.assistantStage === stage,
+                            );
+
+                        if (previousStageMessage) {
+                            const merged = mergeStreamChunkText(
+                                previousStageMessage.content,
+                                chunkText,
+                            );
+                            const stageDelta = merged.slice(
+                                previousStageMessage.content.length,
+                            );
+
+                            if (!stageDelta) {
+                                return updated;
+                            }
+
+                            updated.push(
+                                createMessage("assistant", stageDelta, {
+                                    assistantStage: stage,
+                                    answeringAt: userMessage.id,
+                                }),
+                            );
+
+                            return updated;
+                        }
+                    }
+
                     updated.push(
                         createMessage("assistant", chunkText, {
                             assistantStage: stage,
@@ -182,6 +271,11 @@ export function useScenarioBuilderChat() {
                         return;
                     }
 
+                    if (lastChunkByStage.get("thinking") === event.chunkText) {
+                        return;
+                    }
+                    lastChunkByStage.set("thinking", event.chunkText);
+
                     setActiveStage("thinking");
                     hasFirstChunk = true;
                     setIsAwaitingFirstChunk(false);
@@ -193,6 +287,11 @@ export function useScenarioBuilderChat() {
                     if (!event.chunkText) {
                         return;
                     }
+
+                    if (lastChunkByStage.get("answering") === event.chunkText) {
+                        return;
+                    }
+                    lastChunkByStage.set("answering", event.chunkText);
 
                     hasFirstChunk = true;
                     setIsAwaitingFirstChunk(false);
@@ -352,6 +451,25 @@ export function useScenarioBuilderChat() {
                 }
 
                 if (event.type === "done") {
+                    setMessages((prevState) =>
+                        prevState.map((message) => {
+                            if (
+                                message.author !== "assistant" ||
+                                message.assistantStage !== "answering" ||
+                                message.answeringAt !== userMessage.id ||
+                                !message.content
+                            ) {
+                                return message;
+                            }
+
+                            return {
+                                ...message,
+                                content: collapseDuplicateWords(
+                                    message.content,
+                                ),
+                            };
+                        }),
+                    );
                     setIsAwaitingFirstChunk(false);
                     setActiveStage(null);
                 }
@@ -434,6 +552,83 @@ export function useScenarioBuilderChat() {
         setMessages([]);
     };
 
+    const updateToolTrace = (
+        messageId: string,
+        updater: (
+            current: NonNullable<ChatMessage["toolTrace"]>,
+        ) => NonNullable<ChatMessage["toolTrace"]>,
+    ) => {
+        setMessages((prevState) =>
+            prevState.map((message) =>
+                message.id === messageId && message.toolTrace
+                    ? {
+                          ...message,
+                          toolTrace: updater(message.toolTrace),
+                      }
+                    : message,
+            ),
+        );
+    };
+
+    const setQaActiveQuestion = (messageId: string, questionIndex: number) => {
+        updateToolTrace(messageId, (toolTrace) => {
+            const qaState = normalizeQaToolState(toolTrace);
+
+            return {
+                ...toolTrace,
+                qaState: {
+                    ...qaState,
+                    activeQuestionIndex: questionIndex,
+                },
+            };
+        });
+    };
+
+    const saveQaAnswer = (
+        messageId: string,
+        questionIndex: number,
+        answer: string,
+    ) => {
+        const nextAnswer = answer.trim();
+
+        updateToolTrace(messageId, (toolTrace) => {
+            const qaState = normalizeQaToolState(toolTrace);
+            const questions = qaState.questions.map((question, index) =>
+                index === questionIndex
+                    ? {
+                          ...question,
+                          answer: nextAnswer,
+                      }
+                    : question,
+            );
+
+            return {
+                ...toolTrace,
+                qaState: {
+                    activeQuestionIndex: questionIndex,
+                    questions,
+                },
+            };
+        });
+    };
+
+    const sendQaAnswer = (qaMessageId: string) => {
+        const message = messages.find((item) => item.id === qaMessageId);
+        const qaState = normalizeQaToolState(message?.toolTrace);
+        const submission = buildQaToolSubmission(qaState);
+
+        if (!submission.trim()) {
+            return;
+        }
+
+        updateToolTrace(qaMessageId, (toolTrace) => ({
+            ...toolTrace,
+            status: "answered",
+        }));
+
+        sendMessage(`__qa_hidden__${submission}`);
+    };
+
     const resolveCommandApproval = (
         callId: string,
         accepted: boolean,
@@ -478,6 +673,9 @@ export function useScenarioBuilderChat() {
         activeStage,
         activeResponseToId,
         sendMessage,
+        saveQaAnswer,
+        sendQaAnswer,
+        setQaActiveQuestion,
         clearChat,
         approveCommandExec,
         rejectCommandExec,

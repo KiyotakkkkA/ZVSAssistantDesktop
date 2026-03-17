@@ -2,7 +2,9 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { Icon } from "@iconify/react";
 import { Avatar, Loader } from "../../../atoms";
 import {
+    ChatUserBubbleCard,
     PlanningToolBubbleCard,
+    QaToolBubbleCard,
     ThinkingBubbleCard,
     ToolBubbleCard,
 } from "../../../molecules/cards/chat";
@@ -10,6 +12,7 @@ import { MarkdownStaticContent } from "../../../molecules/render";
 import type {
     AssistantStage,
     ChatMessage,
+    QaToolState,
     ToolTrace,
 } from "../../../../../types/Chat";
 
@@ -19,9 +22,17 @@ type AssistantStageBlock = {
 };
 
 type ScenarioBuilderMessageFeedProps = {
+    sendMessage: (content: string) => void;
     messages: ChatMessage[];
     activeStage?: AssistantStage | null;
     activeResponseToId?: string | null;
+    saveQaAnswer: (
+        qaMessageId: string,
+        questionIndex: number,
+        answer: string,
+    ) => void;
+    sendQaAnswer: (qaMessageId: string, qaState?: QaToolState) => void;
+    setQaActiveQuestion: (qaMessageId: string, questionIndex: number) => void;
     onApproveCommandExec: (callId: string) => void;
     onRejectCommandExec: (callId: string) => void;
     onInterruptCommandExec: (callId: string) => void;
@@ -79,6 +90,9 @@ function AssistantResponseBlock({
     stages,
     activeStage,
     isActive,
+    saveQaAnswer,
+    sendQaAnswer,
+    setQaActiveQuestion,
     onApproveCommandExec,
     onRejectCommandExec,
     onInterruptCommandExec,
@@ -86,6 +100,13 @@ function AssistantResponseBlock({
     stages: ChatMessage[];
     activeStage?: AssistantStage | null;
     isActive?: boolean;
+    saveQaAnswer: (
+        qaMessageId: string,
+        questionIndex: number,
+        answer: string,
+    ) => void;
+    sendQaAnswer: (qaMessageId: string, qaState?: QaToolState) => void;
+    setQaActiveQuestion: (qaMessageId: string, questionIndex: number) => void;
     onApproveCommandExec: (callId: string) => void;
     onRejectCommandExec: (callId: string) => void;
     onInterruptCommandExec: (callId: string) => void;
@@ -140,7 +161,7 @@ function AssistantResponseBlock({
     return (
         <article className="flex justify-start gap-3">
             <Avatar label="AI" tone="assistant" />
-            <div className="w-full max-w-[84%] rounded-2xl px-4 py-3 text-sm leading-relaxed text-main-100">
+            <div className="w-full max-w-[72%] rounded-2xl px-4 py-3 text-sm leading-relaxed text-main-100">
                 <div className="relative space-y-3 pl-5">
                     <div className="pointer-events-none absolute bottom-1 left-1.5 top-1 w-px bg-main-700/70" />
                     {stageBlocks.map((block, blockIndex) => {
@@ -242,31 +263,68 @@ function AssistantResponseBlock({
                                 const callId = message.toolTrace?.callId;
 
                                 renderedItems.push(
-                                    <ToolBubbleCard
-                                        key={message.id}
-                                        content={message.content}
-                                        toolTrace={message.toolTrace}
-                                        onApproveCommandExec={() => {
-                                            if (callId) {
-                                                onApproveCommandExec(callId);
+                                    toolName === "qa_tool" ? (
+                                        <QaToolBubbleCard
+                                            key={message.id}
+                                            toolTrace={message.toolTrace}
+                                            answered={
+                                                message.toolTrace?.status ===
+                                                "answered"
                                             }
-                                        }}
-                                        onRejectCommandExec={() => {
-                                            if (callId) {
-                                                onRejectCommandExec(callId);
+                                            onSelectQuestion={(questionIndex) =>
+                                                setQaActiveQuestion(
+                                                    message.id,
+                                                    questionIndex,
+                                                )
                                             }
-                                        }}
-                                        onInterruptCommandExec={() => {
-                                            if (callId) {
-                                                onInterruptCommandExec(callId);
+                                            onSaveAnswer={(
+                                                questionIndex,
+                                                answer,
+                                            ) =>
+                                                saveQaAnswer(
+                                                    message.id,
+                                                    questionIndex,
+                                                    answer,
+                                                )
                                             }
-                                        }}
-                                        isLoading={
-                                            isToolBlockLoading &&
-                                            toolIndex ===
-                                                block.messages.length - 1
-                                        }
-                                    />,
+                                            onSendAnswers={(qaState) =>
+                                                sendQaAnswer(
+                                                    message.id,
+                                                    qaState,
+                                                )
+                                            }
+                                        />
+                                    ) : (
+                                        <ToolBubbleCard
+                                            key={message.id}
+                                            content={message.content}
+                                            toolTrace={message.toolTrace}
+                                            onApproveCommandExec={() => {
+                                                if (callId) {
+                                                    onApproveCommandExec(
+                                                        callId,
+                                                    );
+                                                }
+                                            }}
+                                            onRejectCommandExec={() => {
+                                                if (callId) {
+                                                    onRejectCommandExec(callId);
+                                                }
+                                            }}
+                                            onInterruptCommandExec={() => {
+                                                if (callId) {
+                                                    onInterruptCommandExec(
+                                                        callId,
+                                                    );
+                                                }
+                                            }}
+                                            isLoading={
+                                                isToolBlockLoading &&
+                                                toolIndex ===
+                                                    block.messages.length - 1
+                                            }
+                                        />
+                                    ),
                                 );
                             }
 
@@ -357,9 +415,13 @@ function AssistantResponseBlock({
 }
 
 export function ScenarioBuilderMessageFeed({
+    sendMessage,
     messages,
     activeStage,
     activeResponseToId,
+    saveQaAnswer,
+    sendQaAnswer,
+    setQaActiveQuestion,
     onApproveCommandExec,
     onRejectCommandExec,
     onInterruptCommandExec,
@@ -454,21 +516,33 @@ export function ScenarioBuilderMessageFeed({
 
                     return (
                         <div key={message.id} className="space-y-3">
-                            <article className="flex justify-end gap-3">
-                                <div className="max-w-[72%] rounded-2xl bg-main-500/20 px-4 py-3 text-sm leading-relaxed text-main-100 ring-main-300/30">
-                                    <p>{message.content}</p>
-                                    <p className="mt-2 text-[11px] text-main-400">
-                                        {message.timestamp}
-                                    </p>
-                                </div>
-                                <Avatar label="U" tone="user" />
-                            </article>
+                            <ChatUserBubbleCard
+                                content={message.content}
+                                timestamp={message.timestamp}
+                                msgDelete={() => {
+                                    /* local mini-chat does not persist per-message delete */
+                                }}
+                                msgEdit={() => {
+                                    /* local mini-chat does not persist per-message edit */
+                                }}
+                                msgCopy={() => {
+                                    void navigator.clipboard.writeText(
+                                        message.content,
+                                    );
+                                }}
+                                msgRetry={() => {
+                                    sendMessage(message.content);
+                                }}
+                            />
 
                             {(linkedStages.length > 0 || isActiveResponse) && (
                                 <AssistantResponseBlock
                                     stages={linkedStages}
                                     activeStage={activeStage}
                                     isActive={isActiveResponse}
+                                    saveQaAnswer={saveQaAnswer}
+                                    sendQaAnswer={sendQaAnswer}
+                                    setQaActiveQuestion={setQaActiveQuestion}
                                     onApproveCommandExec={onApproveCommandExec}
                                     onRejectCommandExec={onRejectCommandExec}
                                     onInterruptCommandExec={
