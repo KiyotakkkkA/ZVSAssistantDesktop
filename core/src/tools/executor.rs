@@ -40,6 +40,11 @@ pub trait BuiltinToolHostPort: Send + Sync {
     ) -> Result<Value, CoreError>;
     async fn fs_delete_file(&self, file_path: &str) -> Result<Value, CoreError>;
     async fn fs_text_search(&self, cwd: &str, exp: &str) -> Result<Value, CoreError>;
+    async fn scenario_builder(
+        &self,
+        request: &ToolExecutionRequest,
+        args: &Value,
+    ) -> Result<Value, CoreError>;
     async fn tools_store_calling_doc(&self, payload: &Value) -> Result<Value, CoreError>;
     async fn tools_get_calling_doc(&self, doc_id: &str) -> Result<Value, CoreError>;
 }
@@ -431,6 +436,7 @@ impl BuiltinToolsExecutor {
             "qa_tool" | "planning_tool" | "get_tools_calling" => {
                 Self::sanitize_value_compact(&raw_result, 3000)
             }
+            "scenario_builder_tool" => Self::sanitize_value_compact(&raw_result, 12000),
             _ => Self::sanitize_value_compact(&raw_result, 3000),
         }
     }
@@ -773,6 +779,7 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
             "read_file" => self.execute_read_file(args).await,
             "delete_file" => self.execute_delete_file(args).await,
             "text_search" => self.execute_text_search(args).await,
+            "scenario_builder_tool" => self.host_port.scenario_builder(&request, args).await,
             "get_tools_calling" => {
                 let doc_id = args
                     .get("doc_id")

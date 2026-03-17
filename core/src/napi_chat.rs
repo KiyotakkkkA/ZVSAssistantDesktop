@@ -1031,6 +1031,24 @@ impl BuiltinToolHostPort for JsHostPort {
         .map_err(|error| CoreError::Internal(error.to_string()))?
     }
 
+    async fn scenario_builder(
+        &self,
+        request: &ToolExecutionRequest,
+        args: &Value,
+    ) -> Result<Value, CoreError> {
+        let mut payload = args.clone();
+        if let Value::Object(object) = &mut payload
+            && !object.contains_key("sessionId")
+        {
+            object.insert(
+                "sessionId".to_owned(),
+                Value::String(request.session_id.clone()),
+            );
+        }
+
+        self.request_host_method("scenario.builder", payload).await
+    }
+
     async fn tools_store_calling_doc(&self, payload: &Value) -> Result<Value, CoreError> {
         self.request_host_method("tools.store_calling_doc", payload.clone())
             .await
@@ -1057,7 +1075,9 @@ impl OllamaHttpLlmPort {
     fn resolve_tool_names(&self, payload: &RunChatSessionPayload) -> Vec<String> {
         match &payload.enabled_tool_names {
             Some(names) if !names.is_empty() => names.clone(),
-            _ => self.tool_registry.all_tool_names(),
+            _ => self
+                .tool_registry
+                .all_tool_names_for_mode(payload.agent_mode.as_deref()),
         }
     }
 

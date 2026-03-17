@@ -34,6 +34,7 @@ pub struct RunChatSessionPayload {
     pub max_tool_calls: Option<u32>,
     #[serde(default)]
     pub use_auto_tool_calling_confirmation: bool,
+    pub agent_mode: Option<String>,
     pub runtime_context: Option<ChatRuntimeContext>,
 }
 

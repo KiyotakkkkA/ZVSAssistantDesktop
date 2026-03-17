@@ -5,8 +5,7 @@ use serde_json::json;
 use crate::tools::builtin_tools::{
     array_of_objects_schema, array_of_strings_schema, enum_string_schema,
     number_schema, object_schema, package_tool_with_output, string_schema,
-    with_confirmation, BuiltinToolPackage,
-    confirmation_spec,
+    BuiltinToolPackage,
 };
 
 pub fn build_base_pack() -> BuiltinToolPackage {
@@ -51,17 +50,6 @@ pub fn build_base_pack() -> BuiltinToolPackage {
     planning_props.insert("plan_id".to_owned(), string_schema("ID плана"));
     planning_props.insert("step_id".to_owned(), number_schema("Номер шага"));
 
-    let mut command_exec_props = BTreeMap::new();
-    command_exec_props.insert("command".to_owned(), string_schema("Shell-команда для выполнения"));
-    command_exec_props.insert(
-        "cwd".to_owned(),
-        string_schema("Рабочая директория выполнения (опционально)"),
-    );
-
-    let mut vector_search_props = BTreeMap::new();
-    vector_search_props.insert("query".to_owned(), string_schema("Поисковый запрос"));
-    vector_search_props.insert("limit".to_owned(), number_schema("Лимит результатов 1..10"));
-
     BuiltinToolPackage {
         id: "base-tools".to_owned(),
         title: "Базовые инструменты".to_owned(),
@@ -73,7 +61,7 @@ pub fn build_base_pack() -> BuiltinToolPackage {
                 "Базовые инструменты",
                 "Набор базовых инструментов для взаимодействия модели с внешней средой",
                 "qa_tool",
-                "Запрашивает у пользователя до 3 коротких и точных уточнений в одном вызове. Каждый вопрос должен спрашивать только один недостающий факт. Для категориальных вопросов добавляй selectAnswers для быстрого выбора.",
+                "Назначение: запрос уточнений у пользователя, когда данных недостаточно. Вход: questions[] (каждый объект принимает question:string, опционально reason:string, selectAnswers:string[], userAnswerHint:string). Выход: status='awaiting_user_response', questions[] (нормализованный список вопросов), instruction:string. Правило: один вопрос = один недостающий факт; не задавай длинные объединённые вопросы.",
                 object_schema(qa_props, &["questions"]),
                 json!({
                     "type": "object",
@@ -89,7 +77,7 @@ pub fn build_base_pack() -> BuiltinToolPackage {
                 "Базовые инструменты",
                 "Набор базовых инструментов для взаимодействия модели с внешней средой",
                 "planning_tool",
-                "Управляет планом выполнения задачи",
+                "Назначение: пошаговое планирование и контроль прогресса. Вход: action:string из [create, complete_step, get_status]; для create передай title:string и steps:string[]; для complete_step передай plan_id:string и step_id:number; для get_status передай plan_id:string. Выход: plan_id, title, progress, completed_steps[], pending_steps[], next_step, is_complete, а также instruction/warning/error в зависимости от операции.",
                 object_schema(planning_props, &["action"]),
                 json!({
                     "type": "object",
@@ -104,58 +92,6 @@ pub fn build_base_pack() -> BuiltinToolPackage {
                         "instruction": { "type": "string" },
                         "warning": { "type": "string" },
                         "error": { "type": "string" }
-                    }
-                }),
-            ),
-            with_confirmation(
-                package_tool_with_output(
-                    "base-tools",
-                    "Базовые инструменты",
-                    "Набор базовых инструментов для взаимодействия модели с внешней средой",
-                    "command_exec",
-                    "Выполняет shell-команду после подтверждения пользователем",
-                    object_schema(command_exec_props, &["command"]),
-                    json!({
-                        "type": "object",
-                        "properties": {
-                            "command": { "type": "string" },
-                            "cwd": { "type": "string" },
-                            "isAdmin": { "type": "boolean" },
-                            "exitCode": { "type": "number" },
-                            "stdout": { "type": "string" },
-                            "stderr": { "type": "string" }
-                        }
-                    }),
-                ),
-                confirmation_spec(
-                    "Подтверждение выполнения команды",
-                    "Проверь shell-команду и рабочую директорию перед запуском.",
-                ),
-            ),
-            package_tool_with_output(
-                "base-tools",
-                "Базовые инструменты",
-                "Набор базовых инструментов для взаимодействия модели с внешней средой",
-                "vector_store_search_tool",
-                "Ищет релевантные фрагменты в подключённом векторном хранилище",
-                object_schema(vector_search_props, &["query"]),
-                json!({
-                    "type": "object",
-                    "properties": {
-                        "vectorStorageId": { "type": "string" },
-                        "items": { "type": "array", "items": { "type": "object" } },
-                        "hits": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "id": { "type": "string" },
-                                    "text": { "type": "string" },
-                                    "score": { "type": "number" }
-                                }
-                            }
-                        },
-                        "request": { "type": "object" }
                     }
                 }),
             ),

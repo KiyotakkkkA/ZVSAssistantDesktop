@@ -119,12 +119,18 @@ impl ChatCoreService {
 
     fn resolve_session_config(&self, payload: &RunChatSessionPayload) -> SessionConfig {
         let mut config = SessionConfig::from_payload(payload);
+        let agent_mode = payload.agent_mode.as_deref();
+
         if config.allowed_tools.is_empty() {
             config.allowed_tools = self
                 .tool_registry
-                .all_tool_names()
+                .all_tool_names_for_mode(agent_mode)
                 .into_iter()
                 .collect();
+        } else {
+            config.allowed_tools = self
+                .tool_registry
+                .filter_tool_names_for_mode(config.allowed_tools, agent_mode);
         }
 
         for tool_name in self.tool_registry.mandatory_tool_names() {

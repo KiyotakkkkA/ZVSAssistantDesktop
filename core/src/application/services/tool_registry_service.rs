@@ -4,12 +4,15 @@ use crate::domain::chat::OllamaToolDefinition;
 use crate::tools::builtin_tools::{builtin_tool_packages_ref, internal_tool_definitions_ref};
 
 const MANDATORY_INTERNAL_TOOLS: [&str; 1] = ["get_tools_calling"];
+const SCENARIO_BUILDER_ONLY_TOOLS: [&str; 1] = ["scenario_builder_tool"];
+const SCENARIO_BUILDER_BASE_TOOLS: [&str; 2] = ["qa_tool", "planning_tool"];
 
 #[derive(Debug, Clone)]
 pub struct ToolRegistryService {
     by_name: HashMap<String, OllamaToolDefinition>,
     requires_confirmation: HashSet<String>,
     mandatory_tools: HashSet<String>,
+    scenario_builder_only_tools: HashSet<String>,
 }
 
 impl Default for ToolRegistryService {
@@ -23,6 +26,10 @@ impl ToolRegistryService {
         let mut by_name = HashMap::new();
         let mut requires_confirmation = HashSet::new();
         let mandatory_tools = MANDATORY_INTERNAL_TOOLS
+            .iter()
+            .map(|name| (*name).to_owned())
+            .collect::<HashSet<_>>();
+        let scenario_builder_only_tools = SCENARIO_BUILDER_ONLY_TOOLS
             .iter()
             .map(|name| (*name).to_owned())
             .collect::<HashSet<_>>();
@@ -48,7 +55,60 @@ impl ToolRegistryService {
             by_name,
             requires_confirmation,
             mandatory_tools,
+            scenario_builder_only_tools,
         }
+    }
+
+    pub fn is_scenario_builder_mode(agent_mode: Option<&str>) -> bool {
+        matches!(agent_mode.map(str::trim), Some("scenario_builder"))
+    }
+
+    pub fn all_tool_names_for_mode(&self, agent_mode: Option<&str>) -> Vec<String> {
+        if Self::is_scenario_builder_mode(agent_mode) {
+            let mut names = SCENARIO_BUILDER_BASE_TOOLS
+                .iter()
+                .map(|name| (*name).to_owned())
+                .collect::<HashSet<_>>();
+            names.extend(self.scenario_builder_only_tools.iter().cloned());
+            names.extend(self.mandatory_tools.iter().cloned());
+            let mut list = names
+                .into_iter()
+                .filter(|name| self.by_name.contains_key(name))
+                .collect::<Vec<_>>();
+            list.sort();
+            return list;
+        }
+
+        let mut names: Vec<String> = self
+            .by_name
+            .keys()
+            .filter(|name| !self.scenario_builder_only_tools.contains(name.as_str()))
+            .cloned()
+            .collect();
+        names.sort();
+        names
+    }
+
+    pub fn filter_tool_names_for_mode(
+        &self,
+        tool_names: HashSet<String>,
+        agent_mode: Option<&str>,
+    ) -> HashSet<String> {
+        if Self::is_scenario_builder_mode(agent_mode) {
+            let allowed = self
+                .all_tool_names_for_mode(agent_mode)
+                .into_iter()
+                .collect::<HashSet<_>>();
+            return tool_names
+                .into_iter()
+                .filter(|name| allowed.contains(name))
+                .collect();
+        }
+
+        tool_names
+            .into_iter()
+            .filter(|name| !self.scenario_builder_only_tools.contains(name))
+            .collect()
     }
 
     pub fn has_tool(&self, name: &str) -> bool {

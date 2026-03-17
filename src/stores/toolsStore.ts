@@ -1,6 +1,11 @@
 import { makeAutoObservable } from "mobx";
 import type { BuiltinToolPackage, OllamaToolDefinition } from "../types/Chat";
 
+const HIDDEN_PACKAGES_IN_MAIN_CHAT = new Set([
+    "base-tools",
+    "scenario-builder-tools",
+]);
+
 class ToolsStore {
     packages: BuiltinToolPackage[] = [];
 
@@ -80,7 +85,8 @@ class ToolsStore {
                     })),
                 };
             })
-            .filter((pkg): pkg is BuiltinToolPackage => Boolean(pkg));
+            .filter((pkg): pkg is BuiltinToolPackage => Boolean(pkg))
+            .filter((pkg) => !HIDDEN_PACKAGES_IN_MAIN_CHAT.has(pkg.id));
     }
 
     async loadBuiltinToolPackages(): Promise<void> {

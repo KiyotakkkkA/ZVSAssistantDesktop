@@ -379,6 +379,7 @@ export type RunChatSessionPayload = {
     model: string;
     messages: OllamaMessage[];
     enabledToolNames?: string[];
+    agentMode?: "default" | "scenario_builder";
     format?: OllamaResponseFormat;
     think?: boolean;
     maxToolCalls?: number;

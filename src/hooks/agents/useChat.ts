@@ -576,6 +576,7 @@ export function useChat() {
                         model: ollamaModel,
                         messages: toOllamaMessages(historyForRequest),
                         enabledToolNames,
+                        agentMode: "default",
                         think: true,
                         ...(scenarioFormatHint
                             ? { format: scenarioFormatHint }

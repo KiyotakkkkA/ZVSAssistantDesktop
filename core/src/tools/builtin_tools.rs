@@ -8,7 +8,8 @@ use crate::domain::chat::{OllamaToolDefinition, OllamaToolFunction, ToolParamete
 use crate::tools::packs::{
     base_pack::build_base_pack, browser_pack::build_browser_pack,
     communication_pack::build_communication_pack, filesystem_pack::build_filesystem_pack,
-    studying_pack::build_studying_pack,
+    data_pack::build_data_pack, scenario_builder_pack::build_scenario_builder_pack,
+    studying_pack::build_studying_pack, terminal_pack::build_terminal_pack,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -215,7 +216,10 @@ pub fn builtin_tool_packages_ref() -> &'static [BuiltinToolPackage] {
                 build_base_pack(),
                 build_browser_pack(),
                 build_communication_pack(),
+                build_data_pack(),
                 build_filesystem_pack(),
+                build_terminal_pack(),
+                build_scenario_builder_pack(),
                 build_studying_pack(),
             ]
         })

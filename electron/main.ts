@@ -277,6 +277,7 @@ app.whenReady()
             browserService,
             userProfileService,
             databaseService,
+            scenariosService,
             coreClient,
         });
 

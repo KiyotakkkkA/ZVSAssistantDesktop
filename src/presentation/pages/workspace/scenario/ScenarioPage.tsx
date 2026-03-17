@@ -8,6 +8,7 @@ import {
     ScenarioCanvas,
     type ScenarioCanvasInsertRequest,
 } from "../../../components/organisms/scenarios";
+import { ScenarioAiChatPanel } from "../../../components/organisms/scenarios/support/ScenarioAiChatPanel";
 import { toolsStore } from "../../../../stores/toolsStore";
 import { Icon } from "@iconify/react";
 import type { Scenario } from "../../../../types/Scenario";
@@ -402,6 +403,7 @@ export const ScenarioPage = observer(function ScenarioPage() {
                     insertRequest={insertRequest}
                     onInsertHandled={() => setInsertRequest(null)}
                 />
+                <ScenarioAiChatPanel />
             </div>
         </section>
     );
