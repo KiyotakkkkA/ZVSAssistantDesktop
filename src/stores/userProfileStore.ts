@@ -34,6 +34,7 @@ class UserProfileStore {
         zvsAuthName: "",
         zvsAuthUpdatedAt: "",
         useSpeechSynthesis: false,
+        useAutoToolCallingConfirmation: false,
         activeDialogId: null,
         activeProjectId: null,
         activeScenarioId: null,

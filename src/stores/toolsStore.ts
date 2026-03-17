@@ -130,6 +130,18 @@ class ToolsStore {
         return this.packages.flatMap((pkg) => pkg.tools);
     }
 
+    get toolsByName() {
+        return new Map(
+            this.allTools.map(
+                (tool) => [tool.schema.function.name, tool] as const,
+            ),
+        );
+    }
+
+    get allToolNamesSet() {
+        return new Set(this.toolsByName.keys());
+    }
+
     get allToolOptions() {
         return this.allTools.map((tool) => ({
             value: tool.schema.function.name,
@@ -172,11 +184,7 @@ class ToolsStore {
     }
 
     setToolEnabled(toolName: string, enabled: boolean): void {
-        const knownTool = this.allTools.some(
-            (tool) => tool.schema.function.name === toolName,
-        );
-
-        if (!knownTool) {
+        if (!this.allToolNamesSet.has(toolName)) {
             return;
         }
 
@@ -199,10 +207,7 @@ class ToolsStore {
     }
 
     getToolConfirmation(toolName: string) {
-        const descriptor = this.allTools.find(
-            (tool) => tool.schema.function.name === toolName,
-        );
-        return descriptor?.confirmation;
+        return this.toolsByName.get(toolName)?.confirmation;
     }
 
     get toolDefinitions(): OllamaToolDefinition[] {
@@ -213,13 +218,20 @@ class ToolsStore {
         excludeToolNames: string[] = [],
     ): OllamaToolDefinition[] {
         const excludedNames = new Set(excludeToolNames);
-        const userTools = this.allTools.filter(
-            (tool) =>
-                this.enabledToolNames.has(tool.schema.function.name) &&
-                !excludedNames.has(tool.schema.function.name),
-        );
+        const result: OllamaToolDefinition[] = [];
 
-        return userTools.map((tool) => tool.schema);
+        for (const toolName of this.enabledToolNames) {
+            if (excludedNames.has(toolName)) {
+                continue;
+            }
+
+            const descriptor = this.toolsByName.get(toolName);
+            if (descriptor) {
+                result.push(descriptor.schema);
+            }
+        }
+
+        return result;
     }
 
     getFilteredPackages(query: string): BuiltinToolPackage[] {

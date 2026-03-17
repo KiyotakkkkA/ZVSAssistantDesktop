@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::domain::chat::OllamaToolDefinition;
-use crate::tools::builtin_tools::{builtin_tool_packages, internal_tool_definitions};
+use crate::tools::builtin_tools::{builtin_tool_packages_ref, internal_tool_definitions_ref};
 
 const MANDATORY_INTERNAL_TOOLS: [&str; 1] = ["get_tools_calling"];
 
@@ -27,9 +27,9 @@ impl ToolRegistryService {
             .map(|name| (*name).to_owned())
             .collect::<HashSet<_>>();
 
-        for package in builtin_tool_packages() {
-            for descriptor in package.tools {
-                let definition = descriptor.schema;
+        for package in builtin_tool_packages_ref() {
+            for descriptor in &package.tools {
+                let definition = descriptor.schema.clone();
                 let tool_name = definition.function.name.clone();
 
                 if descriptor.confirmation.is_some() {
@@ -40,8 +40,8 @@ impl ToolRegistryService {
             }
         }
 
-        for definition in internal_tool_definitions() {
-            by_name.insert(definition.function.name.clone(), definition);
+        for definition in internal_tool_definitions_ref() {
+            by_name.insert(definition.function.name.clone(), definition.clone());
         }
 
         Self {

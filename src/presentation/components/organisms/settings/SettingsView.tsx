@@ -53,7 +53,7 @@ const settingsRoutes: SettingsRouteItem[] = [
         key: "zvs-account",
         title: "ZVS Аккаунт",
         icon: "mdi:shield-account-outline",
-        description: "Форма авторизации в ZVS",
+        description: "Авторизация в ZVS",
     },
     {
         key: "interface",
@@ -63,8 +63,8 @@ const settingsRoutes: SettingsRouteItem[] = [
     },
     {
         key: "chat",
-        title: "Чат",
-        icon: "mdi:message-outline",
+        title: "Ассистент",
+        icon: "mdi:brain",
         description: "Параметры диалога и истории",
     },
     {

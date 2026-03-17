@@ -12,6 +12,7 @@ export const defaultProfile: UserProfile = {
     chatDriver: "ollama",
     assistantName: "Чарли",
     useSpeechSynthesis: false,
+    useAutoToolCallingConfirmation: false,
     notifyOnJobCompleteToast: true,
     notifyOnJobCompleteTelegram: false,
     notifyOnJobCompleteEmail: false,

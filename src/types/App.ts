@@ -26,6 +26,7 @@ export type UserProfile = {
     chatDriver: ChatDriver;
     assistantName: string;
     useSpeechSynthesis: boolean;
+    useAutoToolCallingConfirmation: boolean;
     notifyOnJobCompleteToast: boolean;
     notifyOnJobCompleteTelegram: boolean;
     notifyOnJobCompleteEmail: boolean;

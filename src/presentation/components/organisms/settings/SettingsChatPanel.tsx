@@ -1,16 +1,10 @@
 import { useState } from "react";
-import {
-    Button,
-    InputCheckbox,
-    InputPath,
-    InputSmall,
-    Modal,
-    PrettyBR,
-} from "../../atoms";
+import { Button, InputPath, InputSmall, Modal, PrettyBR } from "../../atoms";
 import { Icon } from "@iconify/react";
 import { useChatParams, useExtensions } from "../../../../hooks";
 import { SettingsChatOllamaModelsPickForm } from "../forms";
 import { Link, useNavigate } from "react-router-dom";
+import { SettingsColoredCheckboxRow } from "../../molecules/cards/settings";
 import { Config } from "../../../../config";
 
 export const SettingsChatPanel = () => {
@@ -34,6 +28,7 @@ export const SettingsChatPanel = () => {
         assistantName,
         maxToolCallsPerResponse,
         useSpeechSynthesis,
+        useAutoToolCallingConfirmation,
         piperModelPath,
     } = userProfile;
 
@@ -119,29 +114,32 @@ export const SettingsChatPanel = () => {
                         />
                     </div>
 
-                    <div className="flex items-center justify-between gap-4">
-                        <div className="flex gap-2 items-center">
-                            <Icon
-                                icon="mdi:account-voice"
-                                width={28}
-                                height={28}
-                                className={`text-main-300 rounded-md p-0.5 ${useSpeechSynthesis ? "bg-lime-700/80" : "bg-main-700/80"}`}
-                            />
-                            <div>
-                                <p className="text-sm font-medium text-main-200">
-                                    Использовать для синтеза речи
-                                </p>
-                                <p className="text-xs text-main-400">Piper</p>
-                            </div>
-                        </div>
+                    <SettingsColoredCheckboxRow
+                        checked={useAutoToolCallingConfirmation}
+                        icon={"mdi:terminal"}
+                        label={"Автоматически подтверждать вызов инструментов"}
+                        description={
+                            useAutoToolCallingConfirmation
+                                ? "Ассистенту не требуется подтверждение со стороны пользователя"
+                                : "Ассистенту требуется подтверждение со стороны пользователя для вызова некоторых инструментов"
+                        }
+                        onChange={() => {
+                            void updateChatParams({
+                                useAutoToolCallingConfirmation:
+                                    !useAutoToolCallingConfirmation,
+                            });
+                        }}
+                    />
 
-                        <InputCheckbox
-                            checked={useSpeechSynthesis}
-                            onChange={(checked) => {
-                                void handleSpeechSynthesisToggle(checked);
-                            }}
-                        />
-                    </div>
+                    <SettingsColoredCheckboxRow
+                        checked={useSpeechSynthesis}
+                        icon={"mdi:account-voice"}
+                        label={"Использовать синтез речи"}
+                        description={
+                            "Ассистент будет озвучивать свои ответы с помощью утилиты Piper."
+                        }
+                        onChange={handleSpeechSynthesisToggle}
+                    />
 
                     {useSpeechSynthesis ? (
                         <InputPath
@@ -176,33 +174,21 @@ export const SettingsChatPanel = () => {
                 </div>
 
                 <div className="mt-4 space-y-4">
-                    <div className="flex items-center justify-between gap-4">
-                        <div className="flex gap-2 items-center">
-                            <Icon
-                                icon="mdi:microphone"
-                                width={28}
-                                height={28}
-                                className={`text-main-300 rounded-md p-0.5 ${voiceRecognitionDriver === "mistral" ? "bg-lime-700/80" : "bg-main-700/80"}`}
-                            />
-                            <div>
-                                <p className="text-sm font-medium text-main-200">
-                                    Использовать для распознавания голоса
-                                </p>
-                                <p className="text-xs text-main-400">Mistral</p>
-                            </div>
-                        </div>
-
-                        <InputCheckbox
-                            checked={voiceRecognitionDriver === "mistral"}
-                            onChange={(checked) => {
-                                void updateChatParams({
-                                    voiceRecognitionDriver: checked
-                                        ? "mistral"
-                                        : "",
-                                });
-                            }}
-                        />
-                    </div>
+                    <SettingsColoredCheckboxRow
+                        checked={voiceRecognitionDriver === "mistral"}
+                        icon={"mdi:microphone"}
+                        label={"Использовать для распознавания голоса"}
+                        description={
+                            "Распознавать голос с помощью Mistral Speech API."
+                        }
+                        onChange={(checked) => {
+                            void updateChatParams({
+                                voiceRecognitionDriver: checked
+                                    ? "mistral"
+                                    : "",
+                            });
+                        }}
+                    />
 
                     <div className="space-y-2">
                         <p className="text-sm font-medium text-main-200">
@@ -268,31 +254,19 @@ export const SettingsChatPanel = () => {
                 </div>
 
                 <div className="mt-4 space-y-4">
-                    <div className="flex items-center justify-between gap-4">
-                        <div className="flex gap-2 items-center">
-                            <Icon
-                                icon="mdi:chat-processing"
-                                width={28}
-                                height={28}
-                                className={`text-main-300 rounded-md p-0.5 ${chatDriver === "ollama" ? "bg-lime-700/80" : "bg-main-700/80"}`}
-                            />
-                            <div>
-                                <p className="text-sm font-medium text-main-200">
-                                    Использовать для общения
-                                </p>
-                                <p className="text-xs text-main-400">Ollama</p>
-                            </div>
-                        </div>
-
-                        <InputCheckbox
-                            checked={chatDriver === "ollama"}
-                            onChange={(checked) => {
-                                void updateChatParams({
-                                    chatDriver: checked ? "ollama" : "",
-                                });
-                            }}
-                        />
-                    </div>
+                    <SettingsColoredCheckboxRow
+                        checked={chatDriver === "ollama"}
+                        icon={"mdi:chat-processing"}
+                        label={"Использовать для общения"}
+                        description={
+                            "Использовать Ollama в качестве драйвера для генерации ответов в чате."
+                        }
+                        onChange={(checked) => {
+                            void updateChatParams({
+                                chatDriver: checked ? "ollama" : "",
+                            });
+                        }}
+                    />
 
                     <div className="space-y-2">
                         <p className="text-sm font-medium text-main-200">

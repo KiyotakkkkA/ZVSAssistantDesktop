@@ -3,6 +3,7 @@ use regex::Regex;
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use tokio::sync::Mutex;
 
 use crate::application::ports::ToolExecutorPort;
@@ -74,15 +75,24 @@ impl BuiltinToolsExecutor {
     }
 
     fn truncate_text(text: &str, max_len: usize) -> String {
-        if text.chars().count() <= max_len {
+        let mut total_chars = 0usize;
+        let mut truncated = String::new();
+
+        for ch in text.chars() {
+            if total_chars < max_len {
+                truncated.push(ch);
+            }
+            total_chars += 1;
+        }
+
+        if total_chars <= max_len {
             return text.to_owned();
         }
 
-        let truncated = text.chars().take(max_len).collect::<String>();
         format!(
             "{}... [truncated, total_chars={}]",
             truncated,
-            text.chars().count()
+            total_chars
         )
     }
 
@@ -93,7 +103,7 @@ impl BuiltinToolsExecutor {
                 Value::Array(items.iter().map(|item| Self::sanitize_value_compact(item, max_text_len)).collect())
             }
             Value::Object(object) => {
-                let mut map = Map::new();
+                let mut map = Map::with_capacity(object.len());
                 for (key, item) in object {
                     map.insert(key.clone(), Self::sanitize_value_compact(item, max_text_len));
                 }
@@ -104,7 +114,7 @@ impl BuiltinToolsExecutor {
     }
 
     fn pick_object_fields(object: &Map<String, Value>, keys: &[&str]) -> Map<String, Value> {
-        let mut selected = Map::new();
+        let mut selected = Map::with_capacity(keys.len());
         for key in keys {
             if let Some(value) = object.get(*key) {
                 selected.insert((*key).to_owned(), value.clone());
@@ -578,28 +588,21 @@ impl BuiltinToolsExecutor {
     }
 
     fn format_plan_response(plan: &Plan) -> Value {
-        let completed: Vec<Value> = plan
-            .steps
-            .iter()
-            .filter(|step| step.completed)
-            .map(|step| {
-                json!({
-                    "id": step.id,
-                    "description": step.description,
-                })
-            })
-            .collect();
-        let pending: Vec<Value> = plan
-            .steps
-            .iter()
-            .filter(|step| !step.completed)
-            .map(|step| {
-                json!({
-                    "id": step.id,
-                    "description": step.description,
-                })
-            })
-            .collect();
+        let mut completed = Vec::with_capacity(plan.steps.len());
+        let mut pending = Vec::with_capacity(plan.steps.len());
+
+        for step in &plan.steps {
+            let view = json!({
+                "id": step.id,
+                "description": step.description,
+            });
+
+            if step.completed {
+                completed.push(view);
+            } else {
+                pending.push(view);
+            }
+        }
 
         json!({
             "plan_id": plan.id,
@@ -627,18 +630,19 @@ impl BuiltinToolsExecutor {
                 .filter(|value| !value.is_empty())
                 .unwrap_or("Без названия")
                 .to_owned();
-            let raw_steps = args
+            let steps = args
                 .get("steps")
                 .and_then(Value::as_array)
-                .cloned()
+                .map(|items| {
+                    items
+                        .iter()
+                        .filter_map(Value::as_str)
+                        .map(str::trim)
+                        .filter(|value| !value.is_empty())
+                        .map(str::to_owned)
+                        .collect::<Vec<_>>()
+                })
                 .unwrap_or_default();
-            let steps: Vec<String> = raw_steps
-                .iter()
-                .filter_map(Value::as_str)
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(str::to_owned)
-                .collect();
 
             if steps.is_empty() {
                 return Ok(json!({ "error": "Необходимо передать хотя бы один шаг в поле 'steps'." }));
@@ -845,14 +849,15 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
             }
             "planning_tool" => self.execute_planning_tool(args).await,
             "schedule_mirea_tool" => {
+                static DATE_PATTERN: OnceLock<Regex> = OnceLock::new();
                 let date_value = args
                     .get("date_value")
                     .and_then(Value::as_str)
                     .map(str::trim)
                     .unwrap_or_default();
 
-                if !Regex::new(r"^\d{4}-\d{2}-\d{2}$")
-                    .map_err(|err| CoreError::Internal(err.to_string()))?
+                if !DATE_PATTERN
+                    .get_or_init(|| Regex::new(r"^\d{4}-\d{2}-\d{2}$").expect("valid date regex"))
                     .is_match(date_value)
                 {
                     return Err(CoreError::Validation(

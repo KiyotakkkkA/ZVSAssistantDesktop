@@ -584,6 +584,8 @@ export function useChat() {
                             userProfile.maxToolCallsPerResponse > 0
                                 ? userProfile.maxToolCallsPerResponse
                                 : 1,
+                        useAutoToolCallingConfirmation:
+                            userProfile.useAutoToolCallingConfirmation,
                         runtimeContext: {
                             activeDialogId: currentDialog.id,
                             activeProjectId,

@@ -1054,13 +1054,10 @@ struct OllamaHttpLlmPort {
 }
 
 impl OllamaHttpLlmPort {
-    fn resolve_tool_names(payload: &RunChatSessionPayload) -> Vec<String> {
+    fn resolve_tool_names(&self, payload: &RunChatSessionPayload) -> Vec<String> {
         match &payload.enabled_tool_names {
             Some(names) if !names.is_empty() => names.clone(),
-            _ => crate::tools::builtin_tools::builtin_tool_definitions()
-                .into_iter()
-                .map(|tool| tool.function.name)
-                .collect(),
+            _ => self.tool_registry.all_tool_names(),
         }
     }
 
@@ -1069,7 +1066,7 @@ impl OllamaHttpLlmPort {
         payload: &RunChatSessionPayload,
         messages: &[OllamaMessage],
     ) -> Result<Value, CoreError> {
-        let mut tool_names = Self::resolve_tool_names(payload);
+        let mut tool_names = self.resolve_tool_names(payload);
         for mandatory in self.tool_registry.mandatory_tool_names() {
             if !tool_names.iter().any(|name| name == &mandatory) {
                 tool_names.push(mandatory);

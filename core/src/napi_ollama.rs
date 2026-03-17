@@ -5,7 +5,7 @@ use napi_derive::napi;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use reqwest::Client;
 use serde_json::Value;
-use crate::tools::builtin_tools::{builtin_tool_definitions, builtin_tool_packages};
+use crate::tools::builtin_tools::{builtin_tool_definitions_ref, builtin_tool_packages_ref};
 
 pub(crate) fn normalize_base_url(base_url: Option<String>) -> String {
     let fallback = "http://127.0.0.1:11434".to_owned();
@@ -228,13 +228,13 @@ pub async fn stream_chat_callback(
 
 #[napi(js_name = "getBuiltinToolDefinitions")]
 pub fn get_builtin_tool_definitions() -> napi::Result<String> {
-    let definitions = builtin_tool_definitions();
+    let definitions = builtin_tool_definitions_ref();
     serde_json::to_string(&definitions)
         .map_err(|error| Error::from_reason(error.to_string()))
 }
 
 #[napi(js_name = "getBuiltinToolPackages")]
 pub fn get_builtin_tool_packages() -> napi::Result<String> {
-    let packages = builtin_tool_packages();
+    let packages = builtin_tool_packages_ref();
     serde_json::to_string(&packages).map_err(|error| Error::from_reason(error.to_string()))
 }

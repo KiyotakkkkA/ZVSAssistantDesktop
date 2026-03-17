@@ -142,6 +142,12 @@ export class UserProfileService {
             ...(typeof parsed.useSpeechSynthesis === "boolean"
                 ? { useSpeechSynthesis: parsed.useSpeechSynthesis }
                 : {}),
+            ...(typeof parsed.useAutoToolCallingConfirmation === "boolean"
+                ? {
+                      useAutoToolCallingConfirmation:
+                          parsed.useAutoToolCallingConfirmation,
+                  }
+                : {}),
             ...(typeof parsed.notifyOnJobCompleteToast === "boolean"
                 ? { notifyOnJobCompleteToast: parsed.notifyOnJobCompleteToast }
                 : {}),

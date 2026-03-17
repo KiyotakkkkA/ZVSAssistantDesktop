@@ -382,6 +382,7 @@ export type RunChatSessionPayload = {
     format?: OllamaResponseFormat;
     think?: boolean;
     maxToolCalls?: number;
+    useAutoToolCallingConfirmation?: boolean;
     runtimeContext?: ChatRuntimeContext;
 };
 

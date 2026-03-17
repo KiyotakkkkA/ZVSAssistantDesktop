@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -37,6 +38,10 @@ pub struct BuiltinToolPackage {
     pub description: String,
     pub tools: Vec<BuiltinToolDescriptor>,
 }
+
+static BUILTIN_TOOL_PACKAGES: OnceLock<Vec<BuiltinToolPackage>> = OnceLock::new();
+static INTERNAL_TOOL_DEFINITIONS: OnceLock<Vec<OllamaToolDefinition>> = OnceLock::new();
+static BUILTIN_TOOL_DEFINITIONS: OnceLock<Vec<OllamaToolDefinition>> = OnceLock::new();
 
 pub fn string_schema(description: &str) -> ToolParameterSchema {
     ToolParameterSchema {
@@ -200,35 +205,59 @@ pub fn with_confirmation(
 }
 
 pub fn builtin_tool_packages() -> Vec<BuiltinToolPackage> {
-    vec![
-        build_base_pack(),
-        build_browser_pack(),
-        build_communication_pack(),
-        build_filesystem_pack(),
-        build_studying_pack(),
-    ]
+    builtin_tool_packages_ref().to_vec()
+}
+
+pub fn builtin_tool_packages_ref() -> &'static [BuiltinToolPackage] {
+    BUILTIN_TOOL_PACKAGES
+        .get_or_init(|| {
+            vec![
+                build_base_pack(),
+                build_browser_pack(),
+                build_communication_pack(),
+                build_filesystem_pack(),
+                build_studying_pack(),
+            ]
+        })
+        .as_slice()
 }
 
 pub fn builtin_tool_definitions() -> Vec<OllamaToolDefinition> {
-    let mut definitions = builtin_tool_packages()
-        .into_iter()
-        .flat_map(|package| package.tools.into_iter().map(|tool| tool.schema))
-        .collect::<Vec<_>>();
+    builtin_tool_definitions_ref().to_vec()
+}
 
-    definitions.extend(internal_tool_definitions());
-    definitions
+pub fn builtin_tool_definitions_ref() -> &'static [OllamaToolDefinition] {
+    BUILTIN_TOOL_DEFINITIONS
+        .get_or_init(|| {
+            let mut definitions = builtin_tool_packages_ref()
+                .iter()
+                .flat_map(|package| package.tools.iter().map(|tool| tool.schema.clone()))
+                .collect::<Vec<_>>();
+
+            definitions.extend(internal_tool_definitions_ref().iter().cloned());
+            definitions
+        })
+        .as_slice()
 }
 
 pub fn internal_tool_definitions() -> Vec<OllamaToolDefinition> {
-    let mut properties = BTreeMap::new();
-    properties.insert(
-        "doc_id".to_owned(),
-        string_schema("Document id вида doc_{uuid} из результата инструмента"),
-    );
+    internal_tool_definitions_ref().to_vec()
+}
 
-    vec![tool(
-        "get_tools_calling",
-        "Возвращает полный payload результата вызова инструмента по doc_id. Используй когда нужен полный контекст вместо сжатого результата.",
-        object_schema(properties, &["doc_id"]),
-    )]
+pub fn internal_tool_definitions_ref() -> &'static [OllamaToolDefinition] {
+    INTERNAL_TOOL_DEFINITIONS
+        .get_or_init(|| {
+            let mut properties = BTreeMap::new();
+            properties.insert(
+                "doc_id".to_owned(),
+                string_schema("Document id вида doc_{uuid} из результата инструмента"),
+            );
+
+            vec![tool(
+                "get_tools_calling",
+                "Возвращает полный payload результата вызова инструмента по doc_id. Используй когда нужен полный контекст вместо сжатого результата.",
+                object_schema(properties, &["doc_id"]),
+            )]
+        })
+        .as_slice()
 }

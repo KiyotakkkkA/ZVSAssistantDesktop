@@ -32,6 +32,8 @@ pub struct RunChatSessionPayload {
     pub format: Option<OllamaResponseFormat>,
     pub think: Option<bool>,
     pub max_tool_calls: Option<u32>,
+    #[serde(default)]
+    pub use_auto_tool_calling_confirmation: bool,
     pub runtime_context: Option<ChatRuntimeContext>,
 }
 
@@ -233,6 +235,7 @@ pub struct ToolExecutionRequest {
 pub struct SessionConfig {
     pub allowed_tools: HashSet<String>,
     pub max_tool_calls: u32,
+    pub use_auto_tool_calling_confirmation: bool,
 }
 
 impl SessionConfig {
@@ -257,6 +260,7 @@ impl SessionConfig {
         Self {
             allowed_tools,
             max_tool_calls: payload.max_tool_calls.unwrap_or(1).max(1),
+            use_auto_tool_calling_confirmation: payload.use_auto_tool_calling_confirmation,
         }
     }
 }

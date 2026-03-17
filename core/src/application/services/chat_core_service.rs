@@ -256,7 +256,9 @@ impl ChatCoreService {
                     args: args_value.clone(),
                 });
 
-                if self.tool_registry.tool_requires_confirmation(&tool_name) {
+                if self.tool_registry.tool_requires_confirmation(&tool_name)
+                    && !config.use_auto_tool_calling_confirmation
+                {
                     let approved = self.wait_tool_approval(session_id, &call_id, state).await;
 
                     if state.is_cancelled() {
