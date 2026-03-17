@@ -755,20 +755,20 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
         let raw_result = match request.tool_name.as_str() {
             "command_exec" => self.execute_command_exec(&request).await,
             "vector_store_search_tool" => self.host_port.vector_search(&request).await,
-            "web_search" => self.execute_web_search(&args).await,
-            "web_fetch" => self.execute_web_fetch(&args).await,
-            "open_url" => self.host_port.browser_open_url(&args).await,
-            "get_page_snapshot" => self.host_port.browser_snapshot(&args).await,
-            "interact_with" => self.host_port.browser_interact(&args).await,
+            "web_search" => self.execute_web_search(args).await,
+            "web_fetch" => self.execute_web_fetch(args).await,
+            "open_url" => self.host_port.browser_open_url(args).await,
+            "get_page_snapshot" => self.host_port.browser_snapshot(args).await,
+            "interact_with" => self.host_port.browser_interact(args).await,
             "close_browser" => self.host_port.browser_close().await,
-            "send_telegram_msg" => self.host_port.telegram_send(&args).await,
-            "get_telegram_unread_msgs" => self.host_port.telegram_unread(&args).await,
-            "list_directory" => self.execute_list_directory(&args).await,
-            "create_file" => self.execute_create_file(&args).await,
-            "create_dir" => self.execute_create_dir(&args).await,
-            "read_file" => self.execute_read_file(&args).await,
-            "delete_file" => self.execute_delete_file(&args).await,
-            "text_search" => self.execute_text_search(&args).await,
+            "send_telegram_msg" => self.host_port.telegram_send(args).await,
+            "get_telegram_unread_msgs" => self.host_port.telegram_unread(args).await,
+            "list_directory" => self.execute_list_directory(args).await,
+            "create_file" => self.execute_create_file(args).await,
+            "create_dir" => self.execute_create_dir(args).await,
+            "read_file" => self.execute_read_file(args).await,
+            "delete_file" => self.execute_delete_file(args).await,
+            "text_search" => self.execute_text_search(args).await,
             "get_tools_calling" => {
                 let doc_id = args
                     .get("doc_id")
@@ -843,7 +843,7 @@ impl ToolExecutorPort for BuiltinToolsExecutor {
                     "instruction": "Задай пользователю все вопросы из списка, дождись ответов на каждый и продолжай только после получения полного набора ответов.",
                 }))
             }
-            "planning_tool" => self.execute_planning_tool(&args).await,
+            "planning_tool" => self.execute_planning_tool(args).await,
             "schedule_mirea_tool" => {
                 let date_value = args
                     .get("date_value")

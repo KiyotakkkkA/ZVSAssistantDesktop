@@ -3,6 +3,7 @@ import { Button } from "../../../atoms";
 import type { OllamaCatalogModel } from "../../../../../services/api";
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
+import { Config } from "../../../../../config";
 
 type SettingsChatOllamaModelPickCardProps = {
     model: OllamaCatalogModel;
@@ -117,7 +118,7 @@ export function SettingsChatOllamaModelPickCard({
 
             <div className="mt-3 flex justify-between items-center">
                 <Link
-                    to={`https://ollama.com/models/${modelIdWithoutColon}`}
+                    to={`${Config.OLLAMA_BASE_URL}/library/${modelIdWithoutColon}`}
                     target="_blank"
                     className="rounded-md p-2 text-white bg-indigo-700 hover:bg-indigo-800 transition-colors flex items-center gap-1 text-xs"
                 >

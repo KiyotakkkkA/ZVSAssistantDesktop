@@ -65,9 +65,8 @@ fn take_pending_host_senders(
 ) -> Vec<oneshot::Sender<Value>> {
     let keys = pending
         .iter()
-        .filter_map(|(request_id, (owner_session_id, _))| {
-            (owner_session_id == session_id).then(|| request_id.clone())
-        })
+        .filter(|(_, (owner_session_id, _))| owner_session_id == session_id)
+        .map(|(request_id, _)| request_id.clone())
         .collect::<Vec<_>>();
 
     keys.into_iter()
@@ -314,7 +313,7 @@ impl JsHostPort {
             .map_err(|error| CoreError::Tool(error.to_string()))
     }
 
-    fn runtime_context<'a>(request: &'a ToolExecutionRequest) -> Result<&'a ChatRuntimeContext, CoreError> {
+    fn runtime_context(request: &ToolExecutionRequest) -> Result<&ChatRuntimeContext, CoreError> {
         request
             .runtime_context
             .as_ref()
@@ -1130,10 +1129,10 @@ impl OllamaHttpLlmPort {
             let mut headers = HeaderMap::new();
             headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
 
-            if let Some(auth) = auth_header_by_mode(&self.token, mode) {
-                if let Ok(value) = HeaderValue::from_str(&auth) {
-                    headers.insert(AUTHORIZATION, value);
-                }
+            if let Some(auth) = auth_header_by_mode(&self.token, mode)
+                && let Ok(value) = HeaderValue::from_str(&auth)
+            {
+                headers.insert(AUTHORIZATION, value);
             }
 
             let client = Client::builder()
@@ -1383,7 +1382,7 @@ pub async fn submit_tool_result(call_id: String, result_json: String) -> NapiRes
     }
 
     let result = serde_json::from_str::<Value>(&result_json)
-        .unwrap_or_else(|_| Value::String(result_json));
+        .unwrap_or(Value::String(result_json));
 
     Ok(runtime().submit_host_result(&call_id, result).await)
 }

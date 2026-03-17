@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { Icon } from "@iconify/react";
 import { Avatar, Button, Loader, Modal } from "../../atoms";
 import {
@@ -412,6 +412,7 @@ export function MessageFeed({
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const previousLastMessageIdRef = useRef<string | null>(null);
     const scrollContainerRef = useRef<HTMLElement | null>(null);
+    const didInitialScrollRef = useRef(false);
     const linkedStagesByUserId = useMemo(() => {
         const userMessageIds = new Set(
             messages
@@ -459,7 +460,22 @@ export function MessageFeed({
 
     useEffect(() => {
         previousLastMessageIdRef.current = null;
+        didInitialScrollRef.current = false;
     }, [contextKey]);
+
+    useLayoutEffect(() => {
+        if (didInitialScrollRef.current) {
+            return;
+        }
+
+        const container = scrollContainerRef.current;
+        if (!container || messages.length === 0) {
+            return;
+        }
+
+        container.scrollTop = container.scrollHeight;
+        didInitialScrollRef.current = true;
+    }, [contextKey, messages]);
 
     useEffect(() => {
         const lastMessage = messages[messages.length - 1];
@@ -476,15 +492,23 @@ export function MessageFeed({
             isNewLastMessage &&
             lastMessage.author === "user";
 
-        if (shouldSmoothScroll && scrollContainerRef.current) {
+        const shouldStickToBottomWhileStreaming =
+            Boolean(activeResponseToId) &&
+            lastMessage.author === "assistant" &&
+            lastMessage.answeringAt === activeResponseToId;
+
+        if (
+            (shouldSmoothScroll || shouldStickToBottomWhileStreaming) &&
+            scrollContainerRef.current
+        ) {
             scrollContainerRef.current.scrollTo({
                 top: scrollContainerRef.current.scrollHeight,
-                behavior: "smooth",
+                behavior: shouldSmoothScroll ? "smooth" : "auto",
             });
         }
 
         previousLastMessageIdRef.current = lastMessage.id;
-    }, [messages]);
+    }, [activeResponseToId, messages]);
 
     return (
         <>

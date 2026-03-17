@@ -567,9 +567,8 @@ impl ChatCoreService {
             let mut approvals = self.pending_approvals.lock().await;
             let keys = approvals
                 .iter()
-                .filter_map(|(call_id, (owner_session, _))| {
-                    (owner_session == session_id).then(|| call_id.clone())
-                })
+                .filter(|(_, (owner_session, _))| owner_session == session_id)
+                .map(|(call_id, _)| call_id.clone())
                 .collect::<Vec<_>>();
 
             keys.into_iter()

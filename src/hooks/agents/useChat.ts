@@ -314,12 +314,18 @@ export function useChat() {
                     totalTokens: 0,
                 };
                 let stopChatEvents: (() => void) | null = null;
+                let firstChunkTimeout: ReturnType<typeof setTimeout> | null =
+                    null;
                 const markFirstActivity = () => {
                     if (hasFirstChunk) {
                         return;
                     }
 
                     hasFirstChunk = true;
+                    if (firstChunkTimeout) {
+                        clearTimeout(firstChunkTimeout);
+                        firstChunkTimeout = null;
+                    }
                     setIsAwaitingFirstChunk(false);
                 };
 
@@ -553,6 +559,18 @@ export function useChat() {
 
                     stopChatEvents = llmApi.onChatEvent(handleChatEvent);
 
+                    firstChunkTimeout = setTimeout(() => {
+                        if (hasFirstChunk || cancellationRequestedRef.current) {
+                            return;
+                        }
+
+                        sessionError = new Error(
+                            "Не удалось получить первый фрагмент ответа. Проверьте подключение к модели.",
+                        );
+                        void llmApi.cancelChatSession(sessionId);
+                        settleTerminalEvent();
+                    }, 45000);
+
                     const payload: RunChatSessionPayload = {
                         sessionId,
                         model: ollamaModel,
@@ -583,6 +601,7 @@ export function useChat() {
                     };
 
                     await llmApi.runChatSession(payload);
+                    settleTerminalEvent();
                     await terminalEventPromise;
 
                     if (sessionError) {
@@ -660,6 +679,10 @@ export function useChat() {
                         return [...prev.slice(0, -1), updatedLastMessage];
                     });
                 } finally {
+                    if (firstChunkTimeout) {
+                        clearTimeout(firstChunkTimeout);
+                        firstChunkTimeout = null;
+                    }
                     stopChatEvents?.();
                     chunkQueueManager.reset();
                     chatSessionIdRef.current = null;

@@ -11,6 +11,7 @@ import { Icon } from "@iconify/react";
 import { useChatParams, useExtensions } from "../../../../hooks";
 import { SettingsChatOllamaModelsPickForm } from "../forms";
 import { Link, useNavigate } from "react-router-dom";
+import { Config } from "../../../../config";
 
 export const SettingsChatPanel = () => {
     const [isModelsPickOpen, setIsModelsPickOpen] = useState(false);
@@ -239,13 +240,14 @@ export const SettingsChatPanel = () => {
                             <Link
                                 to="https://console.mistral.ai/build/audio/realtime?workspace_dialog=apiKeys"
                                 target="_blank"
-                                className="rounded-md p-2 text-white bg-indigo-700 hover:bg-indigo-800 transition-colors"
+                                className="rounded-md p-2 text-white bg-indigo-700 hover:bg-indigo-800 transition-colors flex items-center gap-1 text-xs"
                             >
                                 <Icon
                                     icon="mdi:open-in-new"
                                     width={18}
                                     height={18}
                                 />
+                                Получить ключ
                             </Link>
                         </div>
                     </div>
@@ -301,18 +303,34 @@ export const SettingsChatPanel = () => {
                                 <InputSmall
                                     value={ollamaModel}
                                     className="w-full"
-                                    readOnly
+                                    onChange={(event) =>
+                                        updateChatParams({
+                                            ollamaModel: event.target.value,
+                                        })
+                                    }
                                     placeholder="gpt-oss:20b"
                                 />
                             </div>
                             <Button
                                 variant="primary"
                                 shape="rounded-lg"
-                                className="h-9 shrink-0 px-3"
+                                className="h-9 shrink-0 px-3 text-xs"
                                 onClick={() => setIsModelsPickOpen(true)}
                             >
-                                Выбрать
+                                Список
                             </Button>
+                            <Link
+                                to={`${Config.OLLAMA_BASE_URL}/library/${ollamaModel.split(":")[0]}`}
+                                target="_blank"
+                                className="rounded-md p-2 text-white bg-indigo-700 hover:bg-indigo-800 transition-colors flex items-center gap-1 text-xs"
+                            >
+                                <Icon
+                                    icon="mdi:open-in-new"
+                                    width={18}
+                                    height={18}
+                                />
+                                На страницу
+                            </Link>
                         </div>
                     </div>
 
@@ -334,15 +352,16 @@ export const SettingsChatPanel = () => {
                                 />
                             </div>
                             <Link
-                                to="https://ollama.com/settings/keys"
+                                to={`${Config.OLLAMA_BASE_URL}/settings/keys`}
                                 target="_blank"
-                                className="rounded-md p-2 text-white bg-indigo-700 hover:bg-indigo-800 transition-colors"
+                                className="rounded-md p-2 text-white bg-indigo-700 hover:bg-indigo-800 transition-colors flex items-center gap-1 text-xs"
                             >
                                 <Icon
                                     icon="mdi:open-in-new"
                                     width={18}
                                     height={18}
                                 />
+                                Получить ключ
                             </Link>
                         </div>
                     </div>
@@ -401,13 +420,14 @@ export const SettingsChatPanel = () => {
                             <Link
                                 to="https://t.me/BotFather"
                                 target="_blank"
-                                className="rounded-md p-2 text-white bg-indigo-700 hover:bg-indigo-800 transition-colors"
+                                className="rounded-md p-2 text-white bg-indigo-700 hover:bg-indigo-800 transition-colors flex items-center gap-1 text-xs"
                             >
                                 <Icon
                                     icon="mdi:open-in-new"
                                     width={18}
                                     height={18}
                                 />
+                                Bot Father
                             </Link>
                         </div>
                     </div>

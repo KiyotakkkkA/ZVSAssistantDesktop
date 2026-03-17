@@ -259,67 +259,59 @@ export const MessageComposer = observer(function MessageComposer({
     const dialogTokenUsage = chatsStore.activeDialog?.tokenUsage;
     const activeDialogId = chatsStore.activeDialog?.id ?? null;
     const dialogMessagesCount = chatsStore.activeDialog?.messages.length ?? 0;
-    const totalTokens = dialogTokenUsage?.totalTokens ?? 0;
-    const totalSpentTokens =
-        dialogTokenUsage?.totalSpentTokens ??
-        dialogTokenUsage?.totalTokens ??
-        0;
-    const promptTokens = dialogTokenUsage?.promptTokens ?? 0;
-    const completionTokens = dialogTokenUsage?.completionTokens ?? 0;
+
     const contextWindow = dialogTokenUsage?.contextWindow;
-    const toPercent = (value: number) => {
-        if (totalTokens <= 0) {
-            return 0;
-        }
 
-        return Math.max(0, (value / totalTokens) * 100);
-    };
-
-    const promptPercent = toPercent(promptTokens);
-    const completionPercent = toPercent(completionTokens);
     const contextWindowRows = [
         {
             key: "system",
-            label: "System",
+            label: "Системный промпт",
             value: contextWindow?.system ?? 0,
         },
         {
             key: "systemInstructions",
-            label: "System Instructions",
+            label: "Системные инструкции",
             value: contextWindow?.systemInstructions ?? 0,
         },
         {
             key: "toolDefinitions",
-            label: "Tool Definitions",
+            label: "Определения инструментов",
             value: contextWindow?.toolDefinitions ?? 0,
         },
         {
             key: "reservedOutput",
-            label: "Reserved Output",
+            label: "Резерв вывода",
             value: contextWindow?.reservedOutput ?? 0,
         },
         {
             key: "userContext",
-            label: "User Context",
+            label: "Пользовательский контекст",
             value: contextWindow?.userContext ?? 0,
         },
         {
             key: "messages",
-            label: "Messages",
+            label: "Сообщения",
             value: contextWindow?.messages ?? 0,
         },
         {
             key: "toolResults",
-            label: "Tool Results",
+            label: "Результаты инструментов",
             value: contextWindow?.toolResults ?? 0,
         },
     ];
+    const accountedContextRows = contextWindowRows.filter(
+        (row) => row.value > 0,
+    );
+    const contextWindowTotal = accountedContextRows.reduce(
+        (sum, row) => sum + row.value,
+        0,
+    );
     const contextWindowPercent = (value: number) => {
-        if (totalSpentTokens <= 0) {
+        if (contextWindowTotal <= 0) {
             return 0;
         }
 
-        return Math.max(0, (value / totalSpentTokens) * 100);
+        return Math.max(0, (value / contextWindowTotal) * 100);
     };
 
     useEffect(() => {
@@ -1271,102 +1263,55 @@ export const MessageComposer = observer(function MessageComposer({
                                             </p>
 
                                             <div className="mt-2 space-y-2 text-xs text-main-400">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <span>Всего токенов</span>
-                                                    <span className="text-main-200">
-                                                        {totalTokens.toLocaleString(
-                                                            "ru-RU",
-                                                        )}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <span>Всего потрачено</span>
-                                                    <span className="text-main-200">
-                                                        {totalSpentTokens.toLocaleString(
-                                                            "ru-RU",
-                                                        )}
-                                                    </span>
-                                                </div>
-
-                                                <div className="rounded-lg border border-main-700/70 bg-main-900/60 p-2">
-                                                    <div className="mb-1 flex items-center justify-between gap-2">
-                                                        <span className="text-main-300">
-                                                            Входные токены
-                                                        </span>
-                                                        <span className="text-main-200">
-                                                            {promptPercent.toFixed(
-                                                                1,
-                                                            )}
-                                                            %
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <span>Промпт</span>
-                                                        <span className="text-main-300">
-                                                            {promptTokens.toLocaleString(
-                                                                "ru-RU",
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="rounded-lg border border-main-700/70 bg-main-900/60 p-2">
-                                                    <div className="mb-1 flex items-center justify-between gap-2">
-                                                        <span className="text-main-300">
-                                                            Выходные токены
-                                                        </span>
-                                                        <span className="text-main-200">
-                                                            {completionPercent.toFixed(
-                                                                1,
-                                                            )}
-                                                            %
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <span>Ответ</span>
-                                                        <span className="text-main-300">
-                                                            {completionTokens.toLocaleString(
-                                                                "ru-RU",
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
                                                 <div className="rounded-lg border border-main-700/70 bg-main-900/60 p-2">
                                                     <div className="mb-1 flex items-center justify-between gap-2">
                                                         <span className="text-main-300">
                                                             Контекст диалога
                                                         </span>
                                                         <span className="text-main-200">
-                                                            {totalSpentTokens.toLocaleString(
+                                                            {contextWindowTotal.toLocaleString(
                                                                 "ru-RU",
                                                             )}
                                                         </span>
                                                     </div>
                                                     <div className="space-y-1">
-                                                        {contextWindowRows.map(
-                                                            (row) => (
-                                                                <div
-                                                                    key={
-                                                                        row.key
-                                                                    }
-                                                                    className="flex items-center justify-between gap-2"
-                                                                >
-                                                                    <span>
-                                                                        {
-                                                                            row.label
+                                                        {accountedContextRows.length >
+                                                        0 ? (
+                                                            accountedContextRows.map(
+                                                                (row) => (
+                                                                    <div
+                                                                        key={
+                                                                            row.key
                                                                         }
-                                                                    </span>
-                                                                    <span className="text-main-300">
-                                                                        {contextWindowPercent(
-                                                                            row.value,
-                                                                        ).toFixed(
-                                                                            1,
-                                                                        )}
-                                                                        %
-                                                                    </span>
-                                                                </div>
-                                                            ),
+                                                                        className="flex items-center justify-between gap-2"
+                                                                    >
+                                                                        <span>
+                                                                            {
+                                                                                row.label
+                                                                            }
+                                                                        </span>
+                                                                        <span className="text-main-300">
+                                                                            {contextWindowPercent(
+                                                                                row.value,
+                                                                            ).toFixed(
+                                                                                1,
+                                                                            )}
+                                                                            %
+                                                                        </span>
+                                                                    </div>
+                                                                ),
+                                                            )
+                                                        ) : (
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <span>
+                                                                    Нет
+                                                                    учитываемых
+                                                                    данных
+                                                                </span>
+                                                                <span className="text-main-300">
+                                                                    0.0%
+                                                                </span>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>

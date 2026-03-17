@@ -35,10 +35,10 @@ pub(crate) fn auth_header_by_mode(token: &str, mode: &str) -> Option<String> {
 }
 
 pub(crate) fn is_unauthorized(status: Option<reqwest::StatusCode>, body: &str) -> bool {
-    if let Some(status_code) = status {
-        if status_code.as_u16() == 401 {
-            return true;
-        }
+    if let Some(status_code) = status
+        && status_code.as_u16() == 401
+    {
+        return true;
     }
     let lowered = body.to_ascii_lowercase();
     lowered.contains("unauthorized") || lowered.contains("401")
@@ -58,10 +58,10 @@ pub(crate) async fn post_non_stream_with_auth_fallback(
     for mode in modes {
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        if let Some(auth) = auth_header_by_mode(token, mode) {
-            if let Ok(value) = HeaderValue::from_str(&auth) {
-                headers.insert(AUTHORIZATION, value);
-            }
+        if let Some(auth) = auth_header_by_mode(token, mode)
+            && let Ok(value) = HeaderValue::from_str(&auth)
+        {
+            headers.insert(AUTHORIZATION, value);
         }
         let client = Client::builder()
             .default_headers(headers)
@@ -118,10 +118,10 @@ async fn stream_post_with_callback(
     for mode in modes {
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        if let Some(auth) = auth_header_by_mode(token, mode) {
-            if let Ok(value) = HeaderValue::from_str(&auth) {
-                headers.insert(AUTHORIZATION, value);
-            }
+        if let Some(auth) = auth_header_by_mode(token, mode)
+            && let Ok(value) = HeaderValue::from_str(&auth)
+        {
+            headers.insert(AUTHORIZATION, value);
         }
         let client = Client::builder()
             .default_headers(headers)
@@ -174,15 +174,15 @@ async fn stream_post_with_callback(
         }
 
         let rest = buffer.trim().to_string();
-        if !rest.is_empty() {
-            if let Ok(parsed) = serde_json::from_str::<Value>(&rest) {
-                if parsed.get("done").and_then(Value::as_bool).unwrap_or(false) {
-                    got_done = true;
-                }
-                let chunk_json = serde_json::to_string(&parsed)
-                    .map_err(|e| Error::from_reason(e.to_string()))?;
-                on_chunk.call(Ok(chunk_json), ThreadsafeFunctionCallMode::NonBlocking);
+        if !rest.is_empty()
+            && let Ok(parsed) = serde_json::from_str::<Value>(&rest)
+        {
+            if parsed.get("done").and_then(Value::as_bool).unwrap_or(false) {
+                got_done = true;
             }
+            let chunk_json = serde_json::to_string(&parsed)
+                .map_err(|e| Error::from_reason(e.to_string()))?;
+            on_chunk.call(Ok(chunk_json), ThreadsafeFunctionCallMode::NonBlocking);
         }
 
         if !got_done {
