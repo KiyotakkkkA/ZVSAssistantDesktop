@@ -83,9 +83,9 @@ export const MainLayout = () => {
                     </nav>
                 </aside>
 
-                <div className="w-full">
+                <div className="grid h-full w-full grid-rows-[auto_1fr]">
                     <Header />
-                    <section className="min-w-0 flex-1">
+                    <section className="min-w-0 px-2 pt-2">
                         <Outlet />
                     </section>
                 </div>

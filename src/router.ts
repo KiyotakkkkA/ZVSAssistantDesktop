@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { createHashRouter, Navigate } from "react-router-dom";
 import { MainLayout } from "./presentation/layouts/MainLayout";
 import { WelcomePage } from "./presentation/pages/WelcomePage";
-import { ChatViewPage } from "./presentation/pages/workspace/ChatViewPage";
+import { ChatViewPage } from "./presentation/pages/workspace/chat/ChatViewPage";
 import { AgentsViewPage } from "./presentation/pages/agents/AgentsViewPage";
 import { ScenariosViewPage } from "./presentation/pages/scenarios/ScenariosViewPage";
 import { ExtensionsViewPage } from "./presentation/pages/extensions/ExtensionsViewPage";
