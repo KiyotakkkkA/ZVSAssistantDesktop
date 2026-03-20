@@ -1,4 +1,4 @@
-import type { ThemeData } from "../../../src/types/App";
+import type { ThemeData } from "./types";
 
 export const baseDarkNord: ThemeData = {
     id: "dark-nord",

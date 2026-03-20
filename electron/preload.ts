@@ -60,3 +60,28 @@ contextBridge.exposeInMainWorld("chat", {
         };
     },
 });
+
+contextBridge.exposeInMainWorld("profile", {
+    boot() {
+        return ipcRenderer.invoke("profile:boot");
+    },
+    update(
+        id: string,
+        data: {
+            generalData?: {
+                name: string;
+                preferredTheme: string;
+                preferredLanguage: string;
+                userPrompt: string;
+            };
+            secureData?: {
+                ollamaApiKey: string;
+            };
+        },
+    ) {
+        return ipcRenderer.invoke("profile:update", id, data);
+    },
+    getThemeData(themeName: string) {
+        return ipcRenderer.invoke("theme:get-data", themeName);
+    },
+});

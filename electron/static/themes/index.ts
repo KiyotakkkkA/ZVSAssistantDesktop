@@ -1,4 +1,4 @@
-import type { ThemeData, ThemeListItem } from "../../../src/types/App";
+import type { ThemeData } from "./types";
 import { baseDarkDracula } from "./baseDarkDracula";
 import { baseDarkGithub } from "./baseDarkGithub";
 import { baseDarkGruvbox } from "./baseDarkGruvbox";
@@ -28,7 +28,9 @@ export const staticThemesMap: Record<string, ThemeData> = Object.fromEntries(
     staticThemes.map((theme) => [theme.id, theme]),
 );
 
-export const staticThemesList: ThemeListItem[] = staticThemes.map((theme) => ({
-    id: theme.id,
-    name: theme.name,
-}));
+export const staticThemesList: Omit<ThemeData, "palette">[] = staticThemes.map(
+    (theme) => ({
+        id: theme.id,
+        name: theme.name,
+    }),
+);

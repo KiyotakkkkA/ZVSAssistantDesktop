@@ -1,10 +1,18 @@
 import path from "node:path";
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow } from "electron";
 import { fileURLToPath } from "node:url";
 
-import { ChatGenService, ResponseGenParams } from "./services/ChatGenService";
+import { ChatGenService } from "./services/ChatGenService";
 import { InitService } from "./services/InitService";
+import { DatabaseService } from "./services/DatabaseService";
+import { ThemesService } from "./services/ThemesService";
+
+import { registerIpcChatPack } from "./ipc/icpChatPack";
+import { registerIpcProfilePack } from "./ipc/icpProfilePack";
+
 import { createElectronPaths } from "./paths";
+import { UserRepository } from "./repositories/UserRepository";
+import { defaultUser } from "./static/data/baseProfile";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -27,7 +35,7 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
 const APP_ID = "com.zvs.assistant";
 
 let chatGenService: ChatGenService;
-let initService: InitService;
+let themesService: ThemesService;
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
     ? path.join(process.env.APP_ROOT, "public")
@@ -117,96 +125,40 @@ app.on("second-instance", () => {
 
 app.whenReady().then(() => {
     const appPaths = createElectronPaths(app.getPath("userData"));
-    initService = new InitService(appPaths);
+
+    // Инициализируем сервисы поддержки
+    const initService = new InitService(appPaths);
     initService.initialize();
+    const databaseService = new DatabaseService(appPaths.databasePath);
 
+    // Инициализируем функциональный сервисы
     chatGenService = new ChatGenService(process.env.VITE_OLLAMA_API_KEY ?? "");
+    themesService = new ThemesService(appPaths.themesPath);
 
-    registerChatIpcHandlers();
+    // Инициализируем репозитории
+    const userRepository = new UserRepository(databaseService);
+
+    // Инициализируем данные
+    ensureUserExists(userRepository);
+
+    registerIpcChatPack({
+        chatGenService,
+    });
+
+    registerIpcProfilePack({
+        themesService,
+        userRepository,
+    });
+
     createWindow();
-    ``;
 });
 
-function registerChatIpcHandlers() {
-    ipcMain.handle(
-        "chat:generate",
-        async (_event, payload: ResponseGenParams) => {
-            const prompt = payload.prompt?.trim() ?? "";
-            const model = payload.model;
-            const messages = payload.messages;
-
-            if (!prompt && (!messages || messages.length === 0)) {
-                throw new Error("Prompt is required");
-            }
-
-            return chatGenService.generateResponse({
-                prompt,
-                model,
-                messages,
-            });
-        },
-    );
-
-    ipcMain.on(
-        "chat:stream:start",
-        (event, payload: ResponseGenParams & { requestId: string }) => {
-            const prompt = payload.prompt?.trim() ?? "";
-            const requestId = payload.requestId;
-            const model = payload.model;
-            const messages = payload.messages;
-
-            if (
-                (!prompt && (!messages || messages.length === 0)) ||
-                !requestId
-            ) {
-                event.sender.send("chat:stream:event", {
-                    requestId,
-                    part: {
-                        type: "error",
-                        error: "Prompt and requestId are required",
-                    },
-                });
-                return;
-            }
-
-            void (async () => {
-                try {
-                    const result = chatGenService.streamResponseGeneration({
-                        prompt,
-                        model,
-                        messages,
-                    });
-
-                    for await (const part of result.fullStream) {
-                        event.sender.send("chat:stream:event", {
-                            requestId,
-                            part,
-                        });
-                    }
-
-                    const usage = await result.getTotalUsage();
-                    event.sender.send("chat:stream:event", {
-                        requestId,
-                        part: {
-                            type: "usage",
-                            usage,
-                        },
-                    });
-                } catch (error) {
-                    event.sender.send("chat:stream:event", {
-                        requestId,
-                        part: {
-                            type: "error",
-                            error:
-                                error instanceof Error
-                                    ? error.message
-                                    : "Unknown stream error",
-                        },
-                    });
-                }
-            })();
-        },
-    );
+function ensureUserExists(userRepository: UserRepository) {
+    const currentUser = userRepository.findCurrentUser();
+    if (!currentUser) {
+        return userRepository.createUser(defaultUser);
+    }
+    return currentUser;
 }
 
 async function shutdownApplication(): Promise<void> {
