@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { createHashRouter, Navigate } from "react-router-dom";
 import { MainLayout } from "./presentation/layouts/MainLayout";
+import { WorkspaceSidebar } from "./presentation/layouts/WorkspaceSidebar";
 import { WelcomePage } from "./presentation/pages/WelcomePage";
 import { ChatViewPage } from "./presentation/pages/workspace/chat/ChatViewPage";
 import { AgentsViewPage } from "./presentation/pages/agents/AgentsViewPage";
@@ -16,7 +17,7 @@ export const router = createHashRouter([
             {
                 index: true,
                 element: createElement(Navigate, {
-                    to: "/workspace",
+                    to: "/workspace/chat",
                     replace: true,
                 }),
             },
@@ -26,7 +27,20 @@ export const router = createHashRouter([
             },
             {
                 path: "workspace",
-                element: createElement(ChatViewPage),
+                element: createElement(WorkspaceSidebar),
+                children: [
+                    {
+                        index: true,
+                        element: createElement(Navigate, {
+                            to: "chat",
+                            replace: true,
+                        }),
+                    },
+                    {
+                        path: "chat",
+                        element: createElement(ChatViewPage),
+                    },
+                ],
             },
             {
                 path: "agents",

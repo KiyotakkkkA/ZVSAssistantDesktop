@@ -1,6 +1,6 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Icon } from "@iconify/react";
-import { Header } from "./Header";
+import { Button } from "@kiyotakkkka/zvs-uikit-lib";
 
 type NavigationTab = {
     id: "workspace" | "storage" | "extensions" | "agents" | "scenarios";
@@ -48,7 +48,7 @@ export const MainLayout = () => {
 
     return (
         <main className="h-screen w-screen overflow-hidden bg-main-900 p-3 text-main-100">
-            <div className="flex h-full min-h-0 w-full gap-3">
+            <div className="flex h-full min-h-0 w-full gap-2">
                 <aside
                     className={`flex h-full min-h-0 shrink-0 flex-col rounded-3xl bg-main-800/70 p-3 backdrop-blur-md w-55`}
                 >
@@ -60,14 +60,13 @@ export const MainLayout = () => {
                     <nav className="space-y-2 overflow-y-auto pr-1">
                         {navigationTabs.map((tab) => {
                             return (
-                                <button
+                                <Button
                                     key={tab.id}
-                                    type="button"
                                     onClick={() => navigate(tab.to)}
-                                    className={`flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-sm transition-colors cursor-pointer ${
+                                    className={`w-full justify-start text-sm transition-colors cursor-pointer p-2 gap-2 bg-transparent ${
                                         location.pathname.startsWith(tab.to)
-                                            ? "bg-main-700/60 text-main-100"
-                                            : "text-main-300 hover:bg-main-800/60 hover:text-main-100"
+                                            ? "bg-main-600/60 text-main-100 hover:bg-main-600/60"
+                                            : "text-main-300 hover:bg-main-700/60 hover:text-main-100"
                                     }`}
                                     title={tab.label}
                                 >
@@ -77,15 +76,14 @@ export const MainLayout = () => {
                                         height={18}
                                     />
                                     <span>{tab.label}</span>
-                                </button>
+                                </Button>
                             );
                         })}
                     </nav>
                 </aside>
 
-                <div className="grid h-full min-h-0 w-full grid-rows-[auto_1fr] gap-y-4">
-                    <Header />
-                    <section className="min-h-0 min-w-0 overflow-hidden px-2 pt-1">
+                <div className="h-full min-h-0 w-full">
+                    <section className="h-full min-h-0 min-w-0 overflow-hidden px-2">
                         <Outlet />
                     </section>
                 </div>

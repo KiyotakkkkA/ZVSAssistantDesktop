@@ -1,3 +1,4 @@
 export * from "./ChatUserBubbleCard";
 export * from "./ChatAssistantBubbleCard";
-export * from "./ThinkingBubbleCard";
+export * from "./ChatThinkingBubbleCard";
+export * from "./SidebarItemCard";

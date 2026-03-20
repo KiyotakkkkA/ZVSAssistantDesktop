@@ -1,7 +1,10 @@
 import path from "node:path";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { fileURLToPath } from "node:url";
-import { ChatGenService } from "./services/ChatGenService";
+
+import { ChatGenService, ResponseGenParams } from "./services/ChatGenService";
+import { InitService } from "./services/InitService";
+import { createElectronPaths } from "./paths";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -22,11 +25,9 @@ export const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
 
 const APP_ID = "com.zvs.assistant";
-const DEFAULT_MODEL = "gpt-oss:120b";
 
-const chatGenService = new ChatGenService(
-    process.env.VITE_OLLAMA_API_KEY ?? "",
-);
+let chatGenService: ChatGenService;
+let initService: InitService;
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
     ? path.join(process.env.APP_ROOT, "public")
@@ -115,92 +116,96 @@ app.on("second-instance", () => {
 });
 
 app.whenReady().then(() => {
+    const appPaths = createElectronPaths(app.getPath("userData"));
+    initService = new InitService(appPaths);
+    initService.initialize();
+
+    chatGenService = new ChatGenService(process.env.VITE_OLLAMA_API_KEY ?? "");
+
     registerChatIpcHandlers();
     createWindow();
 });
 
 function registerChatIpcHandlers() {
-    ipcMain.handle("chat:generate", async (_event, payload: unknown) => {
-        const prompt =
-            typeof (payload as { prompt?: unknown })?.prompt === "string"
-                ? (payload as { prompt: string }).prompt.trim()
-                : "";
-        const model =
-            typeof (payload as { model?: unknown })?.model === "string"
-                ? (payload as { model: string }).model
-                : DEFAULT_MODEL;
+    ipcMain.handle(
+        "chat:generate",
+        async (_event, payload: ResponseGenParams) => {
+            const prompt = payload.prompt?.trim() ?? "";
+            const model = payload.model;
+            const messages = payload.messages;
 
-        if (!prompt) {
-            throw new Error("Prompt is required");
-        }
+            if (!prompt && (!messages || messages.length === 0)) {
+                throw new Error("Prompt is required");
+            }
 
-        return chatGenService.generateResponse({
-            prompt,
-            model,
-        });
-    });
-
-    ipcMain.on("chat:stream:start", (event, payload: unknown) => {
-        const prompt =
-            typeof (payload as { prompt?: unknown })?.prompt === "string"
-                ? (payload as { prompt: string }).prompt.trim()
-                : "";
-        const requestId =
-            typeof (payload as { requestId?: unknown })?.requestId === "string"
-                ? (payload as { requestId: string }).requestId
-                : "";
-        const model =
-            typeof (payload as { model?: unknown })?.model === "string"
-                ? (payload as { model: string }).model
-                : DEFAULT_MODEL;
-
-        if (!prompt || !requestId) {
-            event.sender.send("chat:stream:event", {
-                requestId,
-                part: {
-                    type: "error",
-                    error: "Prompt and requestId are required",
-                },
+            return chatGenService.generateResponse({
+                prompt,
+                model,
+                messages,
             });
-            return;
-        }
+        },
+    );
 
-        void (async () => {
-            try {
-                const result = chatGenService.streamResponseGeneration({
-                    prompt,
-                    model,
-                });
+    ipcMain.on(
+        "chat:stream:start",
+        (event, payload: ResponseGenParams & { requestId: string }) => {
+            const prompt = payload.prompt?.trim() ?? "";
+            const requestId = payload.requestId;
+            const model = payload.model;
+            const messages = payload.messages;
 
-                for await (const part of result.fullStream) {
-                    event.sender.send("chat:stream:event", {
-                        requestId,
-                        part,
-                    });
-                }
-
-                const usage = await result.getTotalUsage();
-                event.sender.send("chat:stream:event", {
-                    requestId,
-                    part: {
-                        type: "usage",
-                        usage,
-                    },
-                });
-            } catch (error) {
+            if (
+                (!prompt && (!messages || messages.length === 0)) ||
+                !requestId
+            ) {
                 event.sender.send("chat:stream:event", {
                     requestId,
                     part: {
                         type: "error",
-                        error:
-                            error instanceof Error
-                                ? error.message
-                                : "Unknown stream error",
+                        error: "Prompt and requestId are required",
                     },
                 });
+                return;
             }
-        })();
-    });
+
+            void (async () => {
+                try {
+                    const result = chatGenService.streamResponseGeneration({
+                        prompt,
+                        model,
+                        messages,
+                    });
+
+                    for await (const part of result.fullStream) {
+                        event.sender.send("chat:stream:event", {
+                            requestId,
+                            part,
+                        });
+                    }
+
+                    const usage = await result.getTotalUsage();
+                    event.sender.send("chat:stream:event", {
+                        requestId,
+                        part: {
+                            type: "usage",
+                            usage,
+                        },
+                    });
+                } catch (error) {
+                    event.sender.send("chat:stream:event", {
+                        requestId,
+                        part: {
+                            type: "error",
+                            error:
+                                error instanceof Error
+                                    ? error.message
+                                    : "Unknown stream error",
+                        },
+                    });
+                }
+            })();
+        },
+    );
 }
 
 async function shutdownApplication(): Promise<void> {

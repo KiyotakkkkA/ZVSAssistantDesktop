@@ -1,13 +1,33 @@
 import { useEffect, useRef } from "react";
 import { ChatUserBubbleCard } from "../../molecules/chat/cards";
 import { AssistantResponse } from "./AssistantResponse";
-import type { ChatMessage } from "../../../../hooks/useChat";
+import type { ChatMessage } from "../../../../stores/workspaceStore";
 
 type MessageFeedProps = {
     messages: ChatMessage[];
+    editingMessageId: string | null;
+    editingValue: string;
+    onEditValueChange: (value: string) => void;
+    onStartEdit: (messageId: string) => void;
+    onCancelEdit: () => void;
+    onConfirmEdit: () => void;
+    onCopyMessage: (content: string) => void;
+    onRefreshMessage: (messageId: string) => void;
+    onDeleteMessage: (messageId: string) => void;
 };
 
-export const MessageFeed = ({ messages }: MessageFeedProps) => {
+export const MessageFeed = ({
+    messages,
+    editingMessageId,
+    editingValue,
+    onEditValueChange,
+    onStartEdit,
+    onCancelEdit,
+    onConfirmEdit,
+    onCopyMessage,
+    onRefreshMessage,
+    onDeleteMessage,
+}: MessageFeedProps) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -37,6 +57,23 @@ export const MessageFeed = ({ messages }: MessageFeedProps) => {
                                 key={message.id}
                                 content={message.content}
                                 timestamp={message.timestamp}
+                                isEditing={editingMessageId === message.id}
+                                editValue={editingValue}
+                                onEditValueChange={onEditValueChange}
+                                onEditCancel={onCancelEdit}
+                                onEditConfirm={onConfirmEdit}
+                                msgCopy={() => {
+                                    void onCopyMessage(message.content);
+                                }}
+                                msgRetry={() => {
+                                    void onRefreshMessage(message.id);
+                                }}
+                                msgEdit={() => {
+                                    onStartEdit(message.id);
+                                }}
+                                msgDelete={() => {
+                                    onDeleteMessage(message.id);
+                                }}
                             />
                         );
                     }

@@ -6,6 +6,10 @@ declare global {
             generateResponse: (params: {
                 prompt: string;
                 model: string;
+                messages?: Array<{
+                    role: "user" | "assistant";
+                    content: string;
+                }>;
             }) => Promise<{
                 text: string;
                 usage: unknown;
@@ -14,6 +18,10 @@ declare global {
                 requestId: string;
                 prompt: string;
                 model: string;
+                messages?: Array<{
+                    role: "user" | "assistant";
+                    content: string;
+                }>;
             }) => void;
             onStreamEvent: (
                 listener: (payload: {

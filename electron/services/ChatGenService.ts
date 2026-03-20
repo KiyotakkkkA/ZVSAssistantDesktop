@@ -8,9 +8,26 @@ import type {
     ToolSet,
 } from "ai";
 
-type ResponseGenParams = {
-    prompt: string;
+export type ResponseGenParams = {
+    prompt?: string;
     model: string;
+    messages?: Array<{
+        role: "user" | "assistant";
+        content: string;
+    }>;
+};
+
+const toModelMessages = (params: ResponseGenParams) => {
+    if (params.messages && params.messages.length > 0) {
+        return params.messages;
+    }
+
+    return [
+        {
+            role: "user" as const,
+            content: params.prompt ?? "",
+        },
+    ];
 };
 
 export class ChatGenService {
@@ -39,7 +56,7 @@ export class ChatGenService {
     } {
         const { fullStream, totalUsage } = streamText({
             model: (this.provider as OpenAICompatibleProvider)(params.model),
-            prompt: params.prompt,
+            messages: toModelMessages(params),
         });
 
         return {
@@ -54,7 +71,7 @@ export class ChatGenService {
     }> {
         const { text, usage } = await generateText({
             model: (this.provider as OpenAICompatibleProvider)(params.model),
-            prompt: params.prompt,
+            messages: toModelMessages(params),
         });
 
         return {

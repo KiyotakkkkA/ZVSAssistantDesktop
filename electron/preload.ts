@@ -23,13 +23,18 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
 });
 
 contextBridge.exposeInMainWorld("chat", {
-    generateResponse(params: { prompt: string; model: string }) {
+    generateResponse(params: {
+        prompt: string;
+        model: string;
+        messages?: Array<{ role: "user" | "assistant"; content: string }>;
+    }) {
         return ipcRenderer.invoke("chat:generate", params);
     },
     streamResponseGeneration(params: {
         requestId: string;
         prompt: string;
         model: string;
+        messages?: Array<{ role: "user" | "assistant"; content: string }>;
     }) {
         ipcRenderer.send("chat:stream:start", params);
     },

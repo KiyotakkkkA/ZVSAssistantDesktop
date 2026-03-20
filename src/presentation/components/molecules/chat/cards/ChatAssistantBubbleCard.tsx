@@ -1,3 +1,4 @@
+import { resolveText } from "../../../../../utils/resolvers";
 import { MarkdownStaticContent } from "../../render";
 
 type ChatAssistantBubbleCardProps = {
@@ -7,33 +8,13 @@ type ChatAssistantBubbleCardProps = {
     isError?: boolean;
 };
 
-const normalizeRenderText = (value: unknown) => {
-    if (typeof value === "string") {
-        return value;
-    }
-
-    if (value instanceof Error) {
-        return value.message;
-    }
-
-    if (value == null) {
-        return "";
-    }
-
-    try {
-        return JSON.stringify(value);
-    } catch {
-        return String(value);
-    }
-};
-
 export function ChatAssistantBubbleCard({
     content,
     timestamp,
     isStreaming = false,
     isError = false,
 }: ChatAssistantBubbleCardProps) {
-    const safeContent = normalizeRenderText(content);
+    const safeContent = resolveText(content);
     const showStreamingPlaceholder = isStreaming && !safeContent.trim();
 
     return (

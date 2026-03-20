@@ -1,36 +1,17 @@
 import { Icon } from "@iconify/react";
 import { Accordeon, Loader } from "@kiyotakkkka/zvs-uikit-lib";
+import { resolveText } from "../../../../../utils/resolvers";
 
 type ThinkingBubbleCardProps = {
     content: string;
     isLoading?: boolean;
 };
 
-const normalizeRenderText = (value: unknown) => {
-    if (typeof value === "string") {
-        return value;
-    }
-
-    if (value instanceof Error) {
-        return value.message;
-    }
-
-    if (value == null) {
-        return "";
-    }
-
-    try {
-        return JSON.stringify(value);
-    } catch {
-        return String(value);
-    }
-};
-
-export function ThinkingBubbleCard({
+export function ChatThinkingBubbleCard({
     content,
     isLoading = false,
 }: ThinkingBubbleCardProps) {
-    const safeContent = normalizeRenderText(content);
+    const safeContent = resolveText(content);
 
     if (!safeContent.trim()) {
         return null;
