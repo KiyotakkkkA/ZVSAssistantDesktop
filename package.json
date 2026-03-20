@@ -6,12 +6,11 @@
     "author": "ZVS Team",
     "type": "module",
     "scripts": {
+        "test:chat-gen": "node tests/chat_generation_test.ts",
         "dev": "vite --host",
-        "build:core": "npx @napi-rs/cli build --cargo-cwd core --cargo-name assistant_core --platform --release --target x86_64-pc-windows-msvc native/core && node -e \"const fs=require('fs'); if(fs.existsSync('native/core/index.js')) fs.copyFileSync('native/core/index.js','native/core/index.cjs');\"",
-        "build:app": "npm run build:core && vite build",
+        "build:app": "vite build",
         "build": "npm run typecheck && npm run build:app && electron-builder",
         "typecheck": "tsc --noEmit && tsc --project tsconfig.node.json --noEmit",
-        "release:win": "npm run typecheck && npm run build:app && electron-builder --win --x64",
         "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
         "deps:rebuild": "npx electron-rebuild -f -w better-sqlite3",
         "preview": "vite preview"

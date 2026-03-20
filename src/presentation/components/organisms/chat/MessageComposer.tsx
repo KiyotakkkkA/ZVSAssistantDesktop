@@ -2,6 +2,13 @@ import { Icon } from "@iconify/react";
 import { Button, Dropdown, InputBig } from "@kiyotakkkka/zvs-uikit-lib";
 import { useRef, useState } from "react";
 
+type MessageComposerProps = {
+    input: string;
+    setInput: (value: string) => void;
+    onSubmit: () => void;
+    isGenerating: boolean;
+};
+
 const attachOptions = [
     {
         value: "attach-image",
@@ -13,13 +20,18 @@ const attachOptions = [
     },
 ];
 
-export const MessageComposer = () => {
-    const [msgContent, setMsgContent] = useState("");
+export const MessageComposer = ({
+    input,
+    setInput,
+    onSubmit,
+    isGenerating,
+}: MessageComposerProps) => {
+    const [isRecording] = useState(false);
     const areaRef = useRef<HTMLTextAreaElement>(null);
 
     return (
         <>
-            <footer className="rounded-2xl">
+            <footer className="shrink-0 rounded-2xl pt-2">
                 <div
                     className="mx-auto w-full max-w-5xl rounded-[1.75rem] border border-main-700/70 bg-main-800/65 p-1 hover:border-main-600/90 group transition-colors hover:cursor-text"
                     onClick={() => {
@@ -29,15 +41,14 @@ export const MessageComposer = () => {
                     <div className="relative rounded-2xl px-3 py-2">
                         <InputBig
                             ref={areaRef}
-                            value={msgContent}
-                            onChange={(value) =>
-                                setMsgContent(value.target.value)
-                            }
+                            value={input}
+                            onChange={(value) => setInput(value.target.value)}
                             placeholder="Задайте вопрос..."
                             className="h-auto! min-h-9 w-full rounded-lg border-0 bg-transparent p-2 text-main-100 placeholder:text-main-400 focus-visible:ring-0"
                             onKeyDown={(event) => {
                                 if (event.key === "Enter" && !event.shiftKey) {
                                     event.preventDefault();
+                                    onSubmit();
                                 }
                             }}
                         />
@@ -107,17 +118,31 @@ export const MessageComposer = () => {
                                         e.stopPropagation();
                                     }}
                                 >
-                                    <Icon icon={"mdi:microphone"} />
+                                    <Icon
+                                        icon={
+                                            isRecording
+                                                ? "mdi:microphone-off"
+                                                : "mdi:microphone"
+                                        }
+                                    />
                                 </Button>
 
                                 <Button
                                     className="h-9 w-9 p-0"
                                     variant="primary"
+                                    disabled={isGenerating || !input.trim()}
                                     onClick={(e) => {
                                         e.stopPropagation();
+                                        onSubmit();
                                     }}
                                 >
-                                    <Icon icon={"mdi:send"} />
+                                    <Icon
+                                        icon={
+                                            isGenerating
+                                                ? "mdi:progress-clock"
+                                                : "mdi:send"
+                                        }
+                                    />
                                 </Button>
                             </div>
                         </div>

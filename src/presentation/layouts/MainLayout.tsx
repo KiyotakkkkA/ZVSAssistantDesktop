@@ -48,16 +48,16 @@ export const MainLayout = () => {
 
     return (
         <main className="h-screen w-screen overflow-hidden bg-main-900 p-3 text-main-100">
-            <div className="flex h-full w-full gap-3">
+            <div className="flex h-full min-h-0 w-full gap-3">
                 <aside
-                    className={`flex h-full shrink-0 flex-col rounded-3xl bg-main-800/70 p-3 backdrop-blur-md w-55`}
+                    className={`flex h-full min-h-0 shrink-0 flex-col rounded-3xl bg-main-800/70 p-3 backdrop-blur-md w-55`}
                 >
                     <div className="mb-3 flex items-center justify-start gap-2">
                         <p className="text-xs uppercase tracking-[0.18em] text-main-400">
                             Навигация
                         </p>
                     </div>
-                    <nav className="space-y-2">
+                    <nav className="space-y-2 overflow-y-auto pr-1">
                         {navigationTabs.map((tab) => {
                             return (
                                 <button
@@ -83,9 +83,9 @@ export const MainLayout = () => {
                     </nav>
                 </aside>
 
-                <div className="grid h-full w-full grid-rows-[auto_1fr]">
+                <div className="grid h-full min-h-0 w-full grid-rows-[auto_1fr] gap-y-4">
                     <Header />
-                    <section className="min-w-0 px-2 pt-2">
+                    <section className="min-h-0 min-w-0 overflow-hidden px-2 pt-1">
                         <Outlet />
                     </section>
                 </div>

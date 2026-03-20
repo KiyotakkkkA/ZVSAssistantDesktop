@@ -16,7 +16,7 @@ export const router = createHashRouter([
             {
                 index: true,
                 element: createElement(Navigate, {
-                    to: "/welcome",
+                    to: "/workspace",
                     replace: true,
                 }),
             },

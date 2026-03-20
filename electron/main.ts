@@ -1,6 +1,7 @@
 import path from "node:path";
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import { fileURLToPath } from "node:url";
+import { ChatGenService } from "./services/ChatGenService";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -21,6 +22,11 @@ export const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
 
 const APP_ID = "com.zvs.assistant";
+const DEFAULT_MODEL = "gpt-oss:120b";
+
+const chatGenService = new ChatGenService(
+    process.env.VITE_OLLAMA_API_KEY ?? "",
+);
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
     ? path.join(process.env.APP_ROOT, "public")
@@ -109,8 +115,93 @@ app.on("second-instance", () => {
 });
 
 app.whenReady().then(() => {
+    registerChatIpcHandlers();
     createWindow();
 });
+
+function registerChatIpcHandlers() {
+    ipcMain.handle("chat:generate", async (_event, payload: unknown) => {
+        const prompt =
+            typeof (payload as { prompt?: unknown })?.prompt === "string"
+                ? (payload as { prompt: string }).prompt.trim()
+                : "";
+        const model =
+            typeof (payload as { model?: unknown })?.model === "string"
+                ? (payload as { model: string }).model
+                : DEFAULT_MODEL;
+
+        if (!prompt) {
+            throw new Error("Prompt is required");
+        }
+
+        return chatGenService.generateResponse({
+            prompt,
+            model,
+        });
+    });
+
+    ipcMain.on("chat:stream:start", (event, payload: unknown) => {
+        const prompt =
+            typeof (payload as { prompt?: unknown })?.prompt === "string"
+                ? (payload as { prompt: string }).prompt.trim()
+                : "";
+        const requestId =
+            typeof (payload as { requestId?: unknown })?.requestId === "string"
+                ? (payload as { requestId: string }).requestId
+                : "";
+        const model =
+            typeof (payload as { model?: unknown })?.model === "string"
+                ? (payload as { model: string }).model
+                : DEFAULT_MODEL;
+
+        if (!prompt || !requestId) {
+            event.sender.send("chat:stream:event", {
+                requestId,
+                part: {
+                    type: "error",
+                    error: "Prompt and requestId are required",
+                },
+            });
+            return;
+        }
+
+        void (async () => {
+            try {
+                const result = chatGenService.streamResponseGeneration({
+                    prompt,
+                    model,
+                });
+
+                for await (const part of result.fullStream) {
+                    event.sender.send("chat:stream:event", {
+                        requestId,
+                        part,
+                    });
+                }
+
+                const usage = await result.getTotalUsage();
+                event.sender.send("chat:stream:event", {
+                    requestId,
+                    part: {
+                        type: "usage",
+                        usage,
+                    },
+                });
+            } catch (error) {
+                event.sender.send("chat:stream:event", {
+                    requestId,
+                    part: {
+                        type: "error",
+                        error:
+                            error instanceof Error
+                                ? error.message
+                                : "Unknown stream error",
+                    },
+                });
+            }
+        })();
+    });
+}
 
 async function shutdownApplication(): Promise<void> {
     if (isShuttingDown) {
