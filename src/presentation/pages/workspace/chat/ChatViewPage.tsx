@@ -4,8 +4,9 @@ import {
 } from "../../../components/organisms/chat";
 import { useChat } from "../../../../hooks/useChat";
 import { Header } from "../../../layouts/Header";
+import { observer } from "mobx-react-lite";
 
-export const ChatViewPage = () => {
+export const ChatViewPage = observer(() => {
     const {
         messages,
         input,
@@ -49,4 +50,4 @@ export const ChatViewPage = () => {
             </div>
         </div>
     );
-};
+});

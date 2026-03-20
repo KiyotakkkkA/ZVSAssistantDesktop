@@ -5,8 +5,8 @@ import { ChatMessage, workspaceStore } from "../stores/workspaceStore";
 
 const DEFAULT_MODEL = "gpt-oss:120b";
 
-const createId = () =>
-    `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+const createId = (): `msg-${string}` =>
+    `msg-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 const formatTime = () =>
     new Date().toLocaleTimeString([], {
@@ -27,6 +27,7 @@ export const useChat = () => {
     const [editingValue, setEditingValue] = useState("");
 
     const activeRequestIdRef = useRef<string | null>(null);
+    const activeDialogId = workspaceStore.activeDialogId;
 
     const updateMessages = useCallback(
         (updater: (current: ChatMessage[]) => ChatMessage[]) => {
@@ -147,10 +148,13 @@ export const useChat = () => {
     );
 
     const startGeneration = useCallback(
-        async (prompt: string, baseMessages: ChatMessage[]) => {
+        async (prompt: string) => {
+            if (!activeDialogId) {
+                return;
+            }
+
             const requestId = createId();
             activeRequestIdRef.current = requestId;
-            const safeBaseMessages = [...baseMessages];
 
             const userMessage: ChatMessage = {
                 id: createId(),
@@ -170,12 +174,11 @@ export const useChat = () => {
                 status: "streaming",
             };
 
-            const nextMessages = [
-                ...safeBaseMessages,
+            workspaceStore.addMessages(activeDialogId, [
                 userMessage,
                 assistantMessage,
-            ];
-            workspaceStore.messages = nextMessages;
+            ]);
+            const nextMessages = [...workspaceStore.messages];
             setMessages(nextMessages);
             setIsGenerating(true);
 
@@ -217,8 +220,14 @@ export const useChat = () => {
                 setIsGenerating(false);
             }
         },
-        [buildModelMessages, markAssistantAs],
+        [activeDialogId, buildModelMessages, markAssistantAs],
     );
+
+    useEffect(() => {
+        setMessages([...workspaceStore.messages]);
+        setEditingMessageId(null);
+        setEditingValue("");
+    }, [activeDialogId]);
 
     useEffect(() => {
         if (!window.chat?.onStreamEvent) {
@@ -275,8 +284,8 @@ export const useChat = () => {
         }
 
         setInput("");
-        await startGeneration(prompt, messages);
-    }, [input, isGenerating, messages, startGeneration]);
+        await startGeneration(prompt);
+    }, [input, isGenerating, startGeneration]);
 
     const copyMessage = useCallback(
         async (content: string) => {
@@ -317,13 +326,17 @@ export const useChat = () => {
                 return;
             }
 
-            workspaceStore.truncateFrom(messageId);
+            if (!activeDialogId) {
+                return;
+            }
+
+            workspaceStore.truncateMessagesFromId(activeDialogId, messageId);
             const truncated = [...workspaceStore.messages];
             setMessages(truncated);
 
-            await startGeneration(prompt, truncated);
+            await startGeneration(prompt);
         },
-        [isGenerating, messages, startGeneration],
+        [activeDialogId, isGenerating, messages, startGeneration],
     );
 
     const deleteMessage = useCallback(
@@ -384,7 +397,7 @@ export const useChat = () => {
         activeRequestIdRef.current = null;
         setIsGenerating(false);
         workspaceStore.messages = [];
-        setMessages([]);
+        setMessages([...workspaceStore.messages]);
     }, []);
 
     return {

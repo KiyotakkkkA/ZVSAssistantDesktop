@@ -124,6 +124,7 @@ app.whenReady().then(() => {
 
     registerChatIpcHandlers();
     createWindow();
+    ``;
 });
 
 function registerChatIpcHandlers() {
