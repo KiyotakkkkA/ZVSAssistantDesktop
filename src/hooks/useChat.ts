@@ -50,22 +50,8 @@ export const useChat = () => {
         [activeDialogId],
     );
 
-    const buildModelMessages = useCallback((history: DialogUiMessage[]) => {
-        return history
-            .filter(
-                (message) =>
-                    message.role === "user" || message.role === "assistant",
-            )
-            .filter(
-                (message) =>
-                    message.status !== "streaming" &&
-                    (message.role === "user" ||
-                        message.content.trim().length > 0),
-            )
-            .map((message) => ({
-                role: message.role,
-                content: message.content,
-            }));
+    const buildModelMessages = useCallback(() => {
+        return [...workspaceStore.contextMessages];
     }, []);
 
     const applyAssistantDelta = useCallback(
@@ -197,7 +183,7 @@ export const useChat = () => {
             setIsGenerating(true);
 
             try {
-                const modelMessages = buildModelMessages(nextMessages);
+                const modelMessages = buildModelMessages();
 
                 window.chat.streamResponseGeneration({
                     requestId,

@@ -1,7 +1,12 @@
 import { makeAutoObservable, toJS } from "mobx";
-import type { DialogUiMessage } from "../../electron/models/dialog";
+import type {
+    DialogContextMessage,
+    DialogUiMessage,
+} from "../../electron/models/dialog";
 import { globalStorage } from "./globalStorage";
 import type { PersistedDialog } from "../types/electron";
+import { getSystemPrompt, getUserPrompt } from "../prompts/base";
+import { profileStore } from "./profileStore";
 
 export type DialogIdFormat = `dlg-${string}`;
 export type ProjectIdFormat = `prj-${string}`;
@@ -10,6 +15,7 @@ export type ChatDialog = {
     id: DialogIdFormat;
     name: string;
     messages: DialogUiMessage[];
+    contextMessages: DialogContextMessage[];
     isForProject?: boolean;
     tokenUsage?: unknown;
 };
@@ -47,6 +53,7 @@ class WorkspaceStore {
             id: dialogId,
             name,
             messages: [],
+            contextMessages: [],
             isForProject: false,
             tokenUsage: null,
         };
@@ -62,23 +69,16 @@ class WorkspaceStore {
     }
 
     get messages(): DialogUiMessage[] {
-        const dialog = this.getActiveDialog();
+        return this.getActiveDialog()?.messages ?? [];
+    }
 
-        if (!dialog) {
-            return [];
-        }
-
-        return dialog.messages;
+    get contextMessages(): DialogContextMessage[] {
+        return toJS(this.getActiveDialog()?.contextMessages ?? []);
     }
 
     set messages(nextMessages: DialogUiMessage[]) {
         const dialog = this.getActiveDialog();
-
-        if (!dialog) {
-            return;
-        }
-
-        this.setDialogMessages(dialog.id, nextMessages);
+        if (dialog) this.setDialogMessages(dialog.id, nextMessages);
     }
 
     setDialogMessages(
@@ -92,7 +92,10 @@ class WorkspaceStore {
             return;
         }
 
+        const previousMessages = dialog.messages;
+
         dialog.messages = nextMessages;
+        this.syncContextMessages(dialog, previousMessages, nextMessages);
 
         if (persist) {
             void this.persistDialogState(dialogId);
@@ -104,6 +107,7 @@ class WorkspaceStore {
 
         if (dialog) {
             dialog.messages.push(...messages);
+            this.appendContextMessages(dialog, messages);
         }
     }
 
@@ -123,6 +127,7 @@ class WorkspaceStore {
         }
 
         dialog.messages = dialog.messages.slice(0, index);
+        dialog.contextMessages = this.buildFullContextMessages(dialog.messages);
         void this.persistDialogState(dialog.id);
     }
 
@@ -304,12 +309,13 @@ class WorkspaceStore {
             name: dialog.name,
             isForProject: dialog.is_for_project,
             messages: dialog.ui_messages,
+            contextMessages: dialog.context_messages,
             tokenUsage: dialog.token_usage,
         };
     }
 
-    private buildContextMessages(messages: DialogUiMessage[]) {
-        return messages
+    private buildFullContextMessages(messages: DialogUiMessage[]) {
+        const modelMessages = messages
             .filter(
                 (message) =>
                     message.role === "user" || message.role === "assistant",
@@ -324,6 +330,134 @@ class WorkspaceStore {
                 role: message.role,
                 content: message.content,
             }));
+
+        const hasUserMessage = modelMessages.some(
+            (message) => message.role === "user",
+        );
+
+        if (!hasUserMessage) {
+            return modelMessages;
+        }
+
+        const userGeneralData = profileStore.user?.generalData;
+
+        return [
+            {
+                role: "system" as const,
+                content: getSystemPrompt("Charlie"),
+            },
+            {
+                role: "system" as const,
+                content: getUserPrompt(
+                    userGeneralData?.name ?? "Пользователь",
+                    userGeneralData?.userPrompt ?? "",
+                    userGeneralData?.preferredLanguage ?? "",
+                ),
+            },
+            ...modelMessages,
+        ];
+    }
+
+    private syncContextMessages(
+        dialog: ChatDialog,
+        previousMessages: DialogUiMessage[],
+        nextMessages: DialogUiMessage[],
+    ) {
+        if (nextMessages.length === 0) {
+            dialog.contextMessages = [];
+            return;
+        }
+
+        if (nextMessages.length < previousMessages.length) {
+            dialog.contextMessages =
+                this.buildFullContextMessages(nextMessages);
+            return;
+        }
+
+        if (nextMessages.length < previousMessages.length) {
+            const appended = nextMessages.slice(previousMessages.length);
+            this.appendContextMessages(dialog, appended);
+            return;
+        }
+
+        const previousLast = previousMessages.at(-1);
+        const nextLast = nextMessages.at(-1);
+
+        if (!previousLast || !nextLast || nextLast.role !== "assistant") {
+            return;
+        }
+
+        if (
+            previousLast.role === "assistant" &&
+            previousLast.status === "streaming" &&
+            nextLast.status !== "streaming" &&
+            nextLast.content.trim().length > 0
+        ) {
+            const lastContext = dialog.contextMessages.at(-1);
+
+            if (lastContext?.role === "assistant") {
+                lastContext.content = nextLast.content;
+                return;
+            }
+
+            dialog.contextMessages.push({
+                role: "assistant",
+                content: nextLast.content,
+            });
+        }
+    }
+
+    private appendContextMessages(
+        dialog: ChatDialog,
+        messages: DialogUiMessage[],
+    ) {
+        for (const message of messages) {
+            if (message.role === "user") {
+                if (
+                    !dialog.contextMessages.some((item) => item.role === "user")
+                ) {
+                    dialog.contextMessages.push(
+                        ...this.getSystemContextMessages(),
+                    );
+                }
+
+                dialog.contextMessages.push({
+                    role: "user",
+                    content: message.content,
+                });
+                continue;
+            }
+
+            if (
+                message.role === "assistant" &&
+                message.status !== "streaming" &&
+                message.content.trim().length > 0
+            ) {
+                dialog.contextMessages.push({
+                    role: "assistant",
+                    content: message.content,
+                });
+            }
+        }
+    }
+
+    private getSystemContextMessages(): DialogContextMessage[] {
+        const userGeneralData = profileStore.user?.generalData;
+
+        return [
+            {
+                role: "system",
+                content: getSystemPrompt("Charlie"),
+            },
+            {
+                role: "system",
+                content: getUserPrompt(
+                    userGeneralData?.name ?? "Пользователь",
+                    userGeneralData?.userPrompt ?? "",
+                    userGeneralData?.preferredLanguage ?? "",
+                ),
+            },
+        ];
     }
 
     private async persistDialogState(dialogId: DialogIdFormat) {
@@ -336,7 +470,7 @@ class WorkspaceStore {
         await window.workspace.updateDialogMessages(
             dialogId,
             toJS(dialog.messages),
-            this.buildContextMessages(toJS(dialog.messages)),
+            toJS(dialog.contextMessages),
             dialog.tokenUsage ? toJS(dialog.tokenUsage) : null,
         );
     }

@@ -1,13 +1,15 @@
+import type { ChatRole } from "./chat";
+
 export type DialogId = `dlg-${string}`;
 
 export type DialogContextMessage = {
-    role: "user" | "assistant";
+    role: ChatRole;
     content: string;
 };
 
 export type DialogUiMessage = {
     id: `msg-${string}`;
-    role: "user" | "assistant";
+    role: ChatRole;
     answeringAt?: string;
     content: string;
     reasoning?: string;

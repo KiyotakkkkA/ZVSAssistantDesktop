@@ -17,9 +17,13 @@ interface RawUserData {
 }
 
 export class UserRepository {
+    private cachedUser: User | null = null;
+
     constructor(private readonly databaseService: DatabaseService) {}
 
     findCurrentUser() {
+        if (this.cachedUser) return this.cachedUser;
+
         const data = this.databaseService
             .getDatabase()
             .prepare("SELECT * FROM profiles WHERE is_current = 1 LIMIT 1")
@@ -29,7 +33,7 @@ export class UserRepository {
             return null;
         }
 
-        return {
+        this.cachedUser = {
             id: data.id,
             isCurrent: data.is_current === 1,
             generalData: JSON.parse(data.general_data) as GeneralUserData,
@@ -37,6 +41,7 @@ export class UserRepository {
             createdAt: data.created_at,
             updatedAt: data.updated_at,
         } as User;
+        return this.cachedUser;
     }
 
     createUser(data: CreateUserDto) {
@@ -96,5 +101,12 @@ export class UserRepository {
                 secure_data: updatedSecureData,
                 updated_at: now,
             });
+
+        this.refreshCache();
+    }
+
+    private refreshCache() {
+        this.cachedUser = null;
+        this.findCurrentUser();
     }
 }
