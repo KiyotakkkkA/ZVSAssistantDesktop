@@ -1,24 +1,17 @@
-import { makeAutoObservable } from "mobx";
+import { makeAutoObservable, toJS } from "mobx";
+import type { DialogUiMessage } from "../../electron/models/dialog";
 import { globalStorage } from "./globalStorage";
+import type { PersistedDialog } from "../types/electron";
 
 export type DialogIdFormat = `dlg-${string}`;
 export type ProjectIdFormat = `prj-${string}`;
 
-export type ChatMessage = {
-    id: `msg-${string}`;
-    role: "user" | "assistant";
-    answeringAt?: string;
-    content: string;
-    reasoning?: string;
-    timestamp: string;
-    status: "streaming" | "done" | "error";
-};
-
 export type ChatDialog = {
     id: DialogIdFormat;
-    title: string;
-    messages: ChatMessage[];
+    name: string;
+    messages: DialogUiMessage[];
     isForProject?: boolean;
+    tokenUsage?: unknown;
 };
 
 export type ChatProject = {
@@ -36,24 +29,39 @@ class WorkspaceStore {
 
     constructor() {
         makeAutoObservable(this);
+        void this.bootstrap();
+    }
+
+    async bootstrap() {
+        const persistedDialogs = await window.workspace.getDialogs();
+        this.dialogs = persistedDialogs.map((dialog) =>
+            this.mapPersistedDialog(dialog),
+        );
         this.restoreLastOpened();
     }
 
-    createDialog(title = "Новый диалог") {
+    async createDialog(name = "Новый диалог") {
         const dialogId =
             `dlg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` as DialogIdFormat;
-
-        this.dialogs.push({
+        const dialog: ChatDialog = {
             id: dialogId,
-            title,
+            name,
             messages: [],
-        });
+            isForProject: false,
+            tokenUsage: null,
+        };
+
+        this.dialogs.push(dialog);
+
+        if (window.workspace?.createDialog) {
+            await window.workspace.createDialog(dialogId, name, false);
+        }
 
         this.openDialog(dialogId);
         return dialogId;
     }
 
-    get messages(): ChatMessage[] {
+    get messages(): DialogUiMessage[] {
         const dialog = this.getActiveDialog();
 
         if (!dialog) {
@@ -63,17 +71,35 @@ class WorkspaceStore {
         return dialog.messages;
     }
 
-    set messages(nextMessages: ChatMessage[]) {
+    set messages(nextMessages: DialogUiMessage[]) {
         const dialog = this.getActiveDialog();
 
         if (!dialog) {
             return;
         }
 
-        dialog.messages = nextMessages;
+        this.setDialogMessages(dialog.id, nextMessages);
     }
 
-    addMessages(dialogId: string, messages: ChatMessage[]) {
+    setDialogMessages(
+        dialogId: DialogIdFormat,
+        nextMessages: DialogUiMessage[],
+        persist = true,
+    ) {
+        const dialog = this.dialogs.find((item) => item.id === dialogId);
+
+        if (!dialog) {
+            return;
+        }
+
+        dialog.messages = nextMessages;
+
+        if (persist) {
+            void this.persistDialogState(dialogId);
+        }
+    }
+
+    addMessages(dialogId: string, messages: DialogUiMessage[]) {
         const dialog = this.dialogs.find((d) => d.id === dialogId);
 
         if (dialog) {
@@ -97,6 +123,7 @@ class WorkspaceStore {
         }
 
         dialog.messages = dialog.messages.slice(0, index);
+        void this.persistDialogState(dialog.id);
     }
 
     openDialog(dialogId: DialogIdFormat) {
@@ -105,23 +132,45 @@ class WorkspaceStore {
         globalStorage.lastOpened = `dlg:${dialogId}`;
     }
 
-    renameDialog(dialogId: DialogIdFormat, title: string) {
+    async renameDialog(dialogId: DialogIdFormat, name: string) {
         const dialog = this.dialogs.find((item) => item.id === dialogId);
 
         if (!dialog) {
             return;
         }
 
-        dialog.title = title.trim() || dialog.title;
+        dialog.name = name.trim() || dialog.name;
+
+        if (window.workspace?.renameDialog) {
+            await window.workspace.renameDialog(dialogId, dialog.name);
+        }
     }
 
-    deleteDialog(dialogId: DialogIdFormat) {
+    async deleteDialog(dialogId: DialogIdFormat) {
         this.dialogs = this.dialogs.filter((item) => item.id !== dialogId);
         this.projects = this.projects.filter(
             (project) => project.dialogId !== dialogId,
         );
 
+        if (window.workspace?.deleteDialog) {
+            await window.workspace.deleteDialog(dialogId);
+        }
+
         this.ensureActiveSelection();
+    }
+
+    async updateDialogState(dialogId: DialogIdFormat, tokenUsage?: unknown) {
+        const dialog = this.dialogs.find((item) => item.id === dialogId);
+
+        if (!dialog) {
+            return;
+        }
+
+        if (tokenUsage !== undefined) {
+            dialog.tokenUsage = tokenUsage;
+        }
+
+        await this.persistDialogState(dialogId);
     }
 
     renameProject(projectId: ProjectIdFormat, title: string) {
@@ -247,6 +296,49 @@ class WorkspaceStore {
         this.activeDialogId = null;
         this.activeProjectId = null;
         globalStorage.lastOpened = null;
+    }
+
+    private mapPersistedDialog(dialog: PersistedDialog): ChatDialog {
+        return {
+            id: dialog.id,
+            name: dialog.name,
+            isForProject: dialog.is_for_project,
+            messages: dialog.ui_messages,
+            tokenUsage: dialog.token_usage,
+        };
+    }
+
+    private buildContextMessages(messages: DialogUiMessage[]) {
+        return messages
+            .filter(
+                (message) =>
+                    message.role === "user" || message.role === "assistant",
+            )
+            .filter(
+                (message) =>
+                    message.status !== "streaming" &&
+                    (message.role === "user" ||
+                        message.content.trim().length > 0),
+            )
+            .map((message) => ({
+                role: message.role,
+                content: message.content,
+            }));
+    }
+
+    private async persistDialogState(dialogId: DialogIdFormat) {
+        const dialog = this.dialogs.find((item) => item.id === dialogId);
+
+        if (!dialog) {
+            return;
+        }
+
+        await window.workspace.updateDialogMessages(
+            dialogId,
+            toJS(dialog.messages),
+            this.buildContextMessages(toJS(dialog.messages)),
+            dialog.tokenUsage ? toJS(dialog.tokenUsage) : null,
+        );
     }
 }
 

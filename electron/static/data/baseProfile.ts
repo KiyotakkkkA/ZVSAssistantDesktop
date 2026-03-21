@@ -1,6 +1,6 @@
-import { User } from "../../repositories/UserRepository";
+import type { CreateUserDto } from "../../models/user";
 
-export const defaultUser: Omit<User, "id" | "createdAt" | "updatedAt"> = {
+export const defaultUser: CreateUserDto = {
     isCurrent: true,
     generalData: {
         // Персонализация

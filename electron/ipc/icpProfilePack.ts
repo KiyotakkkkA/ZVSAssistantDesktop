@@ -1,4 +1,5 @@
-import type { User, UserRepository } from "../repositories/UserRepository";
+import type { UpdateUserDto } from "../models/user";
+import type { UserRepository } from "../repositories/UserRepository";
 import type { ThemesService } from "../services/ThemesService";
 import { handleManyIpc } from "./ipcUtils";
 
@@ -36,13 +37,7 @@ export const registerIpcProfilePack = ({
         ],
         [
             "profile:update",
-            (
-                id: string,
-                data: Omit<
-                    User,
-                    "id" | "createdAt" | "updatedAt" | "isCurrent"
-                >,
-            ) => {
+            (id: string, data: UpdateUserDto) => {
                 userRepository.updateUser(id, data);
 
                 return buildProfileBootPayload();

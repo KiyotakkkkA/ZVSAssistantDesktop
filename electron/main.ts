@@ -9,9 +9,11 @@ import { ThemesService } from "./services/ThemesService";
 
 import { registerIpcChatPack } from "./ipc/icpChatPack";
 import { registerIpcProfilePack } from "./ipc/icpProfilePack";
+import { registerIpcWorkspacePack } from "./ipc/icpWorkspacePack";
 
 import { createElectronPaths } from "./paths";
 import { UserRepository } from "./repositories/UserRepository";
+import { DialogRepository } from "./repositories/DialogRepository";
 import { defaultUser } from "./static/data/baseProfile";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -137,10 +139,12 @@ app.whenReady().then(() => {
 
     // Инициализируем репозитории
     const userRepository = new UserRepository(databaseService);
+    const dialogRepository = new DialogRepository(databaseService);
 
     // Инициализируем данные
     ensureUserExists(userRepository);
 
+    // Регистрируем IPC
     registerIpcChatPack({
         chatGenService,
     });
@@ -148,6 +152,10 @@ app.whenReady().then(() => {
     registerIpcProfilePack({
         themesService,
         userRepository,
+    });
+
+    registerIpcWorkspacePack({
+        dialogRepository,
     });
 
     createWindow();
@@ -167,10 +175,4 @@ async function shutdownApplication(): Promise<void> {
     }
 
     isShuttingDown = true;
-
-    try {
-        console.log("[main] Starting shutdown...");
-    } catch (error) {
-        console.error("[main] Error during shutdown:", error);
-    }
 }

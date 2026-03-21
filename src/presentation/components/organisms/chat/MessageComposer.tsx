@@ -1,6 +1,6 @@
 import { Icon } from "@iconify/react";
 import { Button, Dropdown, InputBig } from "@kiyotakkkka/zvs-uikit-lib";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 
 type MessageComposerProps = {
     input: string;
@@ -14,9 +14,7 @@ const attachOptions = [
         value: "attach-image",
         label: "Прикрепить изображение",
         icon: <Icon icon="mdi:image-outline" width="16" height="16" />,
-        onClick: () => {
-            console.log("Прикрепить изображение");
-        },
+        onClick: () => {},
     },
 ];
 
@@ -26,7 +24,6 @@ export const MessageComposer = ({
     onSubmit,
     isGenerating,
 }: MessageComposerProps) => {
-    const [isRecording] = useState(false);
     const areaRef = useRef<HTMLTextAreaElement>(null);
 
     return (
@@ -118,13 +115,7 @@ export const MessageComposer = ({
                                         e.stopPropagation();
                                     }}
                                 >
-                                    <Icon
-                                        icon={
-                                            isRecording
-                                                ? "mdi:microphone-off"
-                                                : "mdi:microphone"
-                                        }
-                                    />
+                                    <Icon icon="mdi:microphone" />
                                 </Button>
 
                                 <Button

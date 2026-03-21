@@ -7,15 +7,7 @@ import type {
     TextStreamPart,
     ToolSet,
 } from "ai";
-
-export type ResponseGenParams = {
-    prompt?: string;
-    model: string;
-    messages?: Array<{
-        role: "user" | "assistant";
-        content: string;
-    }>;
-};
+import type { ResponseGenParams } from "../models/chat";
 
 const toModelMessages = (params: ResponseGenParams) => {
     if (params.messages && params.messages.length > 0) {

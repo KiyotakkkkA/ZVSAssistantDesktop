@@ -1,5 +1,6 @@
 import { makeAutoObservable, runInAction } from "mobx";
-import { ProfileBootPayload } from "../types/electron";
+import type { ProfileBootPayload } from "../../electron/models/profile";
+import type { UpdateUserDto } from "../../electron/models/user";
 
 class ProfileStore {
     user: ProfileBootPayload["user"] | null = null;
@@ -30,14 +31,6 @@ class ProfileStore {
     }
 
     async bootstrap() {
-        if (!window.profile?.boot) {
-            runInAction(() => {
-                this.error = "Profile API is unavailable";
-                this.isBootstrapped = true;
-            });
-            return;
-        }
-
         runInAction(() => {
             this.isLoading = true;
             this.error = null;
@@ -61,31 +54,9 @@ class ProfileStore {
                 this.isLoading = false;
             });
         }
-
-        console.log("Profile bootstrapped");
-        console.log("User:", this.user);
-        console.log("Available themes:", this.themes);
-        console.log("Current theme:", this.currentTheme);
     }
 
-    async updateProfile(
-        id: string,
-        data: {
-            generalData?: {
-                name: string;
-                preferredTheme: string;
-                preferredLanguage: string;
-                userPrompt: string;
-            };
-            secureData?: {
-                ollamaApiKey: string;
-            };
-        },
-    ) {
-        if (!window.profile?.update) {
-            throw new Error("Profile API is unavailable");
-        }
-
+    async updateProfile(id: string, data: UpdateUserDto) {
         const payload = await window.profile.update(id, data);
 
         runInAction(() => {

@@ -1,4 +1,11 @@
 import { ipcRenderer, contextBridge } from "electron";
+import type { ResponseGenParams } from "./models/chat";
+import type {
+    DialogContextMessage,
+    DialogEntity,
+    DialogId,
+} from "./models/dialog";
+import type { UpdateUserDto } from "./models/user";
 
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld("ipcRenderer", {
@@ -23,19 +30,14 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
 });
 
 contextBridge.exposeInMainWorld("chat", {
-    generateResponse(params: {
-        prompt: string;
-        model: string;
-        messages?: Array<{ role: "user" | "assistant"; content: string }>;
-    }) {
+    generateResponse(params: ResponseGenParams) {
         return ipcRenderer.invoke("chat:generate", params);
     },
-    streamResponseGeneration(params: {
-        requestId: string;
-        prompt: string;
-        model: string;
-        messages?: Array<{ role: "user" | "assistant"; content: string }>;
-    }) {
+    streamResponseGeneration(
+        params: ResponseGenParams & {
+            requestId: string;
+        },
+    ) {
         ipcRenderer.send("chat:stream:start", params);
     },
     onStreamEvent(
@@ -65,23 +67,44 @@ contextBridge.exposeInMainWorld("profile", {
     boot() {
         return ipcRenderer.invoke("profile:boot");
     },
-    update(
-        id: string,
-        data: {
-            generalData?: {
-                name: string;
-                preferredTheme: string;
-                preferredLanguage: string;
-                userPrompt: string;
-            };
-            secureData?: {
-                ollamaApiKey: string;
-            };
-        },
-    ) {
+    update(id: string, data: UpdateUserDto) {
         return ipcRenderer.invoke("profile:update", id, data);
     },
     getThemeData(themeName: string) {
         return ipcRenderer.invoke("theme:get-data", themeName);
+    },
+});
+
+contextBridge.exposeInMainWorld("workspace", {
+    getDialogs() {
+        return ipcRenderer.invoke("workspace:get-dialogs");
+    },
+    createDialog(id: DialogId, name: string, isForProject: boolean) {
+        return ipcRenderer.invoke(
+            "workspace:create-dialog",
+            id,
+            name,
+            isForProject,
+        );
+    },
+    renameDialog(id: DialogId, name: string) {
+        return ipcRenderer.invoke("workspace:rename-dialog", id, name);
+    },
+    deleteDialog(id: DialogId) {
+        return ipcRenderer.invoke("workspace:delete-dialog", id);
+    },
+    updateDialogMessages(
+        id: DialogId,
+        uiMessages: DialogEntity["ui_messages"],
+        contextMessages: DialogContextMessage[],
+        tokenUsage: DialogEntity["token_usage"],
+    ) {
+        return ipcRenderer.invoke(
+            "workspace:update-dialog-state",
+            id,
+            uiMessages,
+            contextMessages,
+            tokenUsage,
+        );
     },
 });

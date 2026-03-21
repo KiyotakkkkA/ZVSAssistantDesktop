@@ -24,6 +24,15 @@ export class DatabaseService {
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS dialogs (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                is_for_project INTEGER NOT NULL,
+                ui_messages TEXT NOT NULL,
+                context_messages TEXT NOT NULL,
+                token_usage TEXT NOT NULL
+            );
         `);
     }
 }

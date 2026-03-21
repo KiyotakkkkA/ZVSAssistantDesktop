@@ -61,9 +61,7 @@ export const WorkspaceSidebar = observer(() => {
             icon: (
                 <Icon icon="mdi:folder-plus-outline" width="16" height="16" />
             ),
-            onClick: () => {
-                // placeholder
-            },
+            onClick: () => {},
         },
     ];
 
@@ -122,7 +120,7 @@ export const WorkspaceSidebar = observer(() => {
         .filter((dialog) => !dialog.isForProject)
         .map((dialog) => ({
             id: dialog.id,
-            title: dialog.title,
+            title: dialog.name,
             preview: dialog.messages.at(-1)?.content || "История пока пуста.",
             time: dialog.messages.at(-1)?.timestamp || "--:--",
             active:
@@ -133,7 +131,7 @@ export const WorkspaceSidebar = observer(() => {
             },
             onRename: (id) => {
                 setRenameTarget({ type: "dialog", id });
-                setNewTitle(dialog.title);
+                setNewTitle(dialog.name);
             },
             onDelete: (id) => {
                 setDeleteTarget({ type: "dialog", id });
@@ -228,7 +226,7 @@ export const WorkspaceSidebar = observer(() => {
                 </div>
             </aside>
 
-            <section className="min-h-0 min-w-0 flex-1 overflow-hidden p-2">
+            <section className="min-h-0 min-w-0 flex-1 overflow-hidden p-2 ">
                 <Outlet />
             </section>
 

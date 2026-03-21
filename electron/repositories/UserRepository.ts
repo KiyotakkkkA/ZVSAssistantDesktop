@@ -1,4 +1,11 @@
 import type { DatabaseService } from "../services/DatabaseService";
+import type {
+    CreateUserDto,
+    GeneralUserData,
+    SecureUserData,
+    UpdateUserDto,
+    User,
+} from "../models/user";
 
 interface RawUserData {
     id: string;
@@ -7,26 +14,6 @@ interface RawUserData {
     secure_data: string;
     created_at: string;
     updated_at: string;
-}
-
-export interface GeneralUserData {
-    name: string;
-    preferredTheme: string;
-    preferredLanguage: string;
-    userPrompt: string;
-}
-
-export interface SecureUserData {
-    ollamaApiKey: string;
-}
-
-export interface User {
-    id: string;
-    isCurrent: boolean;
-    generalData: GeneralUserData;
-    secureData: SecureUserData;
-    createdAt: string;
-    updatedAt: string;
 }
 
 export class UserRepository {
@@ -52,7 +39,7 @@ export class UserRepository {
         } as User;
     }
 
-    createUser(data: Omit<User, "id" | "createdAt" | "updatedAt">) {
+    createUser(data: CreateUserDto) {
         const now = new Date().toISOString();
         const id = crypto.randomUUID();
 
@@ -76,12 +63,7 @@ export class UserRepository {
         return this.findCurrentUser() as User;
     }
 
-    updateUser(
-        id: string,
-        data: Partial<
-            Omit<User, "id" | "createdAt" | "updatedAt" | "isCurrent">
-        >,
-    ) {
+    updateUser(id: string, data: UpdateUserDto) {
         const existingUser = this.databaseService
             .getDatabase()
             .prepare("SELECT * FROM profiles WHERE id = ?")

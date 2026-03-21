@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useToasts } from "./useToasts";
 import { resolveText } from "../utils/resolvers";
-import { ChatMessage, workspaceStore } from "../stores/workspaceStore";
+import { workspaceStore } from "../stores/workspaceStore";
+import { DialogUiMessage } from "../../electron/models";
 
 const DEFAULT_MODEL = "gpt-oss:120b";
 
@@ -16,7 +17,7 @@ const formatTime = () =>
 
 export const useChat = () => {
     const toasts = useToasts();
-    const [messages, setMessages] = useState<ChatMessage[]>(
+    const [messages, setMessages] = useState<DialogUiMessage[]>(
         workspaceStore.messages,
     );
     const [input, setInput] = useState("");
@@ -30,17 +31,26 @@ export const useChat = () => {
     const activeDialogId = workspaceStore.activeDialogId;
 
     const updateMessages = useCallback(
-        (updater: (current: ChatMessage[]) => ChatMessage[]) => {
+        (
+            updater: (current: DialogUiMessage[]) => DialogUiMessage[],
+            persist = true,
+        ) => {
             setMessages((current) => {
                 const next = updater(current);
-                workspaceStore.messages = next;
+                if (activeDialogId) {
+                    workspaceStore.setDialogMessages(
+                        activeDialogId,
+                        next,
+                        persist,
+                    );
+                }
                 return next;
             });
         },
-        [],
+        [activeDialogId],
     );
 
-    const buildModelMessages = useCallback((history: ChatMessage[]) => {
+    const buildModelMessages = useCallback((history: DialogUiMessage[]) => {
         return history
             .filter(
                 (message) =>
@@ -83,7 +93,7 @@ export const useChat = () => {
                 };
 
                 return next;
-            });
+            }, false);
         },
         [updateMessages],
     );
@@ -113,13 +123,17 @@ export const useChat = () => {
                 };
 
                 return next;
-            });
+            }, false);
         },
         [updateMessages],
     );
 
     const markAssistantAs = useCallback(
-        (status: ChatMessage["status"], fallbackText?: unknown) => {
+        (
+            status: DialogUiMessage["status"],
+            fallbackText?: unknown,
+            persist = true,
+        ) => {
             updateMessages((current) => {
                 const next = [...current];
                 const assistantIndex = next
@@ -142,7 +156,7 @@ export const useChat = () => {
                 };
 
                 return next;
-            });
+            }, persist);
         },
         [updateMessages],
     );
@@ -156,7 +170,7 @@ export const useChat = () => {
             const requestId = createId();
             activeRequestIdRef.current = requestId;
 
-            const userMessage: ChatMessage = {
+            const userMessage: DialogUiMessage = {
                 id: createId(),
                 role: "user",
                 content: prompt,
@@ -164,7 +178,7 @@ export const useChat = () => {
                 status: "done",
             };
 
-            const assistantMessage: ChatMessage = {
+            const assistantMessage: DialogUiMessage = {
                 id: createId(),
                 role: "assistant",
                 answeringAt: userMessage.id,
@@ -185,30 +199,13 @@ export const useChat = () => {
             try {
                 const modelMessages = buildModelMessages(nextMessages);
 
-                if (window.chat?.streamResponseGeneration) {
-                    window.chat.streamResponseGeneration({
-                        requestId,
-                        prompt,
-                        model: DEFAULT_MODEL,
-                        messages: modelMessages,
-                    });
-                    return;
-                }
-
-                if (window.chat?.generateResponse) {
-                    const response = await window.chat.generateResponse({
-                        prompt,
-                        model: DEFAULT_MODEL,
-                        messages: modelMessages,
-                    });
-
-                    markAssistantAs("done", response.text);
-                    activeRequestIdRef.current = null;
-                    setIsGenerating(false);
-                    return;
-                }
-
-                throw new Error("Chat API is not available in preload");
+                window.chat.streamResponseGeneration({
+                    requestId,
+                    prompt,
+                    model: DEFAULT_MODEL,
+                    messages: modelMessages,
+                });
+                return;
             } catch (error) {
                 markAssistantAs(
                     "error",
@@ -230,10 +227,6 @@ export const useChat = () => {
     }, [activeDialogId]);
 
     useEffect(() => {
-        if (!window.chat?.onStreamEvent) {
-            return;
-        }
-
         const unsubscribe = window.chat.onStreamEvent(({ requestId, part }) => {
             if (
                 !activeRequestIdRef.current ||
@@ -256,21 +249,38 @@ export const useChat = () => {
                 markAssistantAs(
                     "error",
                     part.error ?? "Ошибка генерации ответа",
+                    true,
                 );
                 activeRequestIdRef.current = null;
                 setIsGenerating(false);
                 return;
             }
 
-            if (part.type === "finish" || part.type === "usage") {
-                markAssistantAs("done");
+            if (part.type === "finish") {
+                markAssistantAs("done", undefined, false);
+            }
+
+            if (part.type === "usage") {
+                if (activeDialogId) {
+                    void workspaceStore.updateDialogState(
+                        activeDialogId,
+                        part.usage,
+                    );
+                }
+
                 activeRequestIdRef.current = null;
                 setIsGenerating(false);
+                return;
             }
         });
 
         return unsubscribe;
-    }, [applyAssistantDelta, applyAssistantReasoningDelta, markAssistantAs]);
+    }, [
+        activeDialogId,
+        applyAssistantDelta,
+        applyAssistantReasoningDelta,
+        markAssistantAs,
+    ]);
 
     const sendMessage = useCallback(async () => {
         if (isGenerating) {
@@ -396,9 +406,11 @@ export const useChat = () => {
     const clearChat = useCallback(() => {
         activeRequestIdRef.current = null;
         setIsGenerating(false);
-        workspaceStore.messages = [];
+        if (activeDialogId) {
+            workspaceStore.setDialogMessages(activeDialogId, []);
+        }
         setMessages([...workspaceStore.messages]);
-    }, []);
+    }, [activeDialogId]);
 
     return {
         messages,

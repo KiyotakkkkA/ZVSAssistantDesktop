@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "react";
 import { ChatUserBubbleCard } from "../../molecules/chat/cards";
 import { AssistantResponse } from "./AssistantResponse";
-import type { ChatMessage } from "../../../../stores/workspaceStore";
+import { DialogUiMessage } from "../../../../../electron/models";
 
 type MessageFeedProps = {
-    messages: ChatMessage[];
+    messages: DialogUiMessage[];
     editingMessageId: string | null;
     editingValue: string;
     onEditValueChange: (value: string) => void;
@@ -41,7 +41,7 @@ export const MessageFeed = ({
     return (
         <section
             ref={scrollRef}
-            className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-2xl bg-main-900/55 p-2 ring-main-300/15"
+            className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-2xl bg-main-900/55 p-2 ring-main-300/15 animate-page-fade-in"
         >
             <div className="flex flex-col gap-4">
                 {messages.length === 0 ? (
