@@ -7,9 +7,12 @@ import { InitService } from "./services/InitService";
 import { DatabaseService } from "./services/DatabaseService";
 import { ThemesService } from "./services/ThemesService";
 
-import { registerIpcChatPack } from "./ipc/icpChatPack";
-import { registerIpcProfilePack } from "./ipc/icpProfilePack";
-import { registerIpcWorkspacePack } from "./ipc/icpWorkspacePack";
+import {
+    registerIpcChatPack,
+    registerIpcProfilePack,
+    registerIpcWorkspacePack,
+    registerIpcCorePack,
+} from "./ipc";
 
 import { createElectronPaths } from "./paths";
 import { UserRepository } from "./repositories/UserRepository";
@@ -133,13 +136,13 @@ app.whenReady().then(() => {
     initService.initialize();
     const databaseService = new DatabaseService(appPaths.databasePath);
 
-    // Инициализируем функциональный сервисы
-    chatGenService = new ChatGenService(process.env.VITE_OLLAMA_API_KEY ?? "");
-    themesService = new ThemesService(appPaths.themesPath);
-
     // Инициализируем репозитории
     const userRepository = new UserRepository(databaseService);
     const dialogRepository = new DialogRepository(databaseService);
+
+    // Инициализируем функциональные сервисы
+    chatGenService = new ChatGenService({ userRepository });
+    themesService = new ThemesService(appPaths.themesPath);
 
     // Инициализируем данные
     ensureUserExists(userRepository);
@@ -157,6 +160,8 @@ app.whenReady().then(() => {
     registerIpcWorkspacePack({
         dialogRepository,
     });
+
+    registerIpcCorePack();
 
     createWindow();
 });

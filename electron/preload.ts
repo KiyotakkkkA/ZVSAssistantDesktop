@@ -1,11 +1,11 @@
 import { ipcRenderer, contextBridge } from "electron";
-import type { ResponseGenParams } from "./models/chat";
 import type {
-    DialogContextMessage,
-    DialogEntity,
-    DialogId,
-} from "./models/dialog";
-import type { UpdateUserDto } from "./models/user";
+    ChatStreamEventPayload,
+    IpcChatNamespace,
+    IpcCoreNamespace,
+    IpcProfileNamespace,
+    IpcWorkspaceNamespace,
+} from "./namespaces";
 
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld("ipcRenderer", {
@@ -29,30 +29,24 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
     },
 });
 
-contextBridge.exposeInMainWorld("chat", {
-    generateResponse(params: ResponseGenParams) {
+const coreNamespace: IpcCoreNamespace = {
+    httpRequest(url: string, options?: RequestInit) {
+        return ipcRenderer.invoke("core:http-request", url, options);
+    },
+};
+
+contextBridge.exposeInMainWorld("core", coreNamespace);
+
+const chatNamespace: IpcChatNamespace = {
+    generateResponse(params) {
         return ipcRenderer.invoke("chat:generate", params);
     },
-    streamResponseGeneration(
-        params: ResponseGenParams & {
-            requestId: string;
-        },
-    ) {
+    streamResponseGeneration(params) {
         ipcRenderer.send("chat:stream:start", params);
     },
-    onStreamEvent(
-        listener: (payload: {
-            requestId: string;
-            part: { type: string; text?: string; error?: string };
-        }) => void,
-    ) {
+    onStreamEvent(listener) {
         const wrappedListener = (_event: unknown, payload: unknown) => {
-            listener(
-                payload as {
-                    requestId: string;
-                    part: { type: string; text?: string; error?: string };
-                },
-            );
+            listener(payload as ChatStreamEventPayload);
         };
 
         ipcRenderer.on("chat:stream:event", wrappedListener);
@@ -61,50 +55,40 @@ contextBridge.exposeInMainWorld("chat", {
             ipcRenderer.off("chat:stream:event", wrappedListener);
         };
     },
-});
+};
 
-contextBridge.exposeInMainWorld("profile", {
+contextBridge.exposeInMainWorld("chat", chatNamespace);
+
+const profileNamespace: IpcProfileNamespace = {
     boot() {
         return ipcRenderer.invoke("profile:boot");
     },
-    update(id: string, data: UpdateUserDto) {
+    update(id, data) {
         return ipcRenderer.invoke("profile:update", id, data);
     },
-    getThemeData(themeName: string) {
+    getThemeData(themeName) {
         return ipcRenderer.invoke("theme:get-data", themeName);
     },
-});
+};
 
-contextBridge.exposeInMainWorld("workspace", {
+contextBridge.exposeInMainWorld("profile", profileNamespace);
+
+const workspaceNamespace: IpcWorkspaceNamespace = {
     getDialogs() {
         return ipcRenderer.invoke("workspace:get-dialogs");
     },
-    createDialog(id: DialogId, name: string, isForProject: boolean) {
-        return ipcRenderer.invoke(
-            "workspace:create-dialog",
-            id,
-            name,
-            isForProject,
-        );
+    createDialog(dialog) {
+        return ipcRenderer.invoke("workspace:create-dialog", dialog);
     },
-    renameDialog(id: DialogId, name: string) {
+    renameDialog(id, name) {
         return ipcRenderer.invoke("workspace:rename-dialog", id, name);
     },
-    deleteDialog(id: DialogId) {
+    deleteDialog(id) {
         return ipcRenderer.invoke("workspace:delete-dialog", id);
     },
-    updateDialogMessages(
-        id: DialogId,
-        uiMessages: DialogEntity["ui_messages"],
-        contextMessages: DialogContextMessage[],
-        tokenUsage: DialogEntity["token_usage"],
-    ) {
-        return ipcRenderer.invoke(
-            "workspace:update-dialog-state",
-            id,
-            uiMessages,
-            contextMessages,
-            tokenUsage,
-        );
+    updateDialogState(payload) {
+        return ipcRenderer.invoke("workspace:update-dialog-state", payload);
     },
-});
+};
+
+contextBridge.exposeInMainWorld("workspace", workspaceNamespace);

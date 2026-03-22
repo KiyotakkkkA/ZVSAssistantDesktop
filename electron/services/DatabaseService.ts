@@ -27,6 +27,7 @@ export class DatabaseService {
 
             CREATE TABLE IF NOT EXISTS dialogs (
                 id TEXT PRIMARY KEY,
+                owner_id TEXT NOT NULL DEFAULT '' REFERENCES profiles(id) ON DELETE CASCADE,
                 name TEXT NOT NULL,
                 is_for_project INTEGER NOT NULL,
                 ui_messages TEXT NOT NULL,

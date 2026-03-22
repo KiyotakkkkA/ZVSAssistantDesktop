@@ -1,7 +1,9 @@
 import { makeAutoObservable, toJS } from "mobx";
 import type {
+    CreateDialogDto,
     DialogContextMessage,
     DialogUiMessage,
+    UpdateDialogStateDto,
 } from "../../electron/models/dialog";
 import { globalStorage } from "./globalStorage";
 import type { PersistedDialog } from "../types/electron";
@@ -49,6 +51,12 @@ class WorkspaceStore {
     async createDialog(name = "Новый диалог") {
         const dialogId =
             `dlg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` as DialogIdFormat;
+        const createDialogDto: CreateDialogDto = {
+            id: dialogId,
+            owner_id: profileStore.user?.id ?? "unknown-owner",
+            name,
+            is_for_project: false,
+        };
         const dialog: ChatDialog = {
             id: dialogId,
             name,
@@ -61,7 +69,7 @@ class WorkspaceStore {
         this.dialogs.push(dialog);
 
         if (window.workspace?.createDialog) {
-            await window.workspace.createDialog(dialogId, name, false);
+            await window.workspace.createDialog(createDialogDto);
         }
 
         this.openDialog(dialogId);
@@ -467,12 +475,14 @@ class WorkspaceStore {
             return;
         }
 
-        await window.workspace.updateDialogMessages(
-            dialogId,
-            toJS(dialog.messages),
-            toJS(dialog.contextMessages),
-            dialog.tokenUsage ? toJS(dialog.tokenUsage) : null,
-        );
+        const payload: UpdateDialogStateDto = {
+            id: dialogId,
+            ui_messages: toJS(dialog.messages),
+            context_messages: toJS(dialog.contextMessages),
+            token_usage: dialog.tokenUsage ? toJS(dialog.tokenUsage) : null,
+        };
+
+        await window.workspace.updateDialogState(payload);
     }
 }
 

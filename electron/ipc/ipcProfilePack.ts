@@ -3,13 +3,15 @@ import type { UserRepository } from "../repositories/UserRepository";
 import type { ThemesService } from "../services/ThemesService";
 import { handleManyIpc } from "./ipcUtils";
 
+interface IpcProfilePackDeps {
+    themesService: ThemesService;
+    userRepository: UserRepository;
+}
+
 export const registerIpcProfilePack = ({
     themesService,
     userRepository,
-}: {
-    themesService: ThemesService;
-    userRepository: UserRepository;
-}) => {
+}: IpcProfilePackDeps) => {
     const buildProfileBootPayload = () => {
         const user = userRepository.findCurrentUser();
 

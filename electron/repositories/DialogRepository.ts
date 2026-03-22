@@ -10,6 +10,7 @@ import type {
 
 interface RawDialogData {
     id: string;
+    owner_id: string;
     name: string;
     is_for_project: number;
     ui_messages: string;
@@ -19,6 +20,7 @@ interface RawDialogData {
 
 const mapDialog = (raw: RawDialogData): DialogEntity => ({
     id: raw.id as DialogId,
+    owner_id: raw.owner_id,
     name: raw.name,
     is_for_project: raw.is_for_project === 1,
     ui_messages: JSON.parse(raw.ui_messages) as DialogUiMessage[],
@@ -45,12 +47,13 @@ export class DialogRepository {
             .getDatabase()
             .prepare(
                 `
-                INSERT INTO dialogs (id, name, is_for_project, ui_messages, context_messages, token_usage)
-                VALUES (@id, @name, @is_for_project, @ui_messages, @context_messages, @token_usage)
+                INSERT INTO dialogs (id, owner_id, name, is_for_project, ui_messages, context_messages, token_usage)
+                VALUES (@id, @owner_id, @name, @is_for_project, @ui_messages, @context_messages, @token_usage)
             `,
             )
             .run({
                 id: dialog.id,
+                owner_id: dialog.owner_id,
                 name: dialog.name,
                 is_for_project: dialog.is_for_project ? 1 : 0,
                 ui_messages: "[]",
@@ -81,7 +84,7 @@ export class DialogRepository {
             .run({ id, name });
     }
 
-    updateDialogState(id: DialogId, payload: UpdateDialogStateDto) {
+    updateDialogState(payload: UpdateDialogStateDto) {
         this.databaseService
             .getDatabase()
             .prepare(
@@ -92,7 +95,7 @@ export class DialogRepository {
             `,
             )
             .run({
-                id,
+                id: payload.id,
                 ui_messages: JSON.stringify(payload.ui_messages),
                 context_messages: JSON.stringify(payload.context_messages),
                 token_usage: JSON.stringify(payload.token_usage),

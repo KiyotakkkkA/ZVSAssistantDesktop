@@ -19,6 +19,7 @@ export type DialogUiMessage = {
 
 export interface DialogEntity {
     id: DialogId;
+    owner_id: string;
     name: string;
     is_for_project: boolean;
     ui_messages: DialogUiMessage[];
@@ -28,11 +29,13 @@ export interface DialogEntity {
 
 export type CreateDialogDto = {
     id: DialogId;
+    owner_id: string;
     name: string;
     is_for_project: boolean;
 };
 
 export type UpdateDialogStateDto = {
+    id: DialogId;
     ui_messages: DialogUiMessage[];
     context_messages: DialogContextMessage[];
     token_usage: unknown;

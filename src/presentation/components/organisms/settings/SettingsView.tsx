@@ -2,8 +2,9 @@ import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 import { Icon } from "@iconify/react";
 import { SettingsInterfacePanel } from "./SettingsInterfacePanel";
 import { SettingsProfilePanel } from "./SettingsProfilePanel";
+import { SettingsAssistantPanel } from "./SettingsAssisstantPanel";
 
-type SettingsRoute = "interface" | "profile";
+type SettingsRoute = "interface" | "profile" | "assistant";
 
 export type SettingsViewHandle = {
     save: () => Promise<{
@@ -27,6 +28,12 @@ type SettingsRouteItem = Record<
 >;
 
 const settingsRoutes: SettingsRouteItem = {
+    assistant: {
+        title: "Ассистент",
+        icon: "mdi:robot",
+        description: "Настройки ассистента и моделей",
+        component: SettingsAssistantPanel,
+    },
     interface: {
         title: "Персонализация",
         icon: "mdi:monitor",
@@ -44,7 +51,7 @@ const settingsRoutes: SettingsRouteItem = {
 export const SettingsView = forwardRef<SettingsViewHandle, SettingsViewProps>(
     ({ onSaveVisibilityChange }, ref) => {
         const [activeRoute, setActiveRoute] =
-            useState<SettingsRoute>("interface");
+            useState<SettingsRoute>("assistant");
 
         useEffect(() => {
             onSaveVisibilityChange?.(false);
@@ -107,5 +114,3 @@ export const SettingsView = forwardRef<SettingsViewHandle, SettingsViewProps>(
         );
     },
 );
-
-SettingsView.displayName = "SettingsView";

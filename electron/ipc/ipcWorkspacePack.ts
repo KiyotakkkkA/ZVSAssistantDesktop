@@ -1,14 +1,14 @@
 import type { DialogRepository } from "../repositories/DialogRepository";
 import type {
-    DialogContextMessage,
+    CreateDialogDto,
     DialogId,
-    DialogUiMessage,
+    UpdateDialogStateDto,
 } from "../models/dialog";
 import { handleManyIpc } from "./ipcUtils";
 
-export type IpcWorkspacePackDeps = {
+interface IpcWorkspacePackDeps {
     dialogRepository: DialogRepository;
-};
+}
 
 export const registerIpcWorkspacePack = ({
     dialogRepository,
@@ -17,12 +17,7 @@ export const registerIpcWorkspacePack = ({
         ["workspace:get-dialogs", () => dialogRepository.findAll()],
         [
             "workspace:create-dialog",
-            (id: DialogId, name: string, isForProject: boolean) =>
-                dialogRepository.createDialog({
-                    id,
-                    name,
-                    is_for_project: isForProject,
-                }),
+            (dialog: CreateDialogDto) => dialogRepository.createDialog(dialog),
         ],
         [
             "workspace:rename-dialog",
@@ -38,17 +33,8 @@ export const registerIpcWorkspacePack = ({
         ],
         [
             "workspace:update-dialog-state",
-            (
-                id: DialogId,
-                uiMessages: DialogUiMessage[],
-                contextMessages: DialogContextMessage[],
-                tokenUsage: unknown,
-            ) => {
-                dialogRepository.updateDialogState(id, {
-                    ui_messages: uiMessages,
-                    context_messages: contextMessages,
-                    token_usage: tokenUsage,
-                });
+            (payload: UpdateDialogStateDto) => {
+                dialogRepository.updateDialogState(payload);
             },
         ],
     ]);

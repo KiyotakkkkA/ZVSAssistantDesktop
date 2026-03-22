@@ -10,15 +10,6 @@ export const SettingsProfilePanel = observer(() => {
         return null;
     }
 
-    const updateGeneralData = (nextData: Partial<typeof generalData>) => {
-        void profileStore.updateProfile(currentUser.id, {
-            generalData: {
-                ...generalData,
-                ...nextData,
-            },
-        });
-    };
-
     return (
         <div className="space-y-5">
             <div className="rounded-2xl bg-main-900/40 p-4">
@@ -30,7 +21,7 @@ export const SettingsProfilePanel = observer(() => {
                         <InputSmall
                             value={generalData.name}
                             onChange={(event) =>
-                                updateGeneralData({
+                                profileStore.updateGeneralData({
                                     name: event.target.value,
                                 })
                             }
@@ -45,7 +36,7 @@ export const SettingsProfilePanel = observer(() => {
                         <InputSmall
                             value={generalData.preferredLanguage}
                             onChange={(event) =>
-                                updateGeneralData({
+                                profileStore.updateGeneralData({
                                     preferredLanguage: event.target.value,
                                 })
                             }
@@ -60,7 +51,7 @@ export const SettingsProfilePanel = observer(() => {
                         <InputBig
                             value={generalData.userPrompt}
                             onChange={(value) =>
-                                updateGeneralData({
+                                profileStore.updateGeneralData({
                                     userPrompt: value.target.value,
                                 })
                             }

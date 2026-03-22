@@ -1,5 +1,8 @@
 export interface GeneralUserData {
     name: string;
+    maxToolsUsagePerResponse: number;
+    assistantName: string;
+    ollamaModel: string;
     preferredTheme: string;
     preferredLanguage: string;
     userPrompt: string;

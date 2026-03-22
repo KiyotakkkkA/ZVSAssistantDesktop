@@ -4,9 +4,9 @@ import type { ChatGenService } from "../services/ChatGenService";
 import type { ResponseGenParams } from "../models/chat";
 import { handleIpc, onIpcWithEvent } from "./ipcUtils";
 
-export type IpcChatPackDeps = {
+interface IpcChatPackDeps {
     chatGenService: ChatGenService;
-};
+}
 
 const sendStreamError = (
     event: IpcMainEvent,

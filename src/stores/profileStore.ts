@@ -1,6 +1,10 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import type { ProfileBootPayload } from "../../electron/models/profile";
-import type { UpdateUserDto } from "../../electron/models/user";
+import type {
+    GeneralUserData,
+    SecureUserData,
+    UpdateUserDto,
+} from "../../electron/models/user";
 
 class ProfileStore {
     user: ProfileBootPayload["user"] | null = null;
@@ -62,6 +66,28 @@ class ProfileStore {
         runInAction(() => {
             this.hydrate(payload);
             this.error = null;
+        });
+    }
+
+    updateGeneralData(nextData: Partial<GeneralUserData>) {
+        if (!this.user) return;
+
+        void this.updateProfile(this.user.id, {
+            generalData: {
+                ...this.user.generalData,
+                ...nextData,
+            },
+        });
+    }
+
+    updateSecureData(nextData: Partial<SecureUserData>) {
+        if (!this.user) return;
+
+        void this.updateProfile(this.user.id, {
+            secureData: {
+                ...this.user.secureData,
+                ...nextData,
+            },
         });
     }
 }

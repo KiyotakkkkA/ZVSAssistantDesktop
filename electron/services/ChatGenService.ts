@@ -7,7 +7,13 @@ import type {
     TextStreamPart,
     ToolSet,
 } from "ai";
+import { Config } from "../config";
 import type { ResponseGenParams } from "../models/chat";
+import type { UserRepository } from "../repositories/UserRepository";
+
+interface ChatFenServiceDeps {
+    userRepository: UserRepository;
+}
 
 const toModelMessages = (params: ResponseGenParams) => {
     if (params.messages && params.messages.length > 0) {
@@ -23,31 +29,31 @@ const toModelMessages = (params: ResponseGenParams) => {
 };
 
 export class ChatGenService {
-    private provider: OpenAICompatibleProvider | undefined;
-
     private readonly providerName = "ollama";
-    private readonly baseURL = "https://ollama.com/v1";
+    private readonly baseURL = `${Config.OLLAMA_BASE_URL}/v1`;
     private readonly needUsage = true;
 
-    constructor(token: string) {
-        this.rebuildProvider(token);
-    }
+    private userRepository: UserRepository;
 
-    public rebuildProvider(token: string) {
-        this.provider = createOpenAICompatible({
-            name: this.providerName,
-            baseURL: this.baseURL,
-            apiKey: token,
-            includeUsage: this.needUsage,
-        });
+    constructor({ userRepository }: ChatFenServiceDeps) {
+        this.userRepository = userRepository;
     }
 
     public streamResponseGeneration(params: ResponseGenParams): {
         fullStream: AsyncIterableStream<TextStreamPart<ToolSet>>;
         getTotalUsage: () => PromiseLike<LanguageModelUsage>;
     } {
+        const provider = createOpenAICompatible({
+            name: this.providerName,
+            baseURL: this.baseURL,
+            apiKey:
+                this.userRepository.findCurrentUser()?.secureData
+                    .ollamaApiKey ?? "",
+            includeUsage: this.needUsage,
+        });
+
         const { fullStream, totalUsage } = streamText({
-            model: (this.provider as OpenAICompatibleProvider)(params.model),
+            model: (provider as OpenAICompatibleProvider)(params.model),
             messages: toModelMessages(params),
         });
 
@@ -61,8 +67,17 @@ export class ChatGenService {
         text: string;
         usage: LanguageModelUsage;
     }> {
+        const provider = createOpenAICompatible({
+            name: this.providerName,
+            baseURL: this.baseURL,
+            apiKey:
+                this.userRepository.findCurrentUser()?.secureData
+                    .ollamaApiKey ?? "",
+            includeUsage: this.needUsage,
+        });
+
         const { text, usage } = await generateText({
-            model: (this.provider as OpenAICompatibleProvider)(params.model),
+            model: (provider as OpenAICompatibleProvider)(params.model),
             messages: toModelMessages(params),
         });
 
