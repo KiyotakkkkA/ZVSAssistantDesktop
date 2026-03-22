@@ -16,6 +16,7 @@ export type ChatStreamEventPayload = {
         text?: string;
         error?: string;
         usage?: unknown;
+        [key: string]: unknown;
     };
 };
 

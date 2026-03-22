@@ -3,17 +3,56 @@ import { useToasts } from "./useToasts";
 import { resolveText } from "../utils/resolvers";
 import { workspaceStore } from "../stores/workspaceStore";
 import { DialogUiMessage } from "../../electron/models";
+import type { AskToolResult } from "../../electron/models/tool";
+import type { QaToolState } from "../utils/chat/qaTool";
+import { toolsStorage } from "../stores/toolsStorage";
 
 const DEFAULT_MODEL = "gpt-oss:120b";
 
 const createId = (): `msg-${string}` =>
     `msg-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
+const createStageId = (): `stg-${string}` =>
+    `stg-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+const appendAssistantStageDelta = (
+    message: DialogUiMessage,
+    stageType: "reasoning" | "answer",
+    chunk: string,
+) => {
+    const stages = message.stages ?? [];
+    const lastStage = stages.at(-1);
+
+    if (lastStage && lastStage.type === stageType) {
+        return [
+            ...stages.slice(0, -1),
+            {
+                ...lastStage,
+                content: `${lastStage.content}${chunk}`,
+            },
+        ];
+    }
+
+    return [
+        ...stages,
+        {
+            id: createStageId(),
+            type: stageType,
+            content: chunk,
+        },
+    ];
+};
+
 const formatTime = () =>
     new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
     });
+
+type StartGenerationOptions = {
+    skipUserUiMessage?: boolean;
+    contextOnlyUserMessage?: string;
+};
 
 export const useChat = () => {
     const toasts = useToasts();
@@ -76,6 +115,11 @@ export const useChat = () => {
                 next[assistantIndex] = {
                     ...assistantMessage,
                     content: assistantMessage.content + chunk,
+                    stages: appendAssistantStageDelta(
+                        assistantMessage,
+                        "answer",
+                        chunk,
+                    ),
                 };
 
                 return next;
@@ -106,6 +150,11 @@ export const useChat = () => {
                 next[assistantIndex] = {
                     ...assistantMessage,
                     reasoning: `${assistantMessage.reasoning ?? ""}${chunk}`,
+                    stages: appendAssistantStageDelta(
+                        assistantMessage,
+                        "reasoning",
+                        chunk,
+                    ),
                 };
 
                 return next;
@@ -132,6 +181,8 @@ export const useChat = () => {
 
                 const assistantMessage = next[assistantIndex];
                 const fallback = resolveText(fallbackText);
+                const hasFallback =
+                    !assistantMessage.content && Boolean(fallback);
                 next[assistantIndex] = {
                     ...assistantMessage,
                     status,
@@ -139,6 +190,13 @@ export const useChat = () => {
                         assistantMessage.content ||
                         fallback ||
                         assistantMessage.content,
+                    stages: hasFallback
+                        ? appendAssistantStageDelta(
+                              assistantMessage,
+                              "answer",
+                              fallback,
+                          )
+                        : assistantMessage.stages,
                 };
 
                 return next;
@@ -148,36 +206,61 @@ export const useChat = () => {
     );
 
     const startGeneration = useCallback(
-        async (prompt: string) => {
+        async (prompt: string, options?: StartGenerationOptions) => {
             if (!activeDialogId) {
                 return;
             }
 
+            const normalizedPrompt = prompt.trim();
+
+            if (!normalizedPrompt) {
+                return;
+            }
+
+            const skipUserUiMessage = options?.skipUserUiMessage === true;
+            const hiddenContextPrompt = options?.contextOnlyUserMessage?.trim();
+
             const requestId = createId();
             activeRequestIdRef.current = requestId;
+            const userMessageId = createId();
 
-            const userMessage: DialogUiMessage = {
-                id: createId(),
-                role: "user",
-                content: prompt,
-                timestamp: formatTime(),
-                status: "done",
-            };
+            if (hiddenContextPrompt) {
+                workspaceStore.addContextUserMessage(
+                    activeDialogId,
+                    hiddenContextPrompt,
+                    true,
+                );
+            }
 
             const assistantMessage: DialogUiMessage = {
                 id: createId(),
                 role: "assistant",
-                answeringAt: userMessage.id,
+                answeringAt: skipUserUiMessage ? undefined : userMessageId,
                 content: "",
                 reasoning: "",
+                toolTraces: [],
+                stages: [],
                 timestamp: formatTime(),
                 status: "streaming",
             };
 
-            workspaceStore.addMessages(activeDialogId, [
-                userMessage,
-                assistantMessage,
-            ]);
+            if (skipUserUiMessage) {
+                workspaceStore.addMessages(activeDialogId, [assistantMessage]);
+            } else {
+                const userMessage: DialogUiMessage = {
+                    id: userMessageId,
+                    role: "user",
+                    content: normalizedPrompt,
+                    timestamp: formatTime(),
+                    status: "done",
+                };
+
+                workspaceStore.addMessages(activeDialogId, [
+                    userMessage,
+                    assistantMessage,
+                ]);
+            }
+
             const nextMessages = [...workspaceStore.messages];
             setMessages(nextMessages);
             setIsGenerating(true);
@@ -187,9 +270,11 @@ export const useChat = () => {
 
                 window.chat.streamResponseGeneration({
                     requestId,
-                    prompt,
+                    prompt: skipUserUiMessage ? undefined : normalizedPrompt,
                     model: DEFAULT_MODEL,
                     messages: modelMessages,
+                    dialogId: activeDialogId,
+                    toolPackIds: ["systemTools"],
                 });
                 return;
             } catch (error) {
@@ -242,6 +327,50 @@ export const useChat = () => {
                 return;
             }
 
+            if (part.type === "tool-call") {
+                updateMessages(
+                    (current) =>
+                        toolsStorage.applyToolCall(current, {
+                            toolCallId:
+                                typeof part.toolCallId === "string"
+                                    ? part.toolCallId
+                                    : undefined,
+                            toolName:
+                                typeof part.toolName === "string"
+                                    ? part.toolName
+                                    : undefined,
+                            input: part.input,
+                            args: part.args,
+                        }),
+                    false,
+                );
+                return;
+            }
+
+            if (part.type === "tool-result") {
+                updateMessages(
+                    (current) =>
+                        toolsStorage.applyToolResult(current, {
+                            toolCallId:
+                                typeof part.toolCallId === "string"
+                                    ? part.toolCallId
+                                    : undefined,
+                            toolName:
+                                typeof part.toolName === "string"
+                                    ? part.toolName
+                                    : undefined,
+                            output: part.output,
+                            result: part.result,
+                            errorText:
+                                typeof part.errorText === "string"
+                                    ? part.errorText
+                                    : undefined,
+                        }),
+                    false,
+                );
+                return;
+            }
+
             if (part.type === "finish") {
                 markAssistantAs("done", undefined, false);
             }
@@ -256,6 +385,7 @@ export const useChat = () => {
 
                 activeRequestIdRef.current = null;
                 setIsGenerating(false);
+
                 return;
             }
         });
@@ -266,6 +396,7 @@ export const useChat = () => {
         applyAssistantDelta,
         applyAssistantReasoningDelta,
         markAssistantAs,
+        updateMessages,
     ]);
 
     const sendMessage = useCallback(async () => {
@@ -398,6 +529,75 @@ export const useChat = () => {
         setMessages([...workspaceStore.messages]);
     }, [activeDialogId]);
 
+    const selectAskQuestion = useCallback(
+        (messageId: string, toolCallId: string, questionIndex: number) => {
+            updateMessages(
+                (current) =>
+                    toolsStorage.setAskActiveQuestion(
+                        current,
+                        messageId,
+                        toolCallId,
+                        questionIndex,
+                    ),
+                true,
+            );
+        },
+        [updateMessages],
+    );
+
+    const saveAskAnswer = useCallback(
+        (
+            messageId: string,
+            toolCallId: string,
+            questionIndex: number,
+            answer: string,
+        ) => {
+            updateMessages(
+                (current) =>
+                    toolsStorage.saveAskAnswer(
+                        current,
+                        messageId,
+                        toolCallId,
+                        questionIndex,
+                        answer,
+                    ),
+                true,
+            );
+        },
+        [updateMessages],
+    );
+
+    const sendAskAnswers = useCallback(
+        async (messageId: string, toolCallId: string, qaState: QaToolState) => {
+            if (isGenerating) {
+                return;
+            }
+
+            const payload: AskToolResult = {
+                questions: qaState.questions,
+                activeQuestionIndex: qaState.activeQuestionIndex,
+                answered: true,
+            };
+
+            updateMessages(
+                (current) =>
+                    toolsStorage.markAskAnswered(
+                        current,
+                        messageId,
+                        toolCallId,
+                    ),
+                true,
+            );
+
+            const prompt = toolsStorage.buildAskAnswersPrompt(payload);
+            await startGeneration(prompt, {
+                skipUserUiMessage: true,
+                contextOnlyUserMessage: prompt,
+            });
+        },
+        [isGenerating, startGeneration, updateMessages],
+    );
+
     return {
         messages,
         input,
@@ -414,5 +614,8 @@ export const useChat = () => {
         cancelEditMessage,
         confirmEditMessage,
         clearChat,
+        selectAskQuestion,
+        saveAskAnswer,
+        sendAskAnswers,
     };
 };

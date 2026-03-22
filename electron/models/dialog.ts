@@ -1,4 +1,5 @@
 import type { ChatRole } from "./chat";
+import type { ToolTrace } from "./tool";
 
 export type DialogId = `dlg-${string}`;
 
@@ -7,12 +8,31 @@ export type DialogContextMessage = {
     content: string;
 };
 
+export type AssistantMessageStage =
+    | {
+          id: `stg-${string}`;
+          type: "reasoning";
+          content: string;
+      }
+    | {
+          id: `stg-${string}`;
+          type: "answer";
+          content: string;
+      }
+    | {
+          id: `stg-${string}`;
+          type: "tool";
+          toolCallId: string;
+      };
+
 export type DialogUiMessage = {
     id: `msg-${string}`;
     role: ChatRole;
     answeringAt?: string;
     content: string;
     reasoning?: string;
+    toolTraces?: ToolTrace[];
+    stages?: AssistantMessageStage[];
     timestamp: string;
     status: "streaming" | "done" | "error";
 };

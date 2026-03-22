@@ -2,6 +2,15 @@ import { useEffect, useRef } from "react";
 import { ChatUserBubbleCard } from "../../molecules/chat/cards";
 import { AssistantResponse } from "./AssistantResponse";
 import { DialogUiMessage } from "../../../../../electron/models";
+import type { QaToolState } from "../../../../utils/chat/qaTool";
+
+type FeedSnapshot = {
+    length: number;
+    lastId: string | null;
+    lastContentLength: number;
+    lastReasoningLength: number;
+    lastStagesLength: number;
+};
 
 type MessageFeedProps = {
     messages: DialogUiMessage[];
@@ -14,6 +23,22 @@ type MessageFeedProps = {
     onCopyMessage: (content: string) => void;
     onRefreshMessage: (messageId: string) => void;
     onDeleteMessage: (messageId: string) => void;
+    onSelectAskQuestion: (
+        messageId: string,
+        toolCallId: string,
+        questionIndex: number,
+    ) => void;
+    onSaveAskAnswer: (
+        messageId: string,
+        toolCallId: string,
+        questionIndex: number,
+        answer: string,
+    ) => void;
+    onSendAskAnswers: (
+        messageId: string,
+        toolCallId: string,
+        qaState: QaToolState,
+    ) => void;
 };
 
 export const MessageFeed = ({
@@ -27,15 +52,52 @@ export const MessageFeed = ({
     onCopyMessage,
     onRefreshMessage,
     onDeleteMessage,
+    onSelectAskQuestion,
+    onSaveAskAnswer,
+    onSendAskAnswers,
 }: MessageFeedProps) => {
     const scrollRef = useRef<HTMLDivElement>(null);
+    const snapshotRef = useRef<FeedSnapshot | null>(null);
 
     useEffect(() => {
         if (!scrollRef.current) {
             return;
         }
 
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        const lastMessage = messages.at(-1);
+        const nextSnapshot: FeedSnapshot = {
+            length: messages.length,
+            lastId: lastMessage?.id ?? null,
+            lastContentLength: lastMessage?.content.length ?? 0,
+            lastReasoningLength: lastMessage?.reasoning?.length ?? 0,
+            lastStagesLength: lastMessage?.stages?.length ?? 0,
+        };
+
+        const previousSnapshot = snapshotRef.current;
+
+        if (!previousSnapshot) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            snapshotRef.current = nextSnapshot;
+            return;
+        }
+
+        const hasNewMessage = nextSnapshot.length > previousSnapshot.length;
+        const switchedLastMessage =
+            nextSnapshot.lastId !== previousSnapshot.lastId;
+        const grewLastMessageText =
+            nextSnapshot.lastId === previousSnapshot.lastId &&
+            (nextSnapshot.lastContentLength >
+                previousSnapshot.lastContentLength ||
+                nextSnapshot.lastReasoningLength >
+                    previousSnapshot.lastReasoningLength ||
+                nextSnapshot.lastStagesLength >
+                    previousSnapshot.lastStagesLength);
+
+        if (hasNewMessage || switchedLastMessage || grewLastMessageText) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+
+        snapshotRef.current = nextSnapshot;
     }, [messages]);
 
     return (
@@ -97,11 +159,17 @@ export const MessageFeed = ({
                             }}
                         >
                             <AssistantResponse
+                                messageId={message.id}
                                 content={message.content}
                                 reasoning={message.reasoning ?? ""}
                                 timestamp={message.timestamp}
                                 isStreaming={isStreaming}
                                 isError={isError}
+                                stages={message.stages ?? []}
+                                toolTraces={message.toolTraces ?? []}
+                                onSelectAskQuestion={onSelectAskQuestion}
+                                onSaveAskAnswer={onSaveAskAnswer}
+                                onSendAskAnswers={onSendAskAnswers}
                             />
                         </div>
                     );

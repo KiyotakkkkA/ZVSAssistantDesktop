@@ -25,6 +25,9 @@ export const ChatViewPage = observer(() => {
         copyMessage,
         refreshMessage,
         deleteMessage,
+        selectAskQuestion,
+        saveAskAnswer,
+        sendAskAnswers,
     } = useChat();
 
     return (
@@ -44,6 +47,9 @@ export const ChatViewPage = observer(() => {
                     onCopyMessage={copyMessage}
                     onRefreshMessage={refreshMessage}
                     onDeleteMessage={deleteMessage}
+                    onSelectAskQuestion={selectAskQuestion}
+                    onSaveAskAnswer={saveAskAnswer}
+                    onSendAskAnswers={sendAskAnswers}
                 />
                 <MessageComposer
                     input={input}

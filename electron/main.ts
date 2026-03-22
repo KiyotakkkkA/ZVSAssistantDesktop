@@ -6,6 +6,7 @@ import { ChatGenService } from "./services/ChatGenService";
 import { InitService } from "./services/InitService";
 import { DatabaseService } from "./services/DatabaseService";
 import { ThemesService } from "./services/ThemesService";
+import { ToolsRuntimeService } from "./services/ToolsRuntimeService";
 
 import {
     registerIpcChatPack,
@@ -141,7 +142,11 @@ app.whenReady().then(() => {
     const dialogRepository = new DialogRepository(databaseService);
 
     // Инициализируем функциональные сервисы
-    chatGenService = new ChatGenService({ userRepository });
+    const toolsRuntimeService = new ToolsRuntimeService();
+    chatGenService = new ChatGenService({
+        userRepository,
+        toolsRuntimeService,
+    });
     themesService = new ThemesService(appPaths.themesPath);
 
     // Инициализируем данные

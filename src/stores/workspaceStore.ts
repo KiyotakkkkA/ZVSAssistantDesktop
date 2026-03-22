@@ -119,6 +119,37 @@ class WorkspaceStore {
         }
     }
 
+    addContextUserMessage(
+        dialogId: DialogIdFormat,
+        content: string,
+        persist = true,
+    ) {
+        const dialog = this.dialogs.find((item) => item.id === dialogId);
+
+        if (!dialog) {
+            return;
+        }
+
+        const normalizedContent = content.trim();
+
+        if (!normalizedContent) {
+            return;
+        }
+
+        if (!dialog.contextMessages.some((item) => item.role === "user")) {
+            dialog.contextMessages.push(...this.getSystemContextMessages());
+        }
+
+        dialog.contextMessages.push({
+            role: "user",
+            content: normalizedContent,
+        });
+
+        if (persist) {
+            void this.persistDialogState(dialogId);
+        }
+    }
+
     truncateMessagesFromId(dialogId: string, messageId: string) {
         const dialog = this.dialogs.find((d) => d.id === dialogId);
 
@@ -316,7 +347,11 @@ class WorkspaceStore {
             id: dialog.id,
             name: dialog.name,
             isForProject: dialog.is_for_project,
-            messages: dialog.ui_messages,
+            messages: dialog.ui_messages.map((message) => ({
+                ...message,
+                toolTraces: message.toolTraces ?? [],
+                stages: message.stages ?? [],
+            })),
             contextMessages: dialog.context_messages,
             tokenUsage: dialog.token_usage,
         };
