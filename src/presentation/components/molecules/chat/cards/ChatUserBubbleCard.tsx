@@ -29,7 +29,7 @@ export function ChatUserBubbleCard({
     onEditCancel,
 }: ChatUserBubbleCardProps) {
     return (
-        <article className="self-end flex flex-col w-fit group">
+        <article className="flex flex-col w-fit group">
             <div className="flex justify-end gap-3">
                 <div className="max-w-[88%] rounded-2xl bg-main-500/20 px-4 py-3 text-sm leading-relaxed text-main-100 ring-main-300/30">
                     {isEditing ? (

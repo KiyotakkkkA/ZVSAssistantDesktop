@@ -26,10 +26,10 @@ export const SettingsAssistantPanel = observer(() => {
     const modelBase = generalData.ollamaModel.split(":")[0];
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-5 animate-page-fade-in">
             <PrettyBR icon="mdi:robot" label="Ассистент" size={20} />
 
-            <div className="mt-4 space-y-4">
+            <div className="mt-4 space-y-4 animate-card-rise-in">
                 <div className="space-y-2">
                     <p className="text-sm font-medium text-main-200">
                         Имя ассистента
@@ -74,7 +74,7 @@ export const SettingsAssistantPanel = observer(() => {
 
             <PrettyBR icon="mdi:chip" label="ИИ Сервисы" size={20} />
 
-            <div className="rounded-2xl bg-main-900/40">
+            <div className="rounded-2xl bg-main-900/40 animate-card-rise-in">
                 <div className="flex gap-2 items-center">
                     <Icon
                         icon="mdi:chip"
@@ -116,7 +116,7 @@ export const SettingsAssistantPanel = observer(() => {
                             <Link
                                 to={`${Config.OLLAMA_BASE_URL}/library/${modelBase}`}
                                 target="_blank"
-                                className="rounded-md p-2 text-white bg-indigo-700 hover:bg-indigo-800 transition-colors flex items-center gap-1 text-xs"
+                                className="rounded-md p-2 text-white bg-indigo-700 hover:bg-indigo-800 transition-all duration-200 hover:-translate-y-0.5 flex items-center gap-1 text-xs"
                             >
                                 <Icon
                                     icon="mdi:open-in-new"
@@ -148,7 +148,7 @@ export const SettingsAssistantPanel = observer(() => {
                             <Link
                                 to={`${Config.OLLAMA_BASE_URL}/settings/keys`}
                                 target="_blank"
-                                className="rounded-md p-2 text-white bg-indigo-700 hover:bg-indigo-800 transition-colors flex items-center gap-1 text-xs"
+                                className="rounded-md p-2 text-white bg-indigo-700 hover:bg-indigo-800 transition-all duration-200 hover:-translate-y-0.5 flex items-center gap-1 text-xs"
                             >
                                 <Icon
                                     icon="mdi:open-in-new"

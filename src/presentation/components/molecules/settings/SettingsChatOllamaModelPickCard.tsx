@@ -41,11 +41,6 @@ const toDateLabel = (isoDate: string): string => {
     return parsed.toLocaleDateString("ru-RU");
 };
 
-const toValue = (value: string | null | undefined): string => {
-    const normalized = value?.trim();
-    return normalized ? normalized : "—";
-};
-
 export function SettingsChatOllamaModelPickCard({
     model,
     selected,
@@ -84,30 +79,6 @@ export function SettingsChatOllamaModelPickCard({
                     <dt className="text-main-500">Обновлён</dt>
                     <dd className="text-main-300">
                         {toDateLabel(model.modified_at)}
-                    </dd>
-                </div>
-                <div>
-                    <dt className="text-main-500">Family</dt>
-                    <dd className="text-main-300">
-                        {toValue(model.details.family)}
-                    </dd>
-                </div>
-                <div>
-                    <dt className="text-main-500">Format</dt>
-                    <dd className="text-main-300">
-                        {toValue(model.details.format)}
-                    </dd>
-                </div>
-                <div>
-                    <dt className="text-main-500">Params</dt>
-                    <dd className="text-main-300">
-                        {toValue(model.details.parameter_size)}
-                    </dd>
-                </div>
-                <div>
-                    <dt className="text-main-500">Quantization</dt>
-                    <dd className="text-main-300">
-                        {toValue(model.details.quantization_level)}
                     </dd>
                 </div>
             </dl>

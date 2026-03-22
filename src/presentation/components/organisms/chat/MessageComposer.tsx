@@ -30,7 +30,7 @@ export const MessageComposer = ({
         <>
             <footer className="shrink-0 rounded-2xl pt-2">
                 <div
-                    className="mx-auto w-full max-w-5xl rounded-[1.75rem] border border-main-700/70 bg-main-800/65 p-1 hover:border-main-600/90 group transition-colors hover:cursor-text"
+                    className="mx-auto w-full max-w-5xl rounded-[1.75rem] border border-main-700/70 bg-main-800/65 p-1 hover:border-main-600/90 group transition-colors hover:cursor-text animate-card-rise-in animate-soft-pulse-glow"
                     onClick={() => {
                         areaRef.current?.focus();
                     }}

@@ -17,10 +17,10 @@ export const Header = () => {
 
     return (
         <>
-            <header className="flex items-center gap-3 justify-end">
+            <header className="flex items-center gap-3 justify-end animate-card-rise-in">
                 <Button
                     variant="secondary"
-                    className="p-1.5 border-transparent"
+                    className="p-1.5 border-transparent transition-transform duration-200 hover:scale-105 active:scale-95"
                     onClick={() => {
                         setIsSettingsOpen(true);
                     }}

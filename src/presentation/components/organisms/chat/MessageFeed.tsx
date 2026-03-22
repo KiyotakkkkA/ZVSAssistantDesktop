@@ -50,31 +50,38 @@ export const MessageFeed = ({
                     </p>
                 ) : null}
 
-                {messages.map((message) => {
+                {messages.map((message, index) => {
                     if (message.role === "user") {
                         return (
-                            <ChatUserBubbleCard
+                            <div
                                 key={message.id}
-                                content={message.content}
-                                timestamp={message.timestamp}
-                                isEditing={editingMessageId === message.id}
-                                editValue={editingValue}
-                                onEditValueChange={onEditValueChange}
-                                onEditCancel={onCancelEdit}
-                                onEditConfirm={onConfirmEdit}
-                                msgCopy={() => {
-                                    void onCopyMessage(message.content);
+                                className="animate-message-pop-in self-end"
+                                style={{
+                                    animationDelay: `${Math.min(index * 28, 220)}ms`,
                                 }}
-                                msgRetry={() => {
-                                    void onRefreshMessage(message.id);
-                                }}
-                                msgEdit={() => {
-                                    onStartEdit(message.id);
-                                }}
-                                msgDelete={() => {
-                                    onDeleteMessage(message.id);
-                                }}
-                            />
+                            >
+                                <ChatUserBubbleCard
+                                    content={message.content}
+                                    timestamp={message.timestamp}
+                                    isEditing={editingMessageId === message.id}
+                                    editValue={editingValue}
+                                    onEditValueChange={onEditValueChange}
+                                    onEditCancel={onCancelEdit}
+                                    onEditConfirm={onConfirmEdit}
+                                    msgCopy={() => {
+                                        void onCopyMessage(message.content);
+                                    }}
+                                    msgRetry={() => {
+                                        void onRefreshMessage(message.id);
+                                    }}
+                                    msgEdit={() => {
+                                        onStartEdit(message.id);
+                                    }}
+                                    msgDelete={() => {
+                                        onDeleteMessage(message.id);
+                                    }}
+                                />
+                            </div>
                         );
                     }
 
@@ -82,14 +89,21 @@ export const MessageFeed = ({
                     const isError = message.status === "error";
 
                     return (
-                        <AssistantResponse
+                        <div
                             key={message.id}
-                            content={message.content}
-                            reasoning={message.reasoning ?? ""}
-                            timestamp={message.timestamp}
-                            isStreaming={isStreaming}
-                            isError={isError}
-                        />
+                            className="animate-message-pop-in"
+                            style={{
+                                animationDelay: `${Math.min(index * 28, 220)}ms`,
+                            }}
+                        >
+                            <AssistantResponse
+                                content={message.content}
+                                reasoning={message.reasoning ?? ""}
+                                timestamp={message.timestamp}
+                                isStreaming={isStreaming}
+                                isError={isError}
+                            />
+                        </div>
                     );
                 })}
             </div>

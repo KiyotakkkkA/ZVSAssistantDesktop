@@ -168,7 +168,7 @@ export const WorkspaceSidebar = observer(() => {
 
     return (
         <div className="flex h-full min-h-0 overflow-hidden animate-page-fade-in">
-            <aside className="flex h-full w-[320px] shrink-0 flex-col border-r border-main-300/20 bg-main-900/85 pr-3">
+            <aside className="flex h-full w-[320px] shrink-0 flex-col border-r border-main-300/20 bg-main-900/85 pr-3 animate-panel-slide-in">
                 <div className="flex items-center justify-between gap-2">
                     <p className="text-xs uppercase tracking-[0.18em] text-main-400">
                         Рабочая область
@@ -203,8 +203,16 @@ export const WorkspaceSidebar = observer(() => {
 
                 <div className="flex-1 space-y-2 overflow-y-auto pr-1">
                     {dialogs.length > 0 ? (
-                        dialogs.map((dialog) => (
-                            <SidebarItem key={dialog.id} {...dialog} />
+                        dialogs.map((dialog, index) => (
+                            <div
+                                key={dialog.id}
+                                className="animate-card-rise-in"
+                                style={{
+                                    animationDelay: `${50 + index * 24}ms`,
+                                }}
+                            >
+                                <SidebarItem {...dialog} />
+                            </div>
                         ))
                     ) : (
                         <div className="rounded-xl bg-main-900/50 px-3 text-xs text-main-400">
@@ -215,8 +223,16 @@ export const WorkspaceSidebar = observer(() => {
                     <PrettyBR icon="mdi:folder" label="Проекты" />
 
                     {projects.length > 0 ? (
-                        projects.map((project) => (
-                            <SidebarItem key={project.id} {...project} />
+                        projects.map((project, index) => (
+                            <div
+                                key={project.id}
+                                className="animate-card-rise-in"
+                                style={{
+                                    animationDelay: `${80 + index * 24}ms`,
+                                }}
+                            >
+                                <SidebarItem {...project} />
+                            </div>
                         ))
                     ) : (
                         <div className="rounded-xl bg-main-900/50 px-3 text-xs text-main-400">

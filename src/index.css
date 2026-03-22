@@ -55,3 +55,71 @@ body {
 .animate-page-fade-in {
     animation: page-fade-in 280ms ease-out both;
 }
+
+@keyframes panel-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(-12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes card-rise-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes message-pop-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes soft-pulse-glow {
+    0% {
+        box-shadow: 0 0 0 0 rgba(212, 212, 212, 0.08);
+    }
+    100% {
+        box-shadow: 0 0 0 10px rgba(212, 212, 212, 0);
+    }
+}
+
+.animate-panel-slide-in {
+    animation: panel-slide-in 320ms ease-out both;
+}
+
+.animate-card-rise-in {
+    animation: card-rise-in 260ms ease-out both;
+}
+
+.animate-message-pop-in {
+    animation: message-pop-in 220ms ease-out both;
+}
+
+.animate-soft-pulse-glow {
+    animation: soft-pulse-glow 1.2s ease-out 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-page-fade-in,
+    .animate-panel-slide-in,
+    .animate-card-rise-in,
+    .animate-message-pop-in,
+    .animate-soft-pulse-glow {
+        animation: none !important;
+    }
+}
