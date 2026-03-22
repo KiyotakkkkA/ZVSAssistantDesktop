@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createHighlighter } from "shiki";
 import { Button } from "@kiyotakkkka/zvs-uikit-lib";
+import { useToasts } from "../../../../hooks/useToasts";
 
 interface ShikiCodeBlockProps {
     code: string;
@@ -81,6 +82,7 @@ const downloadTextFile = (content: string, fileName: string) => {
 };
 
 export function ShikiCodeBlock({ code, language }: ShikiCodeBlockProps) {
+    const toast = useToasts();
     const normalizedLanguage = normalizeLanguage(language);
     const cacheKey = `${normalizedLanguage}:${code}`;
     const [html, setHtml] = useState<string>(
@@ -139,6 +141,10 @@ export function ShikiCodeBlock({ code, language }: ShikiCodeBlockProps) {
     const copyCode = async () => {
         try {
             await navigator.clipboard.writeText(code);
+            toast.success({
+                title: "Успешно",
+                description: "Код скопирован в буфер обмена",
+            });
         } catch {
             // noop
         }
