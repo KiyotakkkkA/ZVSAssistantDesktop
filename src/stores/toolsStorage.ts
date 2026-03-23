@@ -98,6 +98,20 @@ const findAskTrace = (message: DialogUiMessage, callId: string) => {
     );
 };
 
+const hasPendingAskAnswers = (resultPayload: unknown) => {
+    if (!resultPayload || typeof resultPayload !== "object") {
+        return false;
+    }
+
+    const payload = resultPayload as AskToolResult;
+
+    if (!Array.isArray(payload.questions)) {
+        return false;
+    }
+
+    return payload.questions.some((question) => !question.answer?.trim());
+};
+
 const updateAskResult = (
     result: unknown,
     updater: (payload: AskToolResult) => AskToolResult,
@@ -113,6 +127,30 @@ const updateAskResult = (
     }
 
     return updater(payload);
+};
+
+const updateAskTraceInMessage = (
+    message: DialogUiMessage,
+    toolCallId: string,
+    updater: (trace: ToolTrace) => ToolTrace,
+): DialogUiMessage => {
+    const traces = message.toolTraces ?? [];
+    let wasUpdated = false;
+
+    const nextTraces = traces.map((trace) => {
+        if (trace.callId !== toolCallId || trace.toolName !== "ask_tool") {
+            return trace;
+        }
+
+        wasUpdated = true;
+        return updater(trace);
+    });
+
+    if (!wasUpdated) {
+        return message;
+    }
+
+    return { ...message, toolTraces: nextTraces };
 };
 
 class ToolsStorage {
@@ -178,13 +216,7 @@ class ToolsStorage {
 
         const resultPayload = part.output ?? part.result ?? null;
         const isAskPending =
-            toolName === "ask_tool" &&
-            resultPayload &&
-            typeof resultPayload === "object" &&
-            Array.isArray((resultPayload as AskToolResult).questions) &&
-            (resultPayload as AskToolResult).questions.some(
-                (question) => !question.answer?.trim(),
-            );
+            toolName === "ask_tool" && hasPendingAskAnswers(resultPayload);
 
         const trace: ToolTrace = {
             callId: toolCallId,
@@ -221,25 +253,14 @@ class ToolsStorage {
                 return message;
             }
 
-            const traces = (message.toolTraces ?? []).map((trace) => {
-                if (
-                    trace.callId !== toolCallId ||
-                    trace.toolName !== "ask_tool"
-                ) {
-                    return trace;
-                }
-
-                return {
-                    ...trace,
-                    result: updateAskResult(trace.result, (payload) => ({
-                        ...payload,
-                        activeQuestionIndex,
-                    })),
-                    updatedAt: nowIso(),
-                };
-            });
-
-            return { ...message, toolTraces: traces };
+            return updateAskTraceInMessage(message, toolCallId, (trace) => ({
+                ...trace,
+                result: updateAskResult(trace.result, (payload) => ({
+                    ...payload,
+                    activeQuestionIndex,
+                })),
+                updatedAt: nowIso(),
+            }));
         });
     }
 
@@ -255,29 +276,18 @@ class ToolsStorage {
                 return message;
             }
 
-            const traces = (message.toolTraces ?? []).map((trace) => {
-                if (
-                    trace.callId !== toolCallId ||
-                    trace.toolName !== "ask_tool"
-                ) {
-                    return trace;
-                }
-
-                return {
-                    ...trace,
-                    result: updateAskResult(trace.result, (payload) => ({
-                        ...payload,
-                        questions: payload.questions.map((question, index) =>
-                            index === questionIndex
-                                ? { ...question, answer }
-                                : question,
-                        ),
-                    })),
-                    updatedAt: nowIso(),
-                };
-            });
-
-            return { ...message, toolTraces: traces };
+            return updateAskTraceInMessage(message, toolCallId, (trace) => ({
+                ...trace,
+                result: updateAskResult(trace.result, (payload) => ({
+                    ...payload,
+                    questions: payload.questions.map((question, index) =>
+                        index === questionIndex
+                            ? { ...question, answer }
+                            : question,
+                    ),
+                })),
+                updatedAt: nowIso(),
+            }));
         });
     }
 
@@ -291,26 +301,15 @@ class ToolsStorage {
                 return message;
             }
 
-            const traces = (message.toolTraces ?? []).map((trace) => {
-                if (
-                    trace.callId !== toolCallId ||
-                    trace.toolName !== "ask_tool"
-                ) {
-                    return trace;
-                }
-
-                return {
-                    ...trace,
-                    status: "done" as const,
-                    result: updateAskResult(trace.result, (payload) => ({
-                        ...payload,
-                        answered: true,
-                    })),
-                    updatedAt: nowIso(),
-                };
-            });
-
-            return { ...message, toolTraces: traces };
+            return updateAskTraceInMessage(message, toolCallId, (trace) => ({
+                ...trace,
+                status: "done" as const,
+                result: updateAskResult(trace.result, (payload) => ({
+                    ...payload,
+                    answered: true,
+                })),
+                updatedAt: nowIso(),
+            }));
         });
     }
 

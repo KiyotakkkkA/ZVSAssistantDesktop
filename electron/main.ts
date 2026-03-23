@@ -13,12 +13,17 @@ import {
     registerIpcProfilePack,
     registerIpcWorkspacePack,
     registerIpcCorePack,
+    registerIpcJobsPack,
+    broadcastJobsRealtimeEvent,
 } from "./ipc";
 
 import { createElectronPaths } from "./paths";
 import { UserRepository } from "./repositories/UserRepository";
 import { DialogRepository } from "./repositories/DialogRepository";
+import { JobRepository } from "./repositories/JobRepository";
 import { defaultUser } from "./static/data/baseProfile";
+import { JobsStorage } from "./services/jobs/JobsStorage";
+import { JobService } from "./services/jobs/JobService";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -42,6 +47,9 @@ const APP_ID = "com.zvs.assistant";
 
 let chatGenService: ChatGenService;
 let themesService: ThemesService;
+let jobService: JobService | null = null;
+let jobsStorage: JobsStorage;
+let toolsRuntimeService: ToolsRuntimeService;
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
     ? path.join(process.env.APP_ROOT, "public")
@@ -140,13 +148,18 @@ app.whenReady().then(() => {
     // Инициализируем репозитории
     const userRepository = new UserRepository(databaseService);
     const dialogRepository = new DialogRepository(databaseService);
+    const jobRepository = new JobRepository(databaseService);
 
     // Инициализируем функциональные сервисы
-    const toolsRuntimeService = new ToolsRuntimeService();
+    toolsRuntimeService = new ToolsRuntimeService();
     chatGenService = new ChatGenService({
         userRepository,
         toolsRuntimeService,
     });
+
+    jobsStorage = new JobsStorage(jobRepository, userRepository);
+    jobService = new JobService(jobsStorage, broadcastJobsRealtimeEvent);
+
     themesService = new ThemesService(appPaths.themesPath);
 
     // Инициализируем данные
@@ -164,6 +177,10 @@ app.whenReady().then(() => {
 
     registerIpcWorkspacePack({
         dialogRepository,
+    });
+
+    registerIpcJobsPack({
+        jobService,
     });
 
     registerIpcCorePack();
@@ -185,4 +202,8 @@ async function shutdownApplication(): Promise<void> {
     }
 
     isShuttingDown = true;
+
+    if (jobService) {
+        await jobService.shutdown();
+    }
 }

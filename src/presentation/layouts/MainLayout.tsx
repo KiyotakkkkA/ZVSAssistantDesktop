@@ -1,6 +1,9 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Icon } from "@iconify/react";
-import { Button } from "@kiyotakkkka/zvs-uikit-lib";
+import { Button, Modal } from "@kiyotakkkka/zvs-uikit-lib";
+import { useState } from "react";
+import { JobManageForm } from "../components/organisms/chat/forms";
+import { useNotifications } from "../../hooks";
 
 type NavigationTab = {
     id: "workspace" | "storage" | "extensions" | "agents" | "scenarios";
@@ -43,8 +46,11 @@ const navigationTabs: NavigationTab[] = [
 ];
 
 export const MainLayout = () => {
+    useNotifications();
+
     const location = useLocation();
     const navigate = useNavigate();
+    const [isJobsModalOpen, setIsJobsModalOpen] = useState(false);
 
     return (
         <main className="h-screen w-screen overflow-hidden bg-main-900 p-3 text-main-100">
@@ -52,10 +58,22 @@ export const MainLayout = () => {
                 <aside
                     className={`flex h-full min-h-0 shrink-0 flex-col rounded-3xl bg-main-800/70 p-3 backdrop-blur-md w-55 animate-panel-slide-in`}
                 >
-                    <div className="mb-3 flex items-center justify-start gap-2">
+                    <div className="mb-3 flex items-center justify-between gap-2">
                         <p className="text-xs uppercase tracking-[0.18em] text-main-400">
                             Навигация
                         </p>
+                        <Button
+                            variant="secondary"
+                            className="h-8 w-8 rounded-lg p-0"
+                            onClick={() => setIsJobsModalOpen(true)}
+                            title="Фоновые задачи"
+                        >
+                            <Icon
+                                icon="mdi:book-clock"
+                                width={16}
+                                height={16}
+                            />
+                        </Button>
                     </div>
                     <nav className="space-y-2 overflow-y-auto pr-1">
                         {navigationTabs.map((tab, index) => {
@@ -91,6 +109,15 @@ export const MainLayout = () => {
                     </section>
                 </div>
             </div>
+
+            <Modal
+                open={isJobsModalOpen}
+                onClose={() => setIsJobsModalOpen(false)}
+                title="Управление фоновыми задачами"
+                className="h-[90vh] max-w-[min(1400px,96vw)]"
+            >
+                <JobManageForm />
+            </Modal>
         </main>
     );
 };

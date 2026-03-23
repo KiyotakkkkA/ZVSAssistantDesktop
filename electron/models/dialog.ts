@@ -40,7 +40,7 @@ export type DialogUiMessage = {
 export interface DialogEntity {
     id: DialogId;
     owner_id: string;
-    name: string;
+    name: string | null;
     is_for_project: boolean;
     ui_messages: DialogUiMessage[];
     context_messages: DialogContextMessage[];
@@ -50,7 +50,7 @@ export interface DialogEntity {
 export type CreateDialogDto = {
     id: DialogId;
     owner_id: string;
-    name: string;
+    name: string | null;
     is_for_project: boolean;
 };
 

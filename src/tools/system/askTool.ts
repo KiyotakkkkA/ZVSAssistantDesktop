@@ -20,24 +20,23 @@ const askToolInputSchema = z.object({
 
 type AskToolInput = z.infer<typeof askToolInputSchema>;
 
-const normalizeQuestion = (
-    question: AskToolInput["questions"][number],
-    index: number,
-) => {
-    if (typeof question === "string") {
-        return {
-            id: `q-${index + 1}`,
-            question,
-        };
-    }
+const toNormalizedQuestions = (questions: AskToolInput["questions"]) => {
+    return questions.map((question, index) => {
+        if (typeof question === "string") {
+            return {
+                id: `q-${index + 1}`,
+                question,
+            };
+        }
 
-    return {
-        id: question.id ?? `q-${index + 1}`,
-        question: question.question,
-        reason: question.reason,
-        selectAnswers: question.selectAnswers,
-        userAnswerHint: question.userAnswerHint,
-    };
+        return {
+            id: question.id ?? `q-${index + 1}`,
+            question: question.question,
+            reason: question.reason,
+            selectAnswers: question.selectAnswers,
+            userAnswerHint: question.userAnswerHint,
+        };
+    });
 };
 
 export const askTool: ToolDefinition = {
@@ -47,10 +46,18 @@ export const askTool: ToolDefinition = {
     inputSchema: askToolInputSchema,
     execute: (args) => {
         const input = askToolInputSchema.parse(args);
+        const questions = toNormalizedQuestions(input.questions);
+        const activeQuestionIndex = Math.max(
+            0,
+            Math.min(
+                input.activeQuestionIndex ?? 0,
+                Math.max(questions.length - 1, 0),
+            ),
+        );
 
         const result: AskToolResult = {
-            questions: input.questions.map(normalizeQuestion),
-            activeQuestionIndex: input.activeQuestionIndex ?? 0,
+            questions,
+            activeQuestionIndex,
             answered: false,
         };
 

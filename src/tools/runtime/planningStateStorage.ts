@@ -13,13 +13,19 @@ const createProgressText = (completed: number, total: number) => {
 };
 
 const toPlanningResult = (state: PlanningToolState): PlanningToolResult => {
-    const completedSteps = state.steps
-        .filter((step) => step.isDone)
-        .map((step) => ({ id: step.id, description: step.description }));
+    const completedSteps: PlanningToolResult["completed_steps"] = [];
+    const pendingSteps: PlanningToolResult["pending_steps"] = [];
 
-    const pendingSteps = state.steps
-        .filter((step) => !step.isDone)
-        .map((step) => ({ id: step.id, description: step.description }));
+    for (const step of state.steps) {
+        const item = { id: step.id, description: step.description };
+
+        if (step.isDone) {
+            completedSteps.push(item);
+            continue;
+        }
+
+        pendingSteps.push(item);
+    }
 
     const nextStep = pendingSteps[0] ?? null;
 
@@ -69,11 +75,11 @@ export class PlanningStateStorage {
             return null;
         }
 
-        planState.steps = planState.steps.map((step) =>
-            step.id === stepId ? { ...step, isDone: true } : step,
-        );
+        const step = planState.steps.find((item) => item.id === stepId);
 
-        this.plansByDialogId.set(dialogId, planState);
+        if (step) {
+            step.isDone = true;
+        }
 
         return toPlanningResult(planState);
     }

@@ -22,6 +22,10 @@ const planningToolInputSchema = z.discriminatedUnion("type", [
     planningNextSchema,
 ]);
 
+const PLAN_NOT_FOUND_ERROR = {
+    error: "План не найден. Сначала вызовите planning_tool с type=createSteps.",
+};
+
 export const planningTool: ToolDefinition = {
     name: "planning_tool",
     description:
@@ -30,9 +34,10 @@ export const planningTool: ToolDefinition = {
     execute: (args, context) => {
         const input = planningToolInputSchema.parse(args);
         const dialogId = context.dialogId;
+        const { planningStateStorage } = context;
 
         if (input.type === "createSteps") {
-            return context.planningStateStorage.createSteps(
+            return planningStateStorage.createSteps(
                 dialogId,
                 input.title ?? "План выполнения",
                 input.steps,
@@ -40,24 +45,16 @@ export const planningTool: ToolDefinition = {
         }
 
         if (input.type === "markStep") {
-            const updatedPlan = context.planningStateStorage.markStep(
+            const updatedPlan = planningStateStorage.markStep(
                 dialogId,
                 input.stepId,
             );
 
-            return (
-                updatedPlan ?? {
-                    error: "План не найден. Сначала вызовите planning_tool с type=createSteps.",
-                }
-            );
+            return updatedPlan ?? PLAN_NOT_FOUND_ERROR;
         }
 
-        const nextPlan = context.planningStateStorage.getNextStep(dialogId);
-
         return (
-            nextPlan ?? {
-                error: "План не найден. Сначала вызовите planning_tool с type=createSteps.",
-            }
+            planningStateStorage.getNextStep(dialogId) ?? PLAN_NOT_FOUND_ERROR
         );
     },
 };

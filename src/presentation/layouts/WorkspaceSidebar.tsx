@@ -120,7 +120,7 @@ export const WorkspaceSidebar = observer(() => {
         .filter((dialog) => !dialog.isForProject)
         .map((dialog) => ({
             id: dialog.id,
-            title: dialog.name,
+            title: dialog.name || "Новый диалог",
             preview: dialog.messages.at(-1)?.content || "История пока пуста.",
             time: dialog.messages.at(-1)?.timestamp || "--:--",
             active:
@@ -131,7 +131,7 @@ export const WorkspaceSidebar = observer(() => {
             },
             onRename: (id) => {
                 setRenameTarget({ type: "dialog", id });
-                setNewTitle(dialog.name);
+                setNewTitle(dialog.name || "Новый диалог");
             },
             onDelete: (id) => {
                 setDeleteTarget({ type: "dialog", id });

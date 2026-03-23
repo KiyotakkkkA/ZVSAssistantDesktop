@@ -28,11 +28,37 @@ export class DatabaseService {
             CREATE TABLE IF NOT EXISTS dialogs (
                 id TEXT PRIMARY KEY,
                 owner_id TEXT NOT NULL DEFAULT '' REFERENCES profiles(id) ON DELETE CASCADE,
-                name TEXT NOT NULL,
+                name TEXT,
                 is_for_project INTEGER NOT NULL,
                 ui_messages TEXT NOT NULL,
                 context_messages TEXT NOT NULL,
                 token_usage TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS jobs (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                is_completed INTEGER NOT NULL DEFAULT 0,
+                is_pending INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                started_at TEXT NOT NULL,
+                finished_at TEXT,
+                error_message TEXT,
+                created_by TEXT NOT NULL,
+                FOREIGN KEY(created_by) REFERENCES profiles(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS jobs_events (
+                id TEXT PRIMARY KEY,
+                job_id TEXT NOT NULL,
+                message TEXT NOT NULL,
+                tag TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                created_by TEXT NOT NULL,
+                FOREIGN KEY(job_id) REFERENCES jobs(id) ON DELETE CASCADE,
+                FOREIGN KEY(created_by) REFERENCES profiles(id) ON DELETE CASCADE
             );
         `);
     }

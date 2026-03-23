@@ -6,6 +6,9 @@ export interface GeneralUserData {
     preferredTheme: string;
     preferredLanguage: string;
     userPrompt: string;
+    notifyOnJobCompleteToast: boolean;
+    notifyOnJobCompleteOsNotification: boolean;
+    notifyOnJobCompleteEmail: boolean;
 }
 
 export interface SecureUserData {

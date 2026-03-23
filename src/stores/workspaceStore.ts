@@ -15,7 +15,7 @@ export type ProjectIdFormat = `prj-${string}`;
 
 export type ChatDialog = {
     id: DialogIdFormat;
-    name: string;
+    name: string | null;
     messages: DialogUiMessage[];
     contextMessages: DialogContextMessage[];
     isForProject?: boolean;
@@ -48,7 +48,7 @@ class WorkspaceStore {
         this.restoreLastOpened();
     }
 
-    async createDialog(name = "Новый диалог") {
+    async createDialog(name = null) {
         const dialogId =
             `dlg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` as DialogIdFormat;
         const createDialogDto: CreateDialogDto = {
@@ -186,7 +186,10 @@ class WorkspaceStore {
         dialog.name = name.trim() || dialog.name;
 
         if (window.workspace?.renameDialog) {
-            await window.workspace.renameDialog(dialogId, dialog.name);
+            await window.workspace.renameDialog(
+                dialogId,
+                dialog.name || "Новый диалог",
+            );
         }
     }
 

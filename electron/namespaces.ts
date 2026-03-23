@@ -8,6 +8,12 @@ import type {
 import type { ProfileBootPayload } from "./models/profile";
 import type { UpdateUserDto } from "./models/user";
 import type { ThemeData } from "./static/themes/types";
+import type {
+    CreateJobPayload,
+    JobEventRecord,
+    JobRealtimeEvent,
+    JobRecord,
+} from "./models/job";
 
 export type ChatStreamEventPayload = {
     requestId: string;
@@ -22,6 +28,10 @@ export type ChatStreamEventPayload = {
 
 export interface IpcCoreNamespace {
     httpRequest(url: string, options?: RequestInit): Promise<string>;
+    showOsNotification(params: {
+        title: string;
+        body: string;
+    }): Promise<boolean>;
 }
 
 export interface IpcChatNamespace {
@@ -49,4 +59,13 @@ export interface IpcWorkspaceNamespace {
     renameDialog(id: DialogId, name: string): Promise<void>;
     deleteDialog(id: DialogId): Promise<void>;
     updateDialogState(payload: UpdateDialogStateDto): Promise<void>;
+}
+
+export interface IpcJobsNamespace {
+    getJobs(): Promise<JobRecord[]>;
+    getJobById(jobId: string): Promise<JobRecord | null>;
+    getJobEvents(jobId: string): Promise<JobEventRecord[]>;
+    createJob(payload: CreateJobPayload): Promise<JobRecord>;
+    cancelJob(jobId: string): Promise<boolean>;
+    onRealtimeEvent(listener: (event: JobRealtimeEvent) => void): () => void;
 }

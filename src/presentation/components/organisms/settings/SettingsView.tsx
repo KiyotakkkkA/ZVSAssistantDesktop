@@ -3,8 +3,9 @@ import { Icon } from "@iconify/react";
 import { SettingsInterfacePanel } from "./SettingsInterfacePanel";
 import { SettingsProfilePanel } from "./SettingsProfilePanel";
 import { SettingsAssistantPanel } from "./SettingsAssisstantPanel";
+import { SettingsNotificationPanel } from "./SettingsNotificationPanel";
 
-type SettingsRoute = "interface" | "profile" | "assistant";
+type SettingsRoute = "interface" | "profile" | "assistant" | "notifications";
 
 export type SettingsViewHandle = {
     save: () => Promise<{
@@ -34,17 +35,23 @@ const settingsRoutes: SettingsRouteItem = {
         description: "Настройки ассистента и моделей",
         component: SettingsAssistantPanel,
     },
+    profile: {
+        title: "Профиль",
+        icon: "mdi:account",
+        description: "Настройки профиля",
+        component: SettingsProfilePanel,
+    },
     interface: {
         title: "Персонализация",
         icon: "mdi:monitor",
         description: "Тема, внешний вид и отображение",
         component: SettingsInterfacePanel,
     },
-    profile: {
-        title: "Профиль",
-        icon: "mdi:account",
-        description: "Настройки профиля",
-        component: SettingsProfilePanel,
+    notifications: {
+        title: "Уведомления",
+        icon: "mdi:bell-outline",
+        description: "Настройки уведомлений",
+        component: SettingsNotificationPanel,
     },
 };
 

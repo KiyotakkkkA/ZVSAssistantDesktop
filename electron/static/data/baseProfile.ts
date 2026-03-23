@@ -13,6 +13,10 @@ export const defaultUser: CreateUserDto = {
         name: "Пользователь",
         preferredLanguage: "",
         userPrompt: "",
+        // Уведомления о задачах
+        notifyOnJobCompleteToast: true,
+        notifyOnJobCompleteOsNotification: false,
+        notifyOnJobCompleteEmail: false,
     },
     secureData: {
         ollamaApiKey: "",

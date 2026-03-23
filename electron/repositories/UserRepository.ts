@@ -16,6 +16,17 @@ interface RawUserData {
     updated_at: string;
 }
 
+const normalizeGeneralData = (data: GeneralUserData): GeneralUserData => {
+    return {
+        ...data,
+        notifyOnJobCompleteToast: Boolean(data.notifyOnJobCompleteToast),
+        notifyOnJobCompleteOsNotification: Boolean(
+            data.notifyOnJobCompleteOsNotification,
+        ),
+        notifyOnJobCompleteEmail: Boolean(data.notifyOnJobCompleteEmail),
+    };
+};
+
 export class UserRepository {
     private cachedUser: User | null = null;
 
@@ -36,7 +47,9 @@ export class UserRepository {
         this.cachedUser = {
             id: data.id,
             isCurrent: data.is_current === 1,
-            generalData: JSON.parse(data.general_data) as GeneralUserData,
+            generalData: normalizeGeneralData(
+                JSON.parse(data.general_data) as GeneralUserData,
+            ),
             secureData: JSON.parse(data.secure_data) as SecureUserData,
             createdAt: data.created_at,
             updatedAt: data.updated_at,

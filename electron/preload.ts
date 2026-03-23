@@ -3,6 +3,7 @@ import type {
     ChatStreamEventPayload,
     IpcChatNamespace,
     IpcCoreNamespace,
+    IpcJobsNamespace,
     IpcProfileNamespace,
     IpcWorkspaceNamespace,
 } from "./namespaces";
@@ -32,6 +33,9 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
 const coreNamespace: IpcCoreNamespace = {
     httpRequest(url: string, options?: RequestInit) {
         return ipcRenderer.invoke("core:http-request", url, options);
+    },
+    showOsNotification(params) {
+        return ipcRenderer.invoke("core:show-os-notification", params);
     },
 };
 
@@ -92,3 +96,34 @@ const workspaceNamespace: IpcWorkspaceNamespace = {
 };
 
 contextBridge.exposeInMainWorld("workspace", workspaceNamespace);
+
+const jobsNamespace: IpcJobsNamespace = {
+    getJobs() {
+        return ipcRenderer.invoke("jobs:get");
+    },
+    getJobById(jobId) {
+        return ipcRenderer.invoke("jobs:get-by-id", jobId);
+    },
+    getJobEvents(jobId) {
+        return ipcRenderer.invoke("jobs:get-events", jobId);
+    },
+    createJob(payload) {
+        return ipcRenderer.invoke("jobs:create", payload);
+    },
+    cancelJob(jobId) {
+        return ipcRenderer.invoke("jobs:cancel", jobId);
+    },
+    onRealtimeEvent(listener) {
+        const wrappedListener = (_event: unknown, payload: unknown) => {
+            listener(payload as Parameters<typeof listener>[0]);
+        };
+
+        ipcRenderer.on("jobs:realtime:event", wrappedListener);
+
+        return () => {
+            ipcRenderer.off("jobs:realtime:event", wrappedListener);
+        };
+    },
+};
+
+contextBridge.exposeInMainWorld("jobs", jobsNamespace);

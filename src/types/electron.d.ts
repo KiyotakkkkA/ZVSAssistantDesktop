@@ -1,6 +1,7 @@
 import type {
     IpcChatNamespace,
     IpcCoreNamespace,
+    IpcJobsNamespace,
     IpcProfileNamespace,
     IpcWorkspaceNamespace,
 } from "../../electron/namespaces";
@@ -16,5 +17,6 @@ declare global {
         chat: IpcChatNamespace;
         profile: IpcProfileNamespace;
         workspace: IpcWorkspaceNamespace;
+        jobs: IpcJobsNamespace;
     }
 }
