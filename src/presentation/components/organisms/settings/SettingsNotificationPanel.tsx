@@ -55,6 +55,12 @@ export const SettingsNotificationPanel = observer(() => {
                         }}
                     />
 
+                    <PrettyBR
+                        icon="mdi:hammer"
+                        label="В разработке"
+                        size={20}
+                    />
+
                     <SettingsColoredCheckboxRow
                         checked={toBool(generalData?.notifyOnJobCompleteEmail)}
                         icon={"mdi:email-outline"}

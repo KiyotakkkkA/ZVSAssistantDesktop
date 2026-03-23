@@ -121,7 +121,6 @@ export const WorkspaceSidebar = observer(() => {
         .map((dialog) => ({
             id: dialog.id,
             title: dialog.name || "Новый диалог",
-            preview: dialog.messages.at(-1)?.content || "История пока пуста.",
             time: dialog.messages.at(-1)?.timestamp || "--:--",
             active:
                 workspaceStore.activeProjectId === null &&
@@ -147,9 +146,6 @@ export const WorkspaceSidebar = observer(() => {
             return {
                 id: project.id,
                 title: project.title,
-                preview:
-                    linkedDialog?.messages.at(-1)?.content ||
-                    "Диалог проекта пока пуст.",
                 time: linkedDialog?.messages.at(-1)?.timestamp || "--:--",
                 active: workspaceStore.activeProjectId === project.id,
                 onSelect: (id) => {

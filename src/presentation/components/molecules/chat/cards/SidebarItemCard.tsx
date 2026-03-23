@@ -4,7 +4,6 @@ import { Button } from "@kiyotakkkka/zvs-uikit-lib";
 export type PlaceholderItem = {
     id: string;
     title: string;
-    preview: string;
     time: string;
     tokens?: string;
     active?: boolean;
@@ -16,7 +15,6 @@ export type PlaceholderItem = {
 export const SidebarItem = ({
     id,
     title,
-    preview,
     time,
     tokens,
     active,
@@ -70,7 +68,6 @@ export const SidebarItem = ({
                     </Button>
                 </div>
             </div>
-            <p className="truncate text-xs text-main-400">{preview}</p>
         </div>
     );
 };

@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
-import { Button, InputSmall, Select } from "@kiyotakkkka/zvs-uikit-lib";
+import {
+    Button,
+    InputSmall,
+    PrettyBR,
+    Select,
+} from "@kiyotakkkka/zvs-uikit-lib";
 import { useJobs } from "../../../../../hooks";
 import type { JobEventTag, JobRecord } from "../../../../../types/ElectronApi";
 
@@ -49,30 +54,62 @@ const resolveStatusLabel = (job: JobRecord) => {
 
 const resolveStatusBadgeClass = (job: JobRecord) => {
     if (job.isPending) {
-        return "border-sky-700/70 bg-sky-900/20 text-sky-300";
+        return "bg-sky-900/25 text-sky-300";
     }
 
     if (job.isCompleted) {
-        return "border-emerald-700/70 bg-emerald-900/20 text-emerald-300";
+        return "bg-emerald-900/25 text-emerald-300";
     }
 
-    return "border-amber-700/70 bg-amber-900/20 text-amber-300";
+    return "bg-amber-900/25 text-amber-300";
 };
 
 const resolveTagClass = (tag: JobEventTag) => {
     if (tag === "success") {
-        return "border-emerald-700/70 bg-emerald-900/15 text-emerald-300";
+        return "bg-emerald-900/20 text-emerald-300";
     }
 
     if (tag === "warning") {
-        return "border-amber-700/70 bg-amber-900/15 text-amber-300";
+        return "bg-amber-900/20 text-amber-300";
     }
 
     if (tag === "error") {
-        return "border-rose-700/70 bg-rose-900/15 text-rose-300";
+        return "bg-rose-900/20 text-rose-300";
     }
 
-    return "border-main-600 bg-main-800/70 text-main-300";
+    return "bg-main-800/80 text-main-300";
+};
+
+const resolveStageCardClass = (tag: JobEventTag) => {
+    if (tag === "success") {
+        return "border-l-emerald-400/70 bg-emerald-950/15";
+    }
+
+    if (tag === "warning") {
+        return "border-l-amber-400/70 bg-amber-950/15";
+    }
+
+    if (tag === "error") {
+        return "border-l-rose-400/70 bg-rose-950/15";
+    }
+
+    return "border-l-main-500/80 bg-main-900/45";
+};
+
+const resolveStageIcon = (tag: JobEventTag) => {
+    if (tag === "success") {
+        return "mdi:check-circle-outline";
+    }
+
+    if (tag === "warning") {
+        return "mdi:alert-outline";
+    }
+
+    if (tag === "error") {
+        return "mdi:close-circle-outline";
+    }
+
+    return "mdi:information-outline";
 };
 
 export const JobManageForm = () => {
@@ -194,14 +231,19 @@ export const JobManageForm = () => {
         : "-";
 
     return (
-        <div className="grid h-full min-h-[68vh] grid-cols-[420px_1fr] gap-4">
-            <aside className="flex min-h-0 flex-col rounded-2xl bg-main-900/40 p-2">
-                <div className="space-y-2">
+        <div className="flex h-full min-h-[68vh] flex-col gap-4 animate-page-fade-in lg:flex-row">
+            <aside className="flex min-h-0 w-full flex-col p-3 animate-panel-slide-in lg:w-85 lg:max-w-85 lg:shrink-0 border-r border-main-600/65">
+                <div className="space-y-3 rounded-xl animate-card-rise-in z-40">
                     <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-main-100">
-                            Список задач
-                        </p>
-                        <span className="text-xs text-main-400">
+                        <div>
+                            <p className="text-xs uppercase tracking-[0.14em] text-main-400">
+                                Список задач
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-main-100">
+                                Фоновые операции
+                            </p>
+                        </div>
+                        <span className="rounded-full bg-main-700/70 px-2.5 py-1 text-xs text-main-200">
                             {filteredAndSortedJobs.length} шт.
                         </span>
                     </div>
@@ -212,26 +254,28 @@ export const JobManageForm = () => {
                         placeholder="Поиск по имени, описанию или ID"
                     />
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2">
                         <Select
                             value={statusFilter}
                             onChange={(value) =>
                                 setStatusFilter(value as JobStatusFilter)
                             }
                             options={STATUS_FILTER_OPTIONS}
+                            className="bg-main-700/45 min-w-79"
                         />
                         <Select
                             value={jobSort}
                             onChange={(value) => setJobSort(value as JobSort)}
                             options={JOB_SORT_OPTIONS}
+                            className="bg-main-700/45 min-w-79"
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="flex gap-2">
                         <Button
                             variant="primary"
                             shape="rounded-lg"
-                            className="h-9"
+                            className="hover:-translate-y-0.5 p-1 transition-transform"
                             onClick={() => {
                                 void handleCreateJob();
                             }}
@@ -242,7 +286,7 @@ export const JobManageForm = () => {
                         <Button
                             variant="secondary"
                             shape="rounded-lg"
-                            className="h-9"
+                            className="hover:-translate-y-0.5 p-1 transition-transform flex-1"
                             onClick={() => {
                                 void handleRefresh();
                             }}
@@ -253,21 +297,24 @@ export const JobManageForm = () => {
                     </div>
                 </div>
 
-                <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 z-0">
                     {isLoading ? (
-                        <div className="rounded-xl border border-main-700/70 px-3 py-6 text-center text-sm text-main-400">
+                        <div className="rounded-xl bg-main-900/48 px-3 py-6 text-center text-sm text-main-300 animate-card-rise-in">
                             Загрузка задач...
                         </div>
                     ) : filteredAndSortedJobs.length > 0 ? (
-                        filteredAndSortedJobs.map((job) => (
+                        filteredAndSortedJobs.map((job, index) => (
                             <button
                                 key={job.id}
                                 type="button"
-                                className={`w-full cursor-pointer rounded-xl border px-3 py-3 text-left transition-colors ${
+                                className={`w-full cursor-pointer rounded-xl px-3 py-3 text-left transition-all duration-200 animate-card-rise-in ${
                                     job.id === selectedJobId
-                                        ? "border-main-500/70 bg-main-800/80"
-                                        : "border-main-700/70 bg-main-900/55 hover:bg-main-800/70"
+                                        ? "bg-main-800/90 shadow-[0_0_0_1px_rgba(245,245,245,0.04)]"
+                                        : "bg-main-900/48 hover:bg-main-800/62"
                                 }`}
+                                style={{
+                                    animationDelay: `${50 + index * 28}ms`,
+                                }}
                                 onClick={() => {
                                     selectJob(job.id);
                                 }}
@@ -282,7 +329,7 @@ export const JobManageForm = () => {
                                         </p>
                                     </div>
                                     <span
-                                        className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${resolveStatusBadgeClass(job)}`}
+                                        className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${resolveStatusBadgeClass(job)}`}
                                     >
                                         {resolveStatusLabel(job)}
                                     </span>
@@ -293,17 +340,17 @@ export const JobManageForm = () => {
                             </button>
                         ))
                     ) : (
-                        <div className="rounded-xl border border-dashed border-main-700/70 px-3 py-6 text-center text-sm text-main-400">
+                        <div className="rounded-xl bg-main-900/36 px-3 py-6 text-center text-sm text-main-400 animate-card-rise-in">
                             Задачи не найдены.
                         </div>
                     )}
                 </div>
             </aside>
 
-            <section className="flex min-h-0 flex-col border-l border-main-700/70 bg-main-900/40 p-4">
+            <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl p-4 animate-card-rise-in">
                 {selectedJob ? (
                     <>
-                        <div className="mb-4 flex items-center justify-between gap-3">
+                        <div className="mb-4 flex flex-wrap items-start justify-between gap-3 animate-card-rise-in">
                             <div className="min-w-0">
                                 <p className="text-xs uppercase tracking-[0.14em] text-main-400">
                                     Детали задачи
@@ -313,43 +360,50 @@ export const JobManageForm = () => {
                                 </h3>
                             </div>
 
-                            <Button
-                                variant="danger"
-                                shape="rounded-lg"
-                                className="h-9 px-3 text-xs"
-                                disabled={!selectedJob.isPending}
-                                onClick={() => {
-                                    void handleCancelSelected();
-                                }}
-                            >
-                                <Icon
-                                    icon="mdi:stop-circle-outline"
-                                    width={16}
-                                />
-                                <span className="ml-1">Остановить</span>
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <span
+                                    className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${resolveStatusBadgeClass(selectedJob)}`}
+                                >
+                                    {selectedJobStatus}
+                                </span>
+                                <Button
+                                    variant="danger"
+                                    shape="rounded-lg"
+                                    className="h-9 px-3 text-xs transition-all duration-200 hover:-translate-y-0.5"
+                                    disabled={!selectedJob.isPending}
+                                    onClick={() => {
+                                        void handleCancelSelected();
+                                    }}
+                                >
+                                    <Icon
+                                        icon="mdi:stop-circle-outline"
+                                        width={16}
+                                    />
+                                    <span className="ml-1">Остановить</span>
+                                </Button>
+                            </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div className="rounded-lg border border-main-700/70 bg-main-900/55 px-3 py-2">
+                        <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
+                            <div className="rounded-lg bg-main-900/42 px-3 py-2 animate-card-rise-in">
                                 <p className="text-xs text-main-400">Статус</p>
                                 <p className="text-main-200">
                                     {selectedJobStatus}
                                 </p>
                             </div>
-                            <div className="rounded-lg border border-main-700/70 bg-main-900/55 px-3 py-2">
+                            <div className="rounded-lg bg-main-900/42 px-3 py-2 animate-card-rise-in">
                                 <p className="text-xs text-main-400">ID</p>
                                 <p className="truncate text-main-200">
                                     {selectedJob.id}
                                 </p>
                             </div>
-                            <div className="rounded-lg border border-main-700/70 bg-main-900/55 px-3 py-2">
+                            <div className="rounded-lg bg-main-900/42 px-3 py-2 animate-card-rise-in">
                                 <p className="text-xs text-main-400">Создана</p>
                                 <p className="text-main-200">
                                     {selectedJob.createdAt}
                                 </p>
                             </div>
-                            <div className="rounded-lg border border-main-700/70 bg-main-900/55 px-3 py-2">
+                            <div className="rounded-lg bg-main-900/42 px-3 py-2 animate-card-rise-in">
                                 <p className="text-xs text-main-400">
                                     Обновлена
                                 </p>
@@ -357,7 +411,7 @@ export const JobManageForm = () => {
                                     {selectedJob.updatedAt}
                                 </p>
                             </div>
-                            <div className="col-span-2 rounded-lg border border-main-700/70 bg-main-900/55 px-3 py-2">
+                            <div className="rounded-lg bg-main-900/42 px-3 py-2 md:col-span-2 animate-card-rise-in">
                                 <p className="text-xs text-main-400">
                                     Описание
                                 </p>
@@ -366,7 +420,7 @@ export const JobManageForm = () => {
                                 </p>
                             </div>
                             {selectedJob.errorMessage ? (
-                                <div className="col-span-2 rounded-lg border border-rose-700/60 bg-rose-900/20 px-3 py-2">
+                                <div className="rounded-lg bg-rose-900/20 px-3 py-2 md:col-span-2 animate-card-rise-in">
                                     <p className="text-xs text-rose-300">
                                         Ошибка
                                     </p>
@@ -377,11 +431,12 @@ export const JobManageForm = () => {
                             ) : null}
                         </div>
 
-                        <div className="mt-4 flex items-center justify-between gap-3">
-                            <p className="text-sm font-semibold text-main-100">
+                        <div className="relative z-40 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl px-2 py-2 animate-card-rise-in">
+                            <p className="inline-flex items-center gap-2 text-sm font-semibold text-main-100">
+                                <Icon icon="mdi:timeline-outline" width={16} />
                                 События задачи
                             </p>
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                 <Select
                                     value={eventTagFilter}
                                     onChange={(value) =>
@@ -390,6 +445,7 @@ export const JobManageForm = () => {
                                         )
                                     }
                                     options={EVENT_TAG_OPTIONS}
+                                    className="bg-main-700/45 backdrop-blur-sm"
                                 />
                                 <Select
                                     value={eventSort}
@@ -397,41 +453,60 @@ export const JobManageForm = () => {
                                         setEventSort(value as EventSort)
                                     }
                                     options={EVENT_SORT_OPTIONS}
+                                    className="bg-main-700/45 backdrop-blur-sm"
                                 />
                             </div>
                         </div>
 
-                        <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                        <PrettyBR
+                            icon="mdi:information-outline"
+                            label="Стадии выполнения"
+                            size={20}
+                        />
+
+                        <div className="relative z-0 mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                             {filteredAndSortedEvents.length > 0 ? (
-                                filteredAndSortedEvents.map((event) => (
+                                filteredAndSortedEvents.map((event, index) => (
                                     <div
                                         key={event.id}
-                                        className="rounded-xl border border-main-700/70 bg-main-900/55 px-3 py-2"
+                                        className={`animate-card-rise-in rounded-xl border border-main-800/70 border-l-3 px-3 py-2.5 transition-colors duration-200 hover:border-main-700/90 ${resolveStageCardClass(event.tag)}`}
+                                        style={{
+                                            animationDelay: `${70 + index * 18}ms`,
+                                        }}
                                     >
                                         <div className="flex items-center justify-between gap-2">
-                                            <span
-                                                className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${resolveTagClass(event.tag)}`}
-                                            >
-                                                {event.tag}
-                                            </span>
-                                            <span className="text-xs text-main-500">
+                                            <div className="inline-flex items-center gap-1.5">
+                                                <Icon
+                                                    icon={resolveStageIcon(
+                                                        event.tag,
+                                                    )}
+                                                    width={14}
+                                                    className="text-main-400"
+                                                />
+                                                <span
+                                                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${resolveTagClass(event.tag)}`}
+                                                >
+                                                    {event.tag}
+                                                </span>
+                                            </div>
+                                            <span className="rounded-full bg-main-800/70 px-2 py-0.5 text-[11px] text-main-500">
                                                 {event.createdAt}
                                             </span>
                                         </div>
-                                        <p className="mt-1 text-sm text-main-200">
+                                        <p className="mt-2 text-sm leading-5 text-main-200">
                                             {event.message}
                                         </p>
                                     </div>
                                 ))
                             ) : (
-                                <div className="rounded-xl border border-dashed border-main-700/70 px-3 py-6 text-center text-sm text-main-400">
+                                <div className="rounded-xl bg-main-900/34 px-3 py-6 text-center text-sm text-main-400 animate-card-rise-in">
                                     Для задачи пока нет событий.
                                 </div>
                             )}
                         </div>
                     </>
                 ) : (
-                    <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-main-700/70 text-sm text-main-400">
+                    <div className="flex h-full items-center justify-center rounded-xl bg-main-900/34 px-6 text-center text-sm text-main-400 animate-card-rise-in">
                         Выберите задачу слева, чтобы посмотреть детали и
                         события.
                     </div>
