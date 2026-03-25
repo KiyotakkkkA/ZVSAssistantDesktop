@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { ChatUserBubbleCard } from "../../molecules/chat/cards";
 import { AssistantResponse } from "./AssistantResponse";
 import { DialogUiMessage } from "../../../../../electron/models";
-import type { QaToolState } from "../../../../utils/chat/qaTool";
+import type { QaToolState } from "../../../../utils/tools/qaTool";
 
 type FeedSnapshot = {
     length: number;

@@ -10,7 +10,7 @@ import { useJobs } from "../../../../../hooks";
 import type { JobEventTag, JobRecord } from "../../../../../types/ElectronApi";
 
 type JobStatusFilter = "all" | "pending" | "completed" | "stopped";
-type JobSort = "updated_desc" | "updated_asc" | "created_desc" | "created_asc";
+type JobSort = "created_desc" | "created_asc";
 type EventSort = "created_desc" | "created_asc";
 
 const STATUS_FILTER_OPTIONS = [
@@ -21,15 +21,13 @@ const STATUS_FILTER_OPTIONS = [
 ];
 
 const JOB_SORT_OPTIONS = [
-    { value: "updated_desc", label: "Сначала обновленные" },
-    { value: "updated_asc", label: "Сначала старые обновления" },
     { value: "created_desc", label: "Сначала новые" },
     { value: "created_asc", label: "Сначала старые" },
 ];
 
 const EVENT_SORT_OPTIONS = [
-    { value: "created_desc", label: "Сначала новые события" },
-    { value: "created_asc", label: "Сначала старые события" },
+    { value: "created_desc", label: "Сначала новые" },
+    { value: "created_asc", label: "Сначала старые" },
 ];
 
 const EVENT_TAG_OPTIONS = [
@@ -127,7 +125,7 @@ export const JobManageForm = () => {
 
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<JobStatusFilter>("all");
-    const [jobSort, setJobSort] = useState<JobSort>("updated_desc");
+    const [jobSort, setJobSort] = useState<JobSort>("created_desc");
     const [eventTagFilter, setEventTagFilter] = useState<"all" | JobEventTag>(
         "all",
     );
@@ -161,19 +159,15 @@ export const JobManageForm = () => {
             : byFilter;
 
         return [...bySearch].sort((left, right) => {
-            if (jobSort === "updated_asc") {
-                return left.updatedAt.localeCompare(right.updatedAt);
+            if (jobSort === "created_asc") {
+                return left.createdAt.localeCompare(right.createdAt);
             }
 
             if (jobSort === "created_desc") {
                 return right.createdAt.localeCompare(left.createdAt);
             }
 
-            if (jobSort === "created_asc") {
-                return left.createdAt.localeCompare(right.createdAt);
-            }
-
-            return right.updatedAt.localeCompare(left.updatedAt);
+            return right.createdAt.localeCompare(left.createdAt);
         });
     }, [jobs, jobSort, searchQuery, statusFilter]);
 

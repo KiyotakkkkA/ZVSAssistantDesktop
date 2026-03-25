@@ -4,7 +4,7 @@ import { resolveText } from "../utils/resolvers";
 import { workspaceStore } from "../stores/workspaceStore";
 import { DialogUiMessage } from "../../electron/models";
 import type { AskToolResult } from "../../electron/models/tool";
-import type { QaToolState } from "../utils/chat/qaTool";
+import type { QaToolState } from "../utils/tools/qaTool";
 import { toolsStorage } from "../stores/toolsStorage";
 
 const DEFAULT_MODEL = "gpt-oss:120b";

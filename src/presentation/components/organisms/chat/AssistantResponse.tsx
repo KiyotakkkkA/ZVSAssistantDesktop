@@ -8,7 +8,7 @@ import {
 } from "../../molecules/chat/cards";
 import type { AssistantMessageStage } from "../../../../../electron/models/dialog";
 import type { ToolTrace } from "../../../../../electron/models/tool";
-import type { QaToolState } from "../../../../utils/chat/qaTool";
+import type { QaToolState } from "../../../../utils/tools/qaTool";
 
 type AssistantResponseProps = {
     messageId: string;

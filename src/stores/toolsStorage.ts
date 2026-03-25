@@ -1,164 +1,31 @@
+import { makeAutoObservable } from "mobx";
 import type { AskToolResult, ToolTrace } from "../../electron/models/tool";
 import type { DialogUiMessage } from "../../electron/models/dialog";
-
-type ToolCallPart = {
-    toolCallId?: string;
-    toolName?: string;
-    input?: unknown;
-    args?: unknown;
-};
-
-type ToolResultPart = {
-    toolCallId?: string;
-    toolName?: string;
-    output?: unknown;
-    result?: unknown;
-    errorText?: string;
-};
-
-const nowIso = () => new Date().toISOString();
-const createStageId = (): `stg-${string}` =>
-    `stg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-const cloneMessages = (messages: DialogUiMessage[]) => [...messages];
-
-const getLastAssistantIndex = (messages: DialogUiMessage[]) => {
-    return messages.map((message) => message.role).lastIndexOf("assistant");
-};
-
-const ensureToolStage = (
-    message: DialogUiMessage,
-    toolCallId: string,
-    toolName: string,
-) => {
-    const stages = message.stages ?? [];
-
-    if (toolName === "planning_tool") {
-        const hasPlanningStage = stages.some(
-            (stage) =>
-                stage.type === "tool" &&
-                (message.toolTraces ?? []).some(
-                    (trace) =>
-                        trace.callId === stage.toolCallId &&
-                        trace.toolName === "planning_tool",
-                ),
-        );
-
-        if (hasPlanningStage) {
-            return stages;
-        }
-    }
-
-    const alreadyExists = stages.some(
-        (stage) => stage.type === "tool" && stage.toolCallId === toolCallId,
-    );
-
-    if (alreadyExists) {
-        return stages;
-    }
-
-    return [
-        ...stages,
-        {
-            id: createStageId(),
-            type: "tool" as const,
-            toolCallId,
-        },
-    ];
-};
-
-const upsertTrace = (
-    traces: ToolTrace[],
-    nextTrace: ToolTrace,
-): ToolTrace[] => {
-    const existingIndex = traces.findIndex(
-        (trace) => trace.callId === nextTrace.callId,
-    );
-
-    if (existingIndex < 0) {
-        return [...traces, nextTrace];
-    }
-
-    const next = [...traces];
-    next[existingIndex] = {
-        ...next[existingIndex],
-        ...nextTrace,
-        createdAt: next[existingIndex].createdAt,
-        updatedAt: nowIso(),
-    };
-
-    return next;
-};
-
-const findAskTrace = (message: DialogUiMessage, callId: string) => {
-    const traces = message.toolTraces ?? [];
-
-    return traces.find(
-        (trace) => trace.callId === callId && trace.toolName === "ask_tool",
-    );
-};
-
-const hasPendingAskAnswers = (resultPayload: unknown) => {
-    if (!resultPayload || typeof resultPayload !== "object") {
-        return false;
-    }
-
-    const payload = resultPayload as AskToolResult;
-
-    if (!Array.isArray(payload.questions)) {
-        return false;
-    }
-
-    return payload.questions.some((question) => !question.answer?.trim());
-};
-
-const updateAskResult = (
-    result: unknown,
-    updater: (payload: AskToolResult) => AskToolResult,
-) => {
-    if (!result || typeof result !== "object") {
-        return result;
-    }
-
-    const payload = result as AskToolResult;
-
-    if (!Array.isArray(payload.questions)) {
-        return result;
-    }
-
-    return updater(payload);
-};
-
-const updateAskTraceInMessage = (
-    message: DialogUiMessage,
-    toolCallId: string,
-    updater: (trace: ToolTrace) => ToolTrace,
-): DialogUiMessage => {
-    const traces = message.toolTraces ?? [];
-    let wasUpdated = false;
-
-    const nextTraces = traces.map((trace) => {
-        if (trace.callId !== toolCallId || trace.toolName !== "ask_tool") {
-            return trace;
-        }
-
-        wasUpdated = true;
-        return updater(trace);
-    });
-
-    if (!wasUpdated) {
-        return message;
-    }
-
-    return { ...message, toolTraces: nextTraces };
-};
+import {
+    cloneMessages,
+    ensureToolStage,
+    getLastAssistantIndex,
+    nowIso,
+    type ToolCallPart,
+    type ToolResultPart,
+    upsertTrace,
+} from "../utils/tools/toolStorage";
+import {
+    buildAskAnswersPrompt,
+    findAskTrace,
+    hasPendingAskAnswers,
+    updateAskResult,
+    updateAskTraceInMessage,
+} from "../utils/tools/qaTool";
 
 class ToolsStorage {
+    constructor() {
+        makeAutoObservable(this, {}, { autoBind: true });
+    }
+
     applyToolCall(messages: DialogUiMessage[], part: ToolCallPart) {
-        const toolCallId =
-            typeof part.toolCallId === "string" ? part.toolCallId : null;
-        const toolName =
-            typeof part.toolName === "string" ? part.toolName : null;
+        const toolCallId = part.toolCallId ?? null;
+        const toolName = part.toolName ?? null;
 
         if (!toolCallId || !toolName) {
             return messages;
@@ -192,10 +59,8 @@ class ToolsStorage {
     }
 
     applyToolResult(messages: DialogUiMessage[], part: ToolResultPart) {
-        const toolCallId =
-            typeof part.toolCallId === "string" ? part.toolCallId : null;
-        const toolName =
-            typeof part.toolName === "string" ? part.toolName : null;
+        const toolCallId = part.toolCallId ?? null;
+        const toolName = part.toolName ?? null;
 
         if (!toolCallId || !toolName) {
             return messages;
@@ -328,14 +193,7 @@ class ToolsStorage {
     }
 
     buildAskAnswersPrompt(payload: AskToolResult) {
-        const answersList = payload.questions
-            .map((question, index) => {
-                const answer = question.answer?.trim() || "(без ответа)";
-                return `${index + 1}. ${question.question}\nОтвет: ${answer}`;
-            })
-            .join("\n\n");
-
-        return `Ответы пользователя на уточняющие вопросы:\n\n${answersList}`;
+        return buildAskAnswersPrompt(payload);
     }
 }
 

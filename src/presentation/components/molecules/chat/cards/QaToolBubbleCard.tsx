@@ -6,7 +6,7 @@ import {
     normalizeQaToolState,
     qaToolHasCompleteAnswers,
     type QaToolState,
-} from "../../../../../utils/chat/qaTool";
+} from "../../../../../utils/tools/qaTool";
 
 type QaToolBubbleCardProps = {
     toolTrace?: ToolTrace;
