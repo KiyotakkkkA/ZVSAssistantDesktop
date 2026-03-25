@@ -11,4 +11,5 @@ export type ResponseGenParams = {
     messages?: ChatRequestMessage[];
     dialogId?: string;
     toolPackIds?: string[];
+    enabledToolNames?: string[];
 };

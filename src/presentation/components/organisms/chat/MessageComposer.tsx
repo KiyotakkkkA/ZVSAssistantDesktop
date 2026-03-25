@@ -1,6 +1,7 @@
 import { Icon } from "@iconify/react";
-import { Button, Dropdown, InputBig } from "@kiyotakkkka/zvs-uikit-lib";
-import { useRef } from "react";
+import { Button, Dropdown, InputBig, Modal } from "@kiyotakkkka/zvs-uikit-lib";
+import { useRef, useState } from "react";
+import { RequiredToolsPickForm } from "./forms";
 
 type MessageComposerProps = {
     input: string;
@@ -25,6 +26,8 @@ export const MessageComposer = ({
     isGenerating,
 }: MessageComposerProps) => {
     const areaRef = useRef<HTMLTextAreaElement>(null);
+    const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
+    const [toolsQuery, setToolsQuery] = useState("");
 
     return (
         <>
@@ -59,6 +62,7 @@ export const MessageComposer = ({
                                     variant="primary"
                                     onClick={(e) => {
                                         e.stopPropagation();
+                                        setIsToolsModalOpen(true);
                                     }}
                                 >
                                     <Icon icon="mdi:tools" />
@@ -140,6 +144,18 @@ export const MessageComposer = ({
                     </div>
                 </div>
             </footer>
+
+            <Modal
+                open={isToolsModalOpen}
+                onClose={() => setIsToolsModalOpen(false)}
+                title="Настройка инструментов"
+                className="max-w-6xl min-h-144"
+            >
+                <RequiredToolsPickForm
+                    toolsQuery={toolsQuery}
+                    onToolsQueryChange={setToolsQuery}
+                />
+            </Modal>
         </>
     );
 };

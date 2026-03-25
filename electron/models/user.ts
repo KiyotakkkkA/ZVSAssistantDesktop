@@ -3,6 +3,8 @@ export interface GeneralUserData {
     maxToolsUsagePerResponse: number;
     assistantName: string;
     ollamaModel: string;
+    enabledPromptTools: string[];
+    requiredPromptTools: string[];
     preferredTheme: string;
     preferredLanguage: string;
     userPrompt: string;

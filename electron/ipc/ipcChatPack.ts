@@ -36,6 +36,9 @@ export const registerIpcChatPack = ({ chatGenService }: IpcChatPackDeps) => {
             prompt,
             model,
             messages,
+            dialogId: payload.dialogId,
+            toolPackIds: payload.toolPackIds,
+            enabledToolNames: payload.enabledToolNames,
         });
     });
 
@@ -65,6 +68,9 @@ export const registerIpcChatPack = ({ chatGenService }: IpcChatPackDeps) => {
                         prompt,
                         model,
                         messages,
+                        dialogId: payload.dialogId,
+                        toolPackIds: payload.toolPackIds,
+                        enabledToolNames: payload.enabledToolNames,
                     });
 
                     for await (const part of result.fullStream) {

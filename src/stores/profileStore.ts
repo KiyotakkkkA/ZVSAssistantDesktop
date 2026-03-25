@@ -1,4 +1,4 @@
-import { makeAutoObservable, runInAction } from "mobx";
+import { makeAutoObservable, runInAction, toJS } from "mobx";
 import type { ProfileBootPayload } from "../../electron/models/profile";
 import type {
     GeneralUserData,
@@ -61,6 +61,7 @@ class ProfileStore {
     }
 
     async updateProfile(id: string, data: UpdateUserDto) {
+        console.log(data);
         const payload = await window.profile.update(id, data);
 
         runInAction(() => {
@@ -72,9 +73,11 @@ class ProfileStore {
     updateGeneralData(nextData: Partial<GeneralUserData>) {
         if (!this.user) return;
 
+        const currentGeneralData = toJS(this.user.generalData);
+
         void this.updateProfile(this.user.id, {
             generalData: {
-                ...this.user.generalData,
+                ...currentGeneralData,
                 ...nextData,
             },
         });

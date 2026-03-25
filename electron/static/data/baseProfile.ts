@@ -7,6 +7,8 @@ export const defaultUser: CreateUserDto = {
         assistantName: "Чарли",
         ollamaModel: "gpt-oss:20b",
         maxToolsUsagePerResponse: 20,
+        enabledPromptTools: [],
+        requiredPromptTools: [],
         // Персонализация
         preferredTheme: "dark-main",
         // Настройки взаимодействия в чате

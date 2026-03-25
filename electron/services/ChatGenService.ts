@@ -70,6 +70,7 @@ export class ChatGenService {
         const tools = this.toolsRuntimeService.buildToolSet({
             dialogId: params.dialogId,
             packIds: params.toolPackIds,
+            enabledToolNames: params.enabledToolNames,
         });
 
         const { fullStream, totalUsage } = streamText({
@@ -106,6 +107,7 @@ export class ChatGenService {
         const tools = this.toolsRuntimeService.buildToolSet({
             dialogId: params.dialogId,
             packIds: params.toolPackIds,
+            enabledToolNames: params.enabledToolNames,
         });
 
         const { text, usage } = await generateText({

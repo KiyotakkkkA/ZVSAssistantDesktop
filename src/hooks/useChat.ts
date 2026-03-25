@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toJS } from "mobx";
 import { useToasts } from "./useToasts";
 import { resolveText } from "../utils/resolvers";
 import { workspaceStore } from "../stores/workspaceStore";
+import { profileStore } from "../stores/profileStore";
 import { DialogUiMessage } from "../../electron/models";
 import type { AskToolResult } from "../../electron/models/tool";
 import type { QaToolState } from "../utils/tools/qaTool";
@@ -267,6 +269,9 @@ export const useChat = () => {
 
             try {
                 const modelMessages = buildModelMessages();
+                const enabledToolNames = toJS(
+                    profileStore.user?.generalData.enabledPromptTools ?? [],
+                );
 
                 window.chat.streamResponseGeneration({
                     requestId,
@@ -275,6 +280,7 @@ export const useChat = () => {
                     messages: modelMessages,
                     dialogId: activeDialogId,
                     toolPackIds: ["systemTools"],
+                    enabledToolNames,
                 });
                 return;
             } catch (error) {

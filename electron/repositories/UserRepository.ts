@@ -16,9 +16,24 @@ interface RawUserData {
     updated_at: string;
 }
 
+const normalizeStringArray = (value: unknown): string[] => {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    return value.filter((item): item is string => typeof item === "string");
+};
+
 const normalizeGeneralData = (data: GeneralUserData): GeneralUserData => {
+    const enabledPromptTools = normalizeStringArray(data.enabledPromptTools);
+    const requiredPromptTools = normalizeStringArray(
+        data.requiredPromptTools,
+    ).filter((toolName) => enabledPromptTools.includes(toolName));
+
     return {
         ...data,
+        enabledPromptTools,
+        requiredPromptTools,
         notifyOnJobCompleteToast: Boolean(data.notifyOnJobCompleteToast),
         notifyOnJobCompleteOsNotification: Boolean(
             data.notifyOnJobCompleteOsNotification,

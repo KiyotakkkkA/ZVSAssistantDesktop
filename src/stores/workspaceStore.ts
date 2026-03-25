@@ -398,6 +398,8 @@ class WorkspaceStore {
                     userGeneralData?.name ?? "Пользователь",
                     userGeneralData?.userPrompt ?? "",
                     userGeneralData?.preferredLanguage ?? "",
+                    userGeneralData?.enabledPromptTools ?? [],
+                    userGeneralData?.requiredPromptTools ?? [],
                 ),
             },
             ...modelMessages,
@@ -501,6 +503,8 @@ class WorkspaceStore {
                     userGeneralData?.name ?? "Пользователь",
                     userGeneralData?.userPrompt ?? "",
                     userGeneralData?.preferredLanguage ?? "",
+                    userGeneralData?.enabledPromptTools ?? [],
+                    userGeneralData?.requiredPromptTools ?? [],
                 ),
             },
         ];

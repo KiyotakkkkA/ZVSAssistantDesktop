@@ -5,6 +5,8 @@ const section = (title: string, lines: string[]) => {
     return `${title}:\n${content}`;
 };
 
+const unique = (values: string[]) => [...new Set(values.map(compact))];
+
 export const getSystemPrompt = (assistantName: string) => {
     return [
         section("SYSTEM_ROLE", [
@@ -46,10 +48,40 @@ export const getSystemPrompt = (assistantName: string) => {
     ].join("\n\n");
 };
 
+export const getMustToolsUsagePolicy = (
+    enabledTools: string[] = [],
+    requiredTools: string[] = [],
+) => {
+    const enabled = unique(enabledTools).filter(Boolean);
+
+    if (enabled.length === 0) {
+        return "";
+    }
+
+    const required = unique(requiredTools)
+        .filter(Boolean)
+        .filter((toolName) => enabled.includes(toolName));
+
+    const lines = [
+        `Enabled tools: ${enabled.join(", ")}.`,
+        required.length > 0
+            ? `Mandatory tools: ${required.join(", ")}.`
+            : "Mandatory tools: none.",
+        required.length > 0
+            ? "When relevant and available, use each mandatory tool at least once before finalizing the answer."
+            : "If any enabled tool materially improves quality, use it proactively.",
+        "If a mandatory tool is unavailable or not applicable, briefly explain why and continue with the best alternative.",
+    ];
+
+    return section("MUST_TOOLS_USAGE_POLICY", lines);
+};
+
 export const getUserPrompt = (
     userName: string,
     userPrompt: string,
     preferredLanguage: string = "Russian",
+    enabledPromptTools: string[] = [],
+    requiredPromptTools: string[] = [],
 ) => {
     const lines = [
         `USER_NAME: ${userName || "Unknown user"}`,
@@ -63,6 +95,15 @@ export const getUserPrompt = (
     lines.push(
         "FOLLOW_USER_PREFERENCES: Respect the user's custom instructions when they do not conflict with system rules.",
     );
+
+    const toolsPolicy = getMustToolsUsagePolicy(
+        enabledPromptTools,
+        requiredPromptTools,
+    );
+
+    if (toolsPolicy) {
+        lines.push(toolsPolicy);
+    }
 
     return lines.join("\n");
 };
