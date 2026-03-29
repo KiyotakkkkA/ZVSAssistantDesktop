@@ -22,19 +22,17 @@ export const ThemeProvider = observer(({ children }: ThemeProviderProps) => {
 
     const setTheme = useCallback(async (themeId: string) => {
         const profileApi = window.profile;
-        const currentUser = profileStore.user;
+        const nextThemeId = String(themeId ?? "").trim();
 
-        if (!profileApi || !currentUser) {
+        if (!profileApi || !nextThemeId) {
             return;
         }
 
-        const selectedTheme = await profileApi.getThemeData(themeId);
+        const selectedTheme = await profileApi.getThemeData(nextThemeId);
         applyThemePalette(selectedTheme.palette);
-        await profileStore.updateProfile(currentUser.id, {
-            generalData: {
-                ...currentUser.generalData,
-                preferredTheme: themeId,
-            },
+
+        profileStore.updateGeneralData({
+            preferredTheme: nextThemeId,
         });
     }, []);
 

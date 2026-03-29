@@ -10,12 +10,12 @@ export const defaultUser: CreateUserDto = {
         enabledPromptTools: [],
         requiredPromptTools: [],
         // Персонализация
-        preferredTheme: "dark-main",
-        // Настройки взаимодействия в чате
         name: "Пользователь",
+        isExtendedInterfaceModeEnabled: false,
         preferredLanguage: "",
+        preferredTheme: "dark-main",
         userPrompt: "",
-        // Уведомления о задачах
+        // Уведомления
         notifyOnJobCompleteToast: true,
         notifyOnJobCompleteOsNotification: false,
         notifyOnJobCompleteEmail: false,

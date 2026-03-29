@@ -1,13 +1,17 @@
 export interface GeneralUserData {
-    name: string;
+    // Настройки ассистента
     maxToolsUsagePerResponse: number;
     assistantName: string;
     ollamaModel: string;
     enabledPromptTools: string[];
     requiredPromptTools: string[];
+    userPrompt: string;
+    // Персонализация
+    name: string;
+    isExtendedInterfaceModeEnabled: boolean;
     preferredTheme: string;
     preferredLanguage: string;
-    userPrompt: string;
+    // Уведомления
     notifyOnJobCompleteToast: boolean;
     notifyOnJobCompleteOsNotification: boolean;
     notifyOnJobCompleteEmail: boolean;

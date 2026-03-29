@@ -4,6 +4,8 @@ import { Button, Modal } from "@kiyotakkkka/zvs-uikit-lib";
 import { useState } from "react";
 import { JobManageForm } from "../components/organisms/chat/forms";
 import { useNotifications } from "../../hooks";
+import { observer } from "mobx-react-lite";
+import { profileStore } from "../../stores/profileStore";
 
 type NavigationTab = {
     id: "workspace" | "storage" | "extensions" | "agents" | "scenarios";
@@ -45,7 +47,7 @@ const navigationTabs: NavigationTab[] = [
     },
 ];
 
-export const MainLayout = () => {
+export const MainLayout = observer(() => {
     useNotifications();
 
     const location = useLocation();
@@ -62,18 +64,21 @@ export const MainLayout = () => {
                         <p className="text-xs uppercase tracking-[0.18em] text-main-400">
                             Навигация
                         </p>
-                        <Button
-                            variant="secondary"
-                            className="h-8 w-8 rounded-lg p-0"
-                            onClick={() => setIsJobsModalOpen(true)}
-                            title="Фоновые задачи"
-                        >
-                            <Icon
-                                icon="mdi:book-clock"
-                                width={16}
-                                height={16}
-                            />
-                        </Button>
+                        {profileStore.user?.generalData
+                            .isExtendedInterfaceModeEnabled && (
+                            <Button
+                                variant="secondary"
+                                className="h-8 w-8 rounded-lg p-0"
+                                onClick={() => setIsJobsModalOpen(true)}
+                                title="Фоновые задачи"
+                            >
+                                <Icon
+                                    icon="mdi:book-clock"
+                                    width={16}
+                                    height={16}
+                                />
+                            </Button>
+                        )}
                     </div>
                     <nav className="space-y-2 overflow-y-auto pr-1">
                         {navigationTabs.map((tab, index) => {
@@ -120,4 +125,4 @@ export const MainLayout = () => {
             </Modal>
         </main>
     );
-};
+});

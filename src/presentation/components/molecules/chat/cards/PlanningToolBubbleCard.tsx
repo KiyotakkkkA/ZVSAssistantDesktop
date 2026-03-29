@@ -158,7 +158,7 @@ export function PlanningToolBubbleCard({
         progressMeta.total || pendingSteps.length + completedSteps.length;
 
     return (
-        <div className="w-full text-xs leading-relaxed text-main-200 animate-card-rise-in">
+        <div className="text-xs leading-relaxed text-main-200 animate-card-rise-in">
             <Accordeon
                 title={`План: ${planTitle}`}
                 variant="plan"
@@ -185,6 +185,7 @@ export function PlanningToolBubbleCard({
                     </span>
                 }
                 subtitle={`Шагов: ${totalStepsCount || "-"} • Прогресс: ${progress}`}
+                className="max-w-172"
             >
                 <div className="space-y-3">
                     <div className="rounded-xl border border-main-700/60 bg-main-900/40 p-3">

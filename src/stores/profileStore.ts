@@ -61,7 +61,6 @@ class ProfileStore {
     }
 
     async updateProfile(id: string, data: UpdateUserDto) {
-        console.log(data);
         const payload = await window.profile.update(id, data);
 
         runInAction(() => {
