@@ -9,8 +9,6 @@ import type { AskToolResult } from "../../electron/models/tool";
 import type { QaToolState } from "../utils/tools/qaTool";
 import { toolsStorage } from "../stores/toolsStorage";
 
-const DEFAULT_MODEL = "gpt-oss:120b";
-
 const createId = (): `msg-${string}` =>
     `msg-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
@@ -282,7 +280,7 @@ export const useChat = () => {
                 window.chat.streamResponseGeneration({
                     requestId,
                     prompt: skipUserUiMessage ? undefined : normalizedPrompt,
-                    model: DEFAULT_MODEL,
+                    model: profileStore.user?.generalData.ollamaModel ?? "",
                     messages: modelMessages,
                     dialogId: activeDialogId,
                     toolPackIds: ["systemTools"],
