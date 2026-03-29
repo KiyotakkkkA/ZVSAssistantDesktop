@@ -105,7 +105,7 @@ export const MessageFeed = ({
             ref={scrollRef}
             className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-2xl bg-main-900/55 p-2 ring-main-300/15 animate-page-fade-in"
         >
-            <div className="flex flex-col gap-4">
+            <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
                 {messages.length === 0 ? (
                     <p className="text-sm text-main-400">
                         Здесь будут отображаться сообщения чата

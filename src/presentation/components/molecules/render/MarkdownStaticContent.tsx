@@ -49,7 +49,7 @@ const MARKDOWN_COMPONENTS: Components = {
 
         return <ShikiCodeBlock code={rawCode} language={language} />;
     },
-    pre: ({ children }) => <>{children}</>,
+    pre: ({ children }) => children,
     a: ({ href, children }) => (
         <a
             href={href}
@@ -67,13 +67,10 @@ const MARKDOWN_COMPONENTS: Components = {
             return null;
         }
 
-        const nonLocalSrc = /^https?:\/\//i.test(imageSrc);
-
         return (
             <ImagePreviewBlock
                 src={imageSrc}
                 title={alt || "Image Preview"}
-                nonLocalSrc={nonLocalSrc}
                 downloadFileName="preview-image.svg"
             />
         );

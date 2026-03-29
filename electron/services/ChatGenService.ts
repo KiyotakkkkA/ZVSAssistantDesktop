@@ -71,6 +71,7 @@ export class ChatGenService {
             dialogId: params.dialogId,
             packIds: params.toolPackIds,
             enabledToolNames: params.enabledToolNames,
+            ollamaApiKey: currentUser?.secureData.ollamaApiKey ?? "",
         });
 
         const { fullStream, totalUsage } = streamText({
@@ -108,6 +109,7 @@ export class ChatGenService {
             dialogId: params.dialogId,
             packIds: params.toolPackIds,
             enabledToolNames: params.enabledToolNames,
+            ollamaApiKey: currentUser?.secureData.ollamaApiKey ?? "",
         });
 
         const { text, usage } = await generateText({

@@ -12,7 +12,7 @@ import {
     getJobEvents,
     getJobs,
     subscribeJobsRealtime,
-} from "../services/api";
+} from "../services/jobs";
 
 class JobsStorage {
     isLoading = false;

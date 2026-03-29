@@ -46,7 +46,7 @@ export const useNotifications = (
     const shownEmailFallbackRef = useRef(false);
 
     const updateNotificationSettings = useCallback(
-        async (nextSettings: Partial<NotificationFields>) => {
+        (nextSettings: Partial<NotificationFields>) => {
             profileStore.updateGeneralData(nextSettings);
         },
         [],

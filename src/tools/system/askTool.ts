@@ -55,12 +55,10 @@ export const askTool: ToolDefinition = {
             ),
         );
 
-        const result: AskToolResult = {
+        return {
             questions,
             activeQuestionIndex,
             answered: false,
-        };
-
-        return result;
+        } satisfies AskToolResult;
     },
 };

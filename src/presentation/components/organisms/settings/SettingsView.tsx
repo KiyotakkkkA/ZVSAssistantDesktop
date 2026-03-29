@@ -125,7 +125,7 @@ export const SettingsView = forwardRef<SettingsViewHandle, SettingsViewProps>(
                     className="min-h-0 overflow-y-auto overflow-x-hidden pr-1 md:pr-2 animate-card-rise-in"
                     key={activeRoute}
                 >
-                    {ActiveComponent && <ActiveComponent />}
+                    <ActiveComponent />
                 </section>
             </div>
         );

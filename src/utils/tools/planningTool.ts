@@ -1,18 +1,20 @@
 import type { DialogUiMessage } from "../../../electron/models/dialog";
+import type { ToolTrace } from "../../../electron/models/tool";
 
 type ToolStage = NonNullable<DialogUiMessage["stages"]>[number];
 
 export const hasPlanningToolStage = (
-    message: DialogUiMessage,
     stages: ToolStage[],
+    traces: ToolTrace[],
 ) => {
+    const planningCallIds = new Set(
+        traces
+            .filter((trace) => trace.toolName === "planning_tool")
+            .map((trace) => trace.callId),
+    );
+
     return stages.some(
         (stage) =>
-            stage.type === "tool" &&
-            (message.toolTraces ?? []).some(
-                (trace) =>
-                    trace.callId === stage.toolCallId &&
-                    trace.toolName === "planning_tool",
-            ),
+            stage.type === "tool" && planningCallIds.has(stage.toolCallId),
     );
 };

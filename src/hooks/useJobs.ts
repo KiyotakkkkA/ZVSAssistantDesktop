@@ -34,7 +34,7 @@ export const useJobs = () => {
 
             return {
                 job: createdJob,
-                cancelJob: async () => jobsStorage.cancelJob(createdJob.id),
+                cancelJob: () => jobsStorage.cancelJob(createdJob.id),
             };
         },
         [toasts],

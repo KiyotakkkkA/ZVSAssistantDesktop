@@ -5,6 +5,7 @@ import type { PlanningStateStorage } from "./planningStateStorage";
 export type ToolExecutionContext = {
     dialogId: string;
     planningStateStorage: PlanningStateStorage;
+    ollamaApiKey?: string;
 };
 
 export type ToolDefinition = {
@@ -37,9 +38,7 @@ export const buildToolSetFromPacks = (
             toolSet[definition.name] = tool({
                 description: definition.description,
                 inputSchema: definition.inputSchema,
-                execute: async (args) => {
-                    return definition.execute(args, context);
-                },
+                execute: (args) => definition.execute(args, context),
             });
         }
     }

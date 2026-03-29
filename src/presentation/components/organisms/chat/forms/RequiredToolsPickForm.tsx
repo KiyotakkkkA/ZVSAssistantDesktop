@@ -178,7 +178,7 @@ export const RequiredToolsPickForm = observer(function RequiredToolsPickForm({
                     : "space-y-4 animate-page-fade-in"
             }
         >
-            <div className="rounded-2xl border border-main-700/70 bg-main-900/50 p-4 animate-card-rise-in">
+            <div className="rounded-2xl bg-main-900/50 p-4 animate-card-rise-in">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <p className="text-sm font-semibold text-main-100">
@@ -272,7 +272,7 @@ export const RequiredToolsPickForm = observer(function RequiredToolsPickForm({
                     </Button>
                 </div>
 
-                <div className="mt-3 rounded-xl border border-main-700/70 bg-main-900/40 px-3 py-2 text-xs text-main-300">
+                <div className="mt-3 rounded-xl bg-main-900/40 px-3 py-2 text-xs text-main-300">
                     Действия множественного изменения применяются только к
                     инструментам, отображаемым в текущем списке, и не
                     затрагивают скрытые инструменты.
@@ -280,14 +280,14 @@ export const RequiredToolsPickForm = observer(function RequiredToolsPickForm({
             </div>
 
             {filteredPackages.length === 0 ? (
-                <div className="rounded-xl border border-main-700/70 bg-main-900/45 p-4 text-sm text-main-400 animate-card-rise-in">
+                <div className="rounded-xl bg-main-900/45 p-4 text-sm text-main-400 animate-card-rise-in">
                     По вашему запросу ничего не найдено.
                 </div>
             ) : (
                 filteredPackages.map((pack, packIndex) => (
                     <article
                         key={pack.id}
-                        className="rounded-2xl border border-main-800/80 bg-main-900/45 p-4 animate-card-rise-in"
+                        className="rounded-2xl bg-main-900/45 p-4 animate-card-rise-in"
                         style={{ animationDelay: `${70 + packIndex * 40}ms` }}
                     >
                         <div className="mb-3">

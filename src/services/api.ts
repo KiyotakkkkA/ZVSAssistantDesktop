@@ -1,10 +1,4 @@
 import { Config } from "../../electron/config";
-import type {
-    CreateJobPayload,
-    JobEventRecord,
-    JobRealtimeEvent,
-    JobRecord,
-} from "../types/ElectronApi";
 
 export type OllamaCatalogModelDetails = {
     parent_model: string;
@@ -24,6 +18,33 @@ export type OllamaCatalogModel = {
     details: OllamaCatalogModelDetails;
 };
 
+export type OllamaWebSearchResult = {
+    title: string;
+    content: string;
+    links: string;
+};
+
+export type OllamaWebFetchResult = {
+    title: string;
+    content: string;
+    links: string;
+};
+
+const buildOllamaHeaders = (ollamaToken?: string): HeadersInit => {
+    const trimmedToken = ollamaToken?.trim();
+
+    if (!trimmedToken) {
+        return {
+            "Content-Type": "application/json",
+        };
+    }
+
+    return {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${trimmedToken}`,
+    };
+};
+
 export const getOllamaModelsCatalog = async (): Promise<
     OllamaCatalogModel[]
 > => {
@@ -41,32 +62,35 @@ export const getOllamaModelsCatalog = async (): Promise<
     return parsed.models ?? [];
 };
 
-export const getJobs = async (): Promise<JobRecord[]> => {
-    return window.jobs.getJobs();
+export const callOllamaWebSearch = async (
+    query: string,
+    max_results: number,
+    ollamaToken?: string,
+): Promise<OllamaWebSearchResult> => {
+    const response = await window.core.httpRequest(
+        `${Config.OLLAMA_BASE_URL}/api/web_search`,
+        {
+            method: "POST",
+            headers: buildOllamaHeaders(ollamaToken),
+            body: JSON.stringify({ query, max_results }),
+        },
+    );
+
+    return JSON.parse(response) as OllamaWebSearchResult;
 };
 
-export const getJobById = async (jobId: string): Promise<JobRecord | null> => {
-    return window.jobs.getJobById(jobId);
-};
+export const callOllamaWebFetch = async (
+    url: string,
+    ollamaToken?: string,
+): Promise<OllamaWebFetchResult> => {
+    const response = await window.core.httpRequest(
+        `${Config.OLLAMA_BASE_URL}/api/web_fetch`,
+        {
+            method: "POST",
+            headers: buildOllamaHeaders(ollamaToken),
+            body: JSON.stringify({ url }),
+        },
+    );
 
-export const getJobEvents = async (
-    jobId: string,
-): Promise<JobEventRecord[]> => {
-    return window.jobs.getJobEvents(jobId);
-};
-
-export const createJob = async (
-    payload: CreateJobPayload,
-): Promise<JobRecord> => {
-    return window.jobs.createJob(payload);
-};
-
-export const cancelJob = async (jobId: string): Promise<boolean> => {
-    return window.jobs.cancelJob(jobId);
-};
-
-export const subscribeJobsRealtime = (
-    listener: (event: JobRealtimeEvent) => void,
-): (() => void) => {
-    return window.jobs.onRealtimeEvent(listener);
+    return JSON.parse(response) as OllamaWebFetchResult;
 };

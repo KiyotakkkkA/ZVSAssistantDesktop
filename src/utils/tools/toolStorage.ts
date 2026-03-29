@@ -25,7 +25,13 @@ export const createStageId = (): `stg-${string}` =>
 export const cloneMessages = (messages: DialogUiMessage[]) => [...messages];
 
 export const getLastAssistantIndex = (messages: DialogUiMessage[]) => {
-    return messages.map((message) => message.role).lastIndexOf("assistant");
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+        if (messages[index].role === "assistant") {
+            return index;
+        }
+    }
+
+    return -1;
 };
 
 export const ensureToolStage = (
@@ -34,8 +40,9 @@ export const ensureToolStage = (
     toolName: string,
 ) => {
     const stages = message.stages ?? [];
+    const traces = message.toolTraces ?? [];
 
-    if (toolName === "planning_tool" && hasPlanningToolStage(message, stages)) {
+    if (toolName === "planning_tool" && hasPlanningToolStage(stages, traces)) {
         return stages;
     }
 

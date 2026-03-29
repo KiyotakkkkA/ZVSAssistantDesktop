@@ -192,7 +192,6 @@ export function MermaidDiagramBlock({ code }: MermaidDiagramBlockProps) {
                 <ImagePreviewBlock
                     src={previewSrc}
                     title="Mermaid diagram"
-                    nonLocalSrc={false}
                     downloadFileName="mermaid-diagram.svg"
                 />
             )}

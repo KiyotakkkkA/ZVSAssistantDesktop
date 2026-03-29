@@ -37,6 +37,26 @@ type AssistantResponseProps = {
     ) => void;
 };
 
+const StageRow = ({
+    icon,
+    children,
+}: {
+    icon: string;
+    children: JSX.Element;
+}) => (
+    <div className="relative grid grid-cols-[auto_1fr] items-start gap-3">
+        <span className="absolute -left-7.5 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-main-900 ring-1 ring-main-600/80">
+            <Icon
+                icon={icon}
+                width={12}
+                height={12}
+                className="text-main-300"
+            />
+        </span>
+        {children}
+    </div>
+);
+
 export const AssistantResponse = ({
     messageId,
     content,
@@ -103,42 +123,24 @@ export const AssistantResponse = ({
                     {orderedStages.map((stage, index) => {
                         if (stage.type === "reasoning") {
                             return (
-                                <div
+                                <StageRow
                                     key={stage.id}
-                                    className="relative grid grid-cols-[auto_1fr] items-start gap-3"
+                                    icon="mdi:head-lightbulb-outline"
                                 >
-                                    <span className="absolute -left-7.5 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-main-900 ring-1 ring-main-600/80">
-                                        <Icon
-                                            icon="mdi:head-lightbulb-outline"
-                                            width={12}
-                                            height={12}
-                                            className="text-main-300"
-                                        />
-                                    </span>
-
                                     <ChatThinkingBubbleCard
                                         content={stage.content}
                                         isLoading={isStreaming}
                                     />
-                                </div>
+                                </StageRow>
                             );
                         }
 
                         if (stage.type === "answer") {
                             return (
-                                <div
+                                <StageRow
                                     key={stage.id}
-                                    className="relative grid grid-cols-[auto_1fr] items-start gap-3"
+                                    icon="mdi:message-text-outline"
                                 >
-                                    <span className="absolute -left-7.5 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-main-900 ring-1 ring-main-600/80">
-                                        <Icon
-                                            icon="mdi:message-text-outline"
-                                            width={12}
-                                            height={12}
-                                            className="text-main-300"
-                                        />
-                                    </span>
-
                                     <ChatAssistantBubbleCard
                                         content={stage.content}
                                         timestamp={
@@ -149,7 +151,7 @@ export const AssistantResponse = ({
                                         isStreaming={isStreaming}
                                         isError={isError}
                                     />
-                                </div>
+                                </StageRow>
                             );
                         }
 
@@ -167,24 +169,15 @@ export const AssistantResponse = ({
                             planningRendered = true;
 
                             return (
-                                <div
+                                <StageRow
                                     key={stage.id}
-                                    className="relative grid grid-cols-[auto_1fr] items-start gap-3"
+                                    icon="mdi:clipboard-text-outline"
                                 >
-                                    <span className="absolute -left-7.5 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-main-900 ring-1 ring-main-600/80">
-                                        <Icon
-                                            icon="mdi:clipboard-text-outline"
-                                            width={12}
-                                            height={12}
-                                            className="text-main-300"
-                                        />
-                                    </span>
-
                                     <PlanningToolBubbleCard
                                         traces={planningTraces}
                                         isLoading={isStreaming}
                                     />
-                                </div>
+                                </StageRow>
                             );
                         }
 
@@ -197,19 +190,10 @@ export const AssistantResponse = ({
                                     trace.result.answered === true);
 
                             return (
-                                <div
+                                <StageRow
                                     key={stage.id}
-                                    className="relative grid grid-cols-[auto_1fr] items-start gap-3"
+                                    icon="mdi:help-circle-outline"
                                 >
-                                    <span className="absolute -left-7.5 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-main-900 ring-1 ring-main-600/80">
-                                        <Icon
-                                            icon="mdi:help-circle-outline"
-                                            width={12}
-                                            height={12}
-                                            className="text-main-300"
-                                        />
-                                    </span>
-
                                     <QaToolBubbleCard
                                         toolTrace={trace}
                                         answered={Boolean(answered)}
@@ -239,29 +223,17 @@ export const AssistantResponse = ({
                                             );
                                         }}
                                     />
-                                </div>
+                                </StageRow>
                             );
                         }
 
                         return (
-                            <div
-                                key={stage.id}
-                                className="relative grid grid-cols-[auto_1fr] items-start gap-3"
-                            >
-                                <span className="absolute -left-7.5 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-main-900 ring-1 ring-main-600/80">
-                                    <Icon
-                                        icon="mdi:wrench-outline"
-                                        width={12}
-                                        height={12}
-                                        className="text-main-300"
-                                    />
-                                </span>
-
+                            <StageRow key={stage.id} icon="mdi:wrench-outline">
                                 <ToolBubbleCard
                                     toolTrace={trace}
                                     isLoading={isStreaming}
                                 />
-                            </div>
+                            </StageRow>
                         );
                     })}
                 </div>

@@ -16,6 +16,25 @@ const safeJson = (value: unknown) => {
     }
 };
 
+const statuses = {
+    done: {
+        color: "text-green-400",
+        label: "Выполнено",
+    },
+    running: {
+        color: "text-yellow-400",
+        label: "Выполняется",
+    },
+    pending: {
+        color: "text-amber-400",
+        label: "Ожидает выполнения",
+    },
+    error: {
+        color: "text-red-400",
+        label: "Ошибка при выполнении",
+    },
+};
+
 export function ToolBubbleCard({
     toolTrace,
     isLoading = false,
@@ -25,7 +44,7 @@ export function ToolBubbleCard({
     }
 
     return (
-        <div className="w-full text-xs leading-relaxed text-main-200 animate-card-rise-in">
+        <div className="text-xs leading-relaxed text-main-200 animate-card-rise-in">
             <Accordeon
                 title={`Инструмент: ${toolTrace.toolName || "unknown"}`}
                 variant="tool"
@@ -37,22 +56,20 @@ export function ToolBubbleCard({
                     </span>
                 }
                 subtitle="Аргументы и результат вызова инструмента"
+                className="max-w-172"
             >
-                <div className="space-y-3">
+                <div className="max-h-[52vh] space-y-3 overflow-y-auto pr-1">
                     <p className="text-[11px] text-main-400">
                         Статус:
                         <span
                             className={
-                                toolTrace.status === "done"
-                                    ? "text-green-400"
-                                    : toolTrace.status === "running"
-                                      ? "text-yellow-400"
-                                      : toolTrace.status === "pending"
-                                        ? "text-amber-400"
-                                        : "text-red-400"
+                                statuses[
+                                    toolTrace.status as keyof typeof statuses
+                                ]?.color || "text-main-400"
                             }
                         >
-                            {toolTrace.status}
+                            {statuses[toolTrace.status as keyof typeof statuses]
+                                ?.label || toolTrace.status}
                         </span>
                     </p>
 
@@ -60,23 +77,27 @@ export function ToolBubbleCard({
                         <p className="text-[11px] font-semibold text-main-300">
                             ВЫЗОВ
                         </p>
-                        <ShikiCodeBlock
-                            code={safeJson(toolTrace.args ?? {})}
-                            language="json"
-                        />
+                        <div className="max-h-72 overflow-y-auto rounded-xl">
+                            <ShikiCodeBlock
+                                code={safeJson(toolTrace.args ?? {})}
+                                language="json"
+                            />
+                        </div>
                     </div>
                     <div>
                         <p className="text-[11px] font-semibold text-main-300">
                             РЕЗУЛЬТАТ
                         </p>
-                        <ShikiCodeBlock
-                            code={safeJson(
-                                toolTrace.error
-                                    ? { error: toolTrace.error }
-                                    : (toolTrace.result ?? {}),
-                            )}
-                            language="json"
-                        />
+                        <div className="max-h-72 overflow-y-auto rounded-xl">
+                            <ShikiCodeBlock
+                                code={safeJson(
+                                    toolTrace.error
+                                        ? { error: toolTrace.error }
+                                        : (toolTrace.result ?? {}),
+                                )}
+                                language="json"
+                            />
+                        </div>
                     </div>
                 </div>
             </Accordeon>

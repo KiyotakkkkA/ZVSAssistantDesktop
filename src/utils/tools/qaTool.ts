@@ -7,6 +7,12 @@ export type QaToolState = {
     answered: boolean;
 };
 
+const EMPTY_QA_STATE: QaToolState = {
+    questions: [],
+    activeQuestionIndex: 0,
+    answered: false,
+};
+
 export const isAskToolResult = (value: unknown): value is AskToolResult => {
     if (!value || typeof value !== "object") {
         return false;
@@ -81,19 +87,11 @@ export const buildAskAnswersPrompt = (payload: AskToolResult) => {
 
 export const normalizeQaToolState = (toolTrace?: ToolTrace): QaToolState => {
     if (!toolTrace || toolTrace.toolName !== "ask_tool") {
-        return {
-            questions: [],
-            activeQuestionIndex: 0,
-            answered: false,
-        };
+        return EMPTY_QA_STATE;
     }
 
     if (!isAskToolResult(toolTrace.result)) {
-        return {
-            questions: [],
-            activeQuestionIndex: 0,
-            answered: false,
-        };
+        return EMPTY_QA_STATE;
     }
 
     const activeQuestionIndex = Math.max(
@@ -116,11 +114,8 @@ export const normalizeQaToolState = (toolTrace?: ToolTrace): QaToolState => {
 };
 
 export const qaToolHasCompleteAnswers = (qaState: QaToolState) => {
-    if (qaState.questions.length === 0) {
-        return false;
-    }
-
-    return qaState.questions.every((question) =>
-        Boolean(question.answer?.trim()),
+    return (
+        qaState.questions.length > 0 &&
+        qaState.questions.every((question) => Boolean(question.answer?.trim()))
     );
 };

@@ -12,7 +12,6 @@ import { Button } from "@kiyotakkkka/zvs-uikit-lib";
 interface ImagePreviewBlockProps {
     src: string;
     title?: string;
-    nonLocalSrc?: boolean;
     downloadFileName?: string;
 }
 
@@ -58,7 +57,6 @@ const downloadFromUrl = async (source: string, fileName: string) => {
 export function ImagePreviewBlock({
     src,
     title = "Image Preview",
-    nonLocalSrc = false,
     downloadFileName,
 }: ImagePreviewBlockProps) {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -98,11 +96,6 @@ export function ImagePreviewBlock({
     };
 
     const handleOpenPreview = async () => {
-        if (nonLocalSrc) {
-            window.open(src, "_blank", "noopener,noreferrer");
-            return;
-        }
-
         window.open(src, "_blank", "noopener,noreferrer");
     };
 

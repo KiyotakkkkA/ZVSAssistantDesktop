@@ -33,12 +33,11 @@ export const planningTool: ToolDefinition = {
     inputSchema: planningToolInputSchema,
     execute: (args, context) => {
         const input = planningToolInputSchema.parse(args);
-        const dialogId = context.dialogId;
         const { planningStateStorage } = context;
 
         if (input.type === "createSteps") {
             return planningStateStorage.createSteps(
-                dialogId,
+                context.dialogId,
                 input.title ?? "План выполнения",
                 input.steps,
             );
@@ -46,7 +45,7 @@ export const planningTool: ToolDefinition = {
 
         if (input.type === "markStep") {
             const updatedPlan = planningStateStorage.markStep(
-                dialogId,
+                context.dialogId,
                 input.stepId,
             );
 
@@ -54,7 +53,8 @@ export const planningTool: ToolDefinition = {
         }
 
         return (
-            planningStateStorage.getNextStep(dialogId) ?? PLAN_NOT_FOUND_ERROR
+            planningStateStorage.getNextStep(context.dialogId) ??
+            PLAN_NOT_FOUND_ERROR
         );
     },
 };

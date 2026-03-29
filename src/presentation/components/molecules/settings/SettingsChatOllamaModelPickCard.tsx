@@ -1,6 +1,5 @@
 import { Icon } from "@iconify/react";
 import { Button } from "@kiyotakkkka/zvs-uikit-lib";
-import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import type { OllamaCatalogModel } from "../../../../services/api";
 import { Config } from "../../../../../electron/config";
@@ -46,9 +45,7 @@ export function SettingsChatOllamaModelPickCard({
     selected,
     onPick,
 }: SettingsChatOllamaModelPickCardProps) {
-    const modelIdWithoutColon = useMemo(() => {
-        return model.name.split(":")[0];
-    }, [model.name]);
+    const modelIdWithoutColon = model.name.split(":")[0];
 
     return (
         <article className="rounded-xl border border-main-700/80 bg-main-900/45 p-4">

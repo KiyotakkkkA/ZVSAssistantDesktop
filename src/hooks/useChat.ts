@@ -51,6 +51,12 @@ const formatTime = () =>
         minute: "2-digit",
     });
 
+const findUserMessageById = (items: DialogUiMessage[], messageId: string) => {
+    return items.find(
+        (message) => message.id === messageId && message.role === "user",
+    );
+};
+
 type StartGenerationOptions = {
     skipUserUiMessage?: boolean;
     contextOnlyUserMessage?: string;
@@ -282,7 +288,6 @@ export const useChat = () => {
                     toolPackIds: ["systemTools"],
                     enabledToolNames,
                 });
-                return;
             } catch (error) {
                 markAssistantAs(
                     "error",
@@ -444,10 +449,7 @@ export const useChat = () => {
                 return;
             }
 
-            const target = messages.find(
-                (message) =>
-                    message.id === messageId && message.role === "user",
-            );
+            const target = findUserMessageById(messages, messageId);
 
             if (!target) {
                 return;
@@ -475,10 +477,7 @@ export const useChat = () => {
     const deleteMessage = useCallback(
         (messageId: string) => {
             updateMessages((current) => {
-                const target = current.find(
-                    (message) =>
-                        message.id === messageId && message.role === "user",
-                );
+                const target = findUserMessageById(current, messageId);
 
                 if (!target) {
                     return current;
@@ -496,10 +495,7 @@ export const useChat = () => {
 
     const startEditMessage = useCallback(
         (messageId: string) => {
-            const target = messages.find(
-                (message) =>
-                    message.id === messageId && message.role === "user",
-            );
+            const target = findUserMessageById(messages, messageId);
 
             if (!target) {
                 return;

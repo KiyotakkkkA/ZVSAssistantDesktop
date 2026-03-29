@@ -269,21 +269,15 @@ export function SettingsChatOllamaModelsPickForm({
                 <div className="flex items-center justify-center rounded-xl border border-main-700/80 bg-main-900/45 py-14">
                     <Loader />
                 </div>
-            ) : null}
-
-            {!isLoading && error ? (
+            ) : error ? (
                 <div className="rounded-xl border border-main-700/80 bg-main-900/45 p-4 text-sm text-red-300">
                     {error}
                 </div>
-            ) : null}
-
-            {!isLoading && !error && filteredModels.length === 0 ? (
+            ) : filteredModels.length === 0 ? (
                 <div className="rounded-xl border border-main-700/80 bg-main-900/45 p-4 text-sm text-main-400">
                     Модели не найдены для текущих фильтров.
                 </div>
-            ) : null}
-
-            {!isLoading && !error && filteredModels.length > 0 ? (
+            ) : (
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {filteredModels.map((item) => (
                         <SettingsChatOllamaModelPickCard
@@ -297,7 +291,7 @@ export function SettingsChatOllamaModelsPickForm({
                         />
                     ))}
                 </div>
-            ) : null}
+            )}
 
             <div className="flex justify-between gap-2 border-t border-main-700/80 pt-3">
                 <p className="flex items-center gap-2 text-xs text-main-400">

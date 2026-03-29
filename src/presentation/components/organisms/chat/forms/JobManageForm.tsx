@@ -208,10 +208,6 @@ export const JobManageForm = () => {
         }
     };
 
-    const handleRefresh = async () => {
-        await refreshJobs();
-    };
-
     const handleCancelSelected = async () => {
         if (!selectedJobId) {
             return;
@@ -282,7 +278,7 @@ export const JobManageForm = () => {
                             shape="rounded-lg"
                             className="hover:-translate-y-0.5 p-1 transition-transform flex-1"
                             onClick={() => {
-                                void handleRefresh();
+                                void refreshJobs();
                             }}
                         >
                             <Icon icon="mdi:refresh" width={16} />
