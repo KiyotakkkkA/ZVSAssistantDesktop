@@ -4,8 +4,14 @@ import { SettingsInterfacePanel } from "./SettingsInterfacePanel";
 import { SettingsProfilePanel } from "./SettingsProfilePanel";
 import { SettingsAssistantPanel } from "./SettingsAssisstantPanel";
 import { SettingsNotificationPanel } from "./SettingsNotificationPanel";
+import { SettingsProvidersPanel } from "./SettingsProvidersPanel";
 
-type SettingsRoute = "interface" | "profile" | "assistant" | "notifications";
+type SettingsRoute =
+    | "interface"
+    | "profile"
+    | "assistant"
+    | "providers"
+    | "notifications";
 
 export type SettingsViewHandle = {
     save: () => Promise<{
@@ -32,8 +38,14 @@ const settingsRoutes: SettingsRouteItem = {
     assistant: {
         title: "Ассистент",
         icon: "mdi:robot",
-        description: "Настройки ассистента и моделей",
+        description: "Настройки ассистента",
         component: SettingsAssistantPanel,
+    },
+    providers: {
+        title: "Провайдеры",
+        icon: "mdi:server-network-outline",
+        description: "Интеграции моделей и API-ключи",
+        component: SettingsProvidersPanel,
     },
     profile: {
         title: "Профиль",
