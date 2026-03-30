@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { Config } from "../../../electron/config";
 import type { ToolDefinition } from "../runtime/contracts";
 
 const webSearchToolInputSchema = z.object({
@@ -11,8 +10,8 @@ const webFetchToolInputSchema = z.object({
     url: z.string().url(),
 });
 
-const buildRequestHeaders = (ollamaApiKey?: string): HeadersInit => {
-    const token = ollamaApiKey?.trim();
+const buildRequestHeaders = (providerApiKey?: string): HeadersInit => {
+    const token = providerApiKey?.trim();
 
     if (!token) {
         return {
@@ -29,11 +28,16 @@ const buildRequestHeaders = (ollamaApiKey?: string): HeadersInit => {
 const postToOllamaWebApi = async (
     endpoint: "/api/web_search" | "/api/web_fetch",
     payload: Record<string, unknown>,
-    ollamaApiKey?: string,
+    providerBaseUrl?: string,
+    providerApiKey?: string,
 ) => {
-    const response = await fetch(`${Config.OLLAMA_BASE_URL}${endpoint}`, {
+    if (!providerBaseUrl) {
+        throw new Error("Text generation provider baseUrl is not configured");
+    }
+
+    const response = await fetch(`${providerBaseUrl}${endpoint}`, {
         method: "POST",
-        headers: buildRequestHeaders(ollamaApiKey),
+        headers: buildRequestHeaders(providerApiKey),
         body: JSON.stringify(payload),
     });
 
@@ -72,7 +76,8 @@ export const webSearchTool: ToolDefinition = {
                 query,
                 max_results: max_results ?? 5,
             },
-            context.ollamaApiKey,
+            context.providerBaseUrl,
+            context.providerApiKey,
         );
     },
 };
@@ -88,7 +93,8 @@ export const webFetchTool: ToolDefinition = {
         return postToOllamaWebApi(
             "/api/web_fetch",
             { url },
-            context.ollamaApiKey,
+            context.providerBaseUrl,
+            context.providerApiKey,
         );
     },
 };

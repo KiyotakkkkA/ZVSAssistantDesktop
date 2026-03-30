@@ -1,8 +1,16 @@
+export type AllowedProviders = "ollama";
+
+export interface ChatGenProviderConfig {
+    baseUrl?: string;
+    modelName: string;
+    apiKey: string;
+}
+
 export interface GeneralUserData {
     // Настройки ассистента
+    chatGenProvider: AllowedProviders;
     maxToolsUsagePerResponse: number;
     assistantName: string;
-    ollamaModel: string;
     enabledPromptTools: string[];
     requiredPromptTools: string[];
     userPrompt: string;
@@ -18,7 +26,8 @@ export interface GeneralUserData {
 }
 
 export interface SecureUserData {
-    ollamaApiKey: string;
+    // Провайдеры
+    chatGenProviders: Record<AllowedProviders, ChatGenProviderConfig>;
 }
 
 export interface User {

@@ -25,7 +25,6 @@ const sendStreamError = (
 export const registerIpcChatPack = ({ chatGenService }: IpcChatPackDeps) => {
     handleIpc("chat:generate", async (payload: ResponseGenParams) => {
         const prompt = payload.prompt?.trim() ?? "";
-        const model = payload.model;
         const messages = payload.messages;
 
         if (!prompt && (!messages || messages.length === 0)) {
@@ -34,7 +33,6 @@ export const registerIpcChatPack = ({ chatGenService }: IpcChatPackDeps) => {
 
         return chatGenService.generateResponse({
             prompt,
-            model,
             messages,
             dialogId: payload.dialogId,
             toolPackIds: payload.toolPackIds,
@@ -47,7 +45,6 @@ export const registerIpcChatPack = ({ chatGenService }: IpcChatPackDeps) => {
         (event, payload: ResponseGenParams & { requestId: string }) => {
             const prompt = payload.prompt?.trim() ?? "";
             const requestId = payload.requestId;
-            const model = payload.model;
             const messages = payload.messages;
 
             if (
@@ -66,7 +63,6 @@ export const registerIpcChatPack = ({ chatGenService }: IpcChatPackDeps) => {
                 try {
                     const result = chatGenService.streamResponseGeneration({
                         prompt,
-                        model,
                         messages,
                         dialogId: payload.dialogId,
                         toolPackIds: payload.toolPackIds,

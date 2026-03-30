@@ -7,8 +7,8 @@ import type {
     TextStreamPart,
     ToolSet,
 } from "ai";
-import { Config } from "../config";
 import type { ResponseGenParams } from "../models/chat";
+import type { ChatGenProviderConfig, AllowedProviders } from "../models/user";
 import type { UserRepository } from "../repositories/UserRepository";
 import type { ToolsRuntimeService } from "./ToolsRuntimeService";
 
@@ -37,8 +37,6 @@ const toMaxStepBudget = (maxToolsUsagePerResponse: number) => {
 };
 
 export class ChatGenService {
-    private readonly providerName = "ollama";
-    private readonly baseURL = `${Config.OLLAMA_BASE_URL}/v1`;
     private readonly needUsage = true;
 
     private userRepository: UserRepository;
@@ -49,15 +47,42 @@ export class ChatGenService {
         this.toolsRuntimeService = toolsRuntimeService;
     }
 
+    private getSelectedProviderConfig(): {
+        providerName: AllowedProviders;
+        providerConfig: ChatGenProviderConfig;
+    } {
+        const currentUser = this.userRepository.findCurrentUser();
+
+        if (!currentUser) {
+            throw new Error("Current user is not found");
+        }
+
+        const providerName = (currentUser.generalData.chatGenProvider ??
+            "ollama") as AllowedProviders;
+        const providerConfig =
+            currentUser.secureData.chatGenProviders?.[providerName];
+
+        if (!providerConfig?.baseUrl || !providerConfig?.modelName) {
+            throw new Error("Text generation provider is not configured");
+        }
+
+        return {
+            providerName,
+            providerConfig,
+        };
+    }
+
     public streamResponseGeneration(params: ResponseGenParams): {
         fullStream: AsyncIterableStream<TextStreamPart<ToolSet>>;
         getTotalUsage: () => PromiseLike<LanguageModelUsage>;
     } {
         const currentUser = this.userRepository.findCurrentUser();
+        const { providerName, providerConfig } =
+            this.getSelectedProviderConfig();
         const provider = createOpenAICompatible({
-            name: this.providerName,
-            baseURL: this.baseURL,
-            apiKey: currentUser?.secureData.ollamaApiKey ?? "",
+            name: providerName,
+            baseURL: `${providerConfig.baseUrl}/v1`,
+            apiKey: providerConfig.apiKey,
             includeUsage: this.needUsage,
         });
 
@@ -71,11 +96,14 @@ export class ChatGenService {
             dialogId: params.dialogId,
             packIds: params.toolPackIds,
             enabledToolNames: params.enabledToolNames,
-            ollamaApiKey: currentUser?.secureData.ollamaApiKey ?? "",
+            providerBaseUrl: providerConfig.baseUrl,
+            providerApiKey: providerConfig.apiKey,
         });
 
         const { fullStream, totalUsage } = streamText({
-            model: (provider as OpenAICompatibleProvider)(params.model),
+            model: (provider as OpenAICompatibleProvider)(
+                providerConfig.modelName,
+            ),
             messages: toModelMessages(params),
             tools,
             stopWhen: stepCountIs(maxSteps),
@@ -92,10 +120,12 @@ export class ChatGenService {
         usage: LanguageModelUsage;
     }> {
         const currentUser = this.userRepository.findCurrentUser();
+        const { providerName, providerConfig } =
+            this.getSelectedProviderConfig();
         const provider = createOpenAICompatible({
-            name: this.providerName,
-            baseURL: this.baseURL,
-            apiKey: currentUser?.secureData.ollamaApiKey ?? "",
+            name: providerName,
+            baseURL: `${providerConfig.baseUrl}/v1`,
+            apiKey: providerConfig.apiKey,
             includeUsage: this.needUsage,
         });
 
@@ -109,11 +139,14 @@ export class ChatGenService {
             dialogId: params.dialogId,
             packIds: params.toolPackIds,
             enabledToolNames: params.enabledToolNames,
-            ollamaApiKey: currentUser?.secureData.ollamaApiKey ?? "",
+            providerBaseUrl: providerConfig.baseUrl,
+            providerApiKey: providerConfig.apiKey,
         });
 
         const { text, usage } = await generateText({
-            model: (provider as OpenAICompatibleProvider)(params.model),
+            model: (provider as OpenAICompatibleProvider)(
+                providerConfig.modelName,
+            ),
             messages: toModelMessages(params),
             tools,
             stopWhen: stepCountIs(maxSteps),

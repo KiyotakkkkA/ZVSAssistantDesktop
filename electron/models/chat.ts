@@ -7,7 +7,6 @@ export type ChatRequestMessage = {
 
 export type ResponseGenParams = {
     prompt?: string;
-    model: string;
     messages?: ChatRequestMessage[];
     dialogId?: string;
     toolPackIds?: string[];

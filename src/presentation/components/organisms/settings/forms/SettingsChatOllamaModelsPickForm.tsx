@@ -16,6 +16,7 @@ type SortKey =
     | "name_desc";
 
 type SettingsChatOllamaModelsPickFormProps = {
+    baseUrl: string;
     currentModel: string;
     onSelectModel: (modelName: string) => void;
     onClose: () => void;
@@ -43,6 +44,7 @@ const buildOptions = (values: string[]) => {
 };
 
 export function SettingsChatOllamaModelsPickForm({
+    baseUrl,
     currentModel,
     onSelectModel,
     onClose,
@@ -65,8 +67,14 @@ export function SettingsChatOllamaModelsPickForm({
             setIsLoading(true);
             setError("");
 
+            if (!baseUrl) {
+                setIsLoading(false);
+                setError("Укажите Base URL провайдера");
+                return;
+            }
+
             try {
-                const fetchedModels = await getOllamaModelsCatalog();
+                const fetchedModels = await getOllamaModelsCatalog(baseUrl);
 
                 if (!isCancelled) {
                     setModels(fetchedModels);
@@ -93,7 +101,7 @@ export function SettingsChatOllamaModelsPickForm({
         return () => {
             isCancelled = true;
         };
-    }, []);
+    }, [baseUrl]);
 
     const familyOptions = useMemo(
         () => buildOptions(models.map((item) => item.details.family)),
@@ -284,6 +292,7 @@ export function SettingsChatOllamaModelsPickForm({
                             key={`${item.model}_${item.digest}`}
                             model={item}
                             selected={item.name === currentModel}
+                            baseUrl={baseUrl}
                             onPick={(modelName) => {
                                 onSelectModel(modelName);
                                 onClose();

@@ -5,7 +5,8 @@ import type { PlanningStateStorage } from "./planningStateStorage";
 export type ToolExecutionContext = {
     dialogId: string;
     planningStateStorage: PlanningStateStorage;
-    ollamaApiKey?: string;
+    providerBaseUrl?: string;
+    providerApiKey?: string;
 };
 
 export type ToolDefinition = {

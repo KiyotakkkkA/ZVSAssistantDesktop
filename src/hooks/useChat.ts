@@ -6,6 +6,7 @@ import { workspaceStore } from "../stores/workspaceStore";
 import { profileStore } from "../stores/profileStore";
 import { DialogUiMessage } from "../../electron/models";
 import type { AskToolResult } from "../../electron/models/tool";
+import type { AllowedProviders } from "../../electron/models/user";
 import type { QaToolState } from "../utils/tools/qaTool";
 import { toolsStorage } from "../stores/toolsStorage";
 
@@ -74,6 +75,34 @@ export const useChat = () => {
 
     const activeRequestIdRef = useRef<string | null>(null);
     const activeDialogId = workspaceStore.activeDialogId;
+
+    const ensureProviderConfigured = useCallback(() => {
+        const currentUser = profileStore.user;
+
+        if (!currentUser) {
+            toasts.danger({
+                title: "Профиль не найден",
+                description: "Не удалось получить настройки провайдера.",
+            });
+            return false;
+        }
+
+        const activeProvider = (currentUser.generalData.chatGenProvider ??
+            "ollama") as AllowedProviders;
+        const providerConfig =
+            currentUser.secureData.chatGenProviders?.[activeProvider];
+
+        if (!providerConfig?.baseUrl || !providerConfig?.modelName) {
+            toasts.danger({
+                title: "Провайдер не настроен",
+                description:
+                    "Заполните Base URL и модель в настройках провайдера.",
+            });
+            return false;
+        }
+
+        return true;
+    }, [toasts]);
 
     const updateMessages = useCallback(
         (
@@ -214,13 +243,17 @@ export const useChat = () => {
     const startGeneration = useCallback(
         async (prompt: string, options?: StartGenerationOptions) => {
             if (!activeDialogId) {
-                return;
+                return false;
             }
 
             const normalizedPrompt = prompt.trim();
 
             if (!normalizedPrompt) {
-                return;
+                return false;
+            }
+
+            if (!ensureProviderConfigured()) {
+                return false;
             }
 
             const skipUserUiMessage = options?.skipUserUiMessage === true;
@@ -280,12 +313,12 @@ export const useChat = () => {
                 window.chat.streamResponseGeneration({
                     requestId,
                     prompt: skipUserUiMessage ? undefined : normalizedPrompt,
-                    model: profileStore.user?.generalData.ollamaModel ?? "",
                     messages: modelMessages,
                     dialogId: activeDialogId,
                     toolPackIds: ["systemTools"],
                     enabledToolNames,
                 });
+                return true;
             } catch (error) {
                 markAssistantAs(
                     "error",
@@ -295,9 +328,15 @@ export const useChat = () => {
                 );
                 activeRequestIdRef.current = null;
                 setIsGenerating(false);
+                return false;
             }
         },
-        [activeDialogId, buildModelMessages, markAssistantAs],
+        [
+            activeDialogId,
+            buildModelMessages,
+            ensureProviderConfigured,
+            markAssistantAs,
+        ],
     );
 
     useEffect(() => {
@@ -419,8 +458,11 @@ export const useChat = () => {
             return;
         }
 
-        setInput("");
-        await startGeneration(prompt);
+        const isStarted = await startGeneration(prompt);
+
+        if (isStarted) {
+            setInput("");
+        }
     }, [input, isGenerating, startGeneration]);
 
     const copyMessage = useCallback(
@@ -459,6 +501,10 @@ export const useChat = () => {
                 return;
             }
 
+            if (!ensureProviderConfigured()) {
+                return;
+            }
+
             if (!activeDialogId) {
                 return;
             }
@@ -469,7 +515,13 @@ export const useChat = () => {
 
             await startGeneration(prompt);
         },
-        [activeDialogId, isGenerating, messages, startGeneration],
+        [
+            activeDialogId,
+            ensureProviderConfigured,
+            isGenerating,
+            messages,
+            startGeneration,
+        ],
     );
 
     const deleteMessage = useCallback(
@@ -573,6 +625,10 @@ export const useChat = () => {
                 return;
             }
 
+            if (!ensureProviderConfigured()) {
+                return;
+            }
+
             const payload: AskToolResult = {
                 questions: qaState.questions,
                 activeQuestionIndex: qaState.activeQuestionIndex,
@@ -595,7 +651,12 @@ export const useChat = () => {
                 contextOnlyUserMessage: prompt,
             });
         },
-        [isGenerating, startGeneration, updateMessages],
+        [
+            ensureProviderConfigured,
+            isGenerating,
+            startGeneration,
+            updateMessages,
+        ],
     );
 
     return {

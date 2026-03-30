@@ -5,7 +5,7 @@ export const defaultUser: CreateUserDto = {
     generalData: {
         // Настройким ассистента
         assistantName: "Чарли",
-        ollamaModel: "gpt-oss:20b",
+        chatGenProvider: "ollama",
         maxToolsUsagePerResponse: 20,
         enabledPromptTools: [],
         requiredPromptTools: [],
@@ -21,6 +21,12 @@ export const defaultUser: CreateUserDto = {
         notifyOnJobCompleteEmail: false,
     },
     secureData: {
-        ollamaApiKey: "",
+        chatGenProviders: {
+            ollama: {
+                baseUrl: "https://ollama.com",
+                modelName: "gpt-oss:20b",
+                apiKey: "",
+            },
+        },
     },
 };

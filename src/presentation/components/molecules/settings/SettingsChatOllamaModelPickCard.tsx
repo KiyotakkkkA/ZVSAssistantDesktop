@@ -2,11 +2,11 @@ import { Icon } from "@iconify/react";
 import { Button } from "@kiyotakkkka/zvs-uikit-lib";
 import { Link } from "react-router-dom";
 import type { OllamaCatalogModel } from "../../../../services/api";
-import { Config } from "../../../../../electron/config";
 
 type SettingsChatOllamaModelPickCardProps = {
     model: OllamaCatalogModel;
     selected: boolean;
+    baseUrl: string;
     onPick: (modelName: string) => void;
 };
 
@@ -43,6 +43,7 @@ const toDateLabel = (isoDate: string): string => {
 export function SettingsChatOllamaModelPickCard({
     model,
     selected,
+    baseUrl,
     onPick,
 }: SettingsChatOllamaModelPickCardProps) {
     const modelIdWithoutColon = model.name.split(":")[0];
@@ -86,7 +87,7 @@ export function SettingsChatOllamaModelPickCard({
 
             <div className="mt-3 flex justify-between items-center">
                 <Link
-                    to={`${Config.OLLAMA_BASE_URL}/library/${modelIdWithoutColon}`}
+                    to={`${baseUrl}/library/${modelIdWithoutColon}`}
                     target="_blank"
                     className="rounded-md p-2 text-white bg-indigo-700 hover:bg-indigo-800 transition-colors flex items-center gap-1 text-xs"
                 >

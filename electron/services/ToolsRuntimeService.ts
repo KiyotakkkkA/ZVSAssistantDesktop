@@ -7,7 +7,8 @@ interface BuildToolsInput {
     dialogId?: string;
     packIds?: string[];
     enabledToolNames?: string[];
-    ollamaApiKey?: string;
+    providerBaseUrl?: string;
+    providerApiKey?: string;
 }
 
 const normalizeToolNames = (value?: string[]) => {
@@ -25,7 +26,8 @@ export class ToolsRuntimeService {
         dialogId,
         packIds,
         enabledToolNames,
-        ollamaApiKey,
+        providerBaseUrl,
+        providerApiKey,
     }: BuildToolsInput): ToolSet {
         const resolvedPackIds =
             packIds && packIds.length > 0 ? packIds : ["systemTools"];
@@ -49,7 +51,8 @@ export class ToolsRuntimeService {
         return buildToolSetFromPacks(packs, {
             dialogId: dialogId ?? "default-dialog",
             planningStateStorage: this.planningStateStorage,
-            ollamaApiKey,
+            providerBaseUrl,
+            providerApiKey,
         });
     }
 }

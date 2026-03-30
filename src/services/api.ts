@@ -1,5 +1,3 @@
-import { Config } from "../../electron/config";
-
 export type OllamaCatalogModelDetails = {
     parent_model: string;
     format: string;
@@ -45,15 +43,12 @@ const buildOllamaHeaders = (ollamaToken?: string): HeadersInit => {
     };
 };
 
-export const getOllamaModelsCatalog = async (): Promise<
-    OllamaCatalogModel[]
-> => {
-    const rawResponse = await window.core.httpRequest(
-        `${Config.OLLAMA_BASE_URL}/api/tags`,
-        {
-            method: "GET",
-        },
-    );
+export const getOllamaModelsCatalog = async (
+    baseUrl: string,
+): Promise<OllamaCatalogModel[]> => {
+    const rawResponse = await window.core.httpRequest(`${baseUrl}/api/tags`, {
+        method: "GET",
+    });
 
     const parsed = JSON.parse(rawResponse) as {
         models?: OllamaCatalogModel[];
@@ -63,12 +58,13 @@ export const getOllamaModelsCatalog = async (): Promise<
 };
 
 export const callOllamaWebSearch = async (
+    baseUrl: string,
     query: string,
     max_results: number,
     ollamaToken?: string,
 ): Promise<OllamaWebSearchResult> => {
     const response = await window.core.httpRequest(
-        `${Config.OLLAMA_BASE_URL}/api/web_search`,
+        `${baseUrl}/api/web_search`,
         {
             method: "POST",
             headers: buildOllamaHeaders(ollamaToken),
@@ -80,17 +76,15 @@ export const callOllamaWebSearch = async (
 };
 
 export const callOllamaWebFetch = async (
+    baseUrl: string,
     url: string,
     ollamaToken?: string,
 ): Promise<OllamaWebFetchResult> => {
-    const response = await window.core.httpRequest(
-        `${Config.OLLAMA_BASE_URL}/api/web_fetch`,
-        {
-            method: "POST",
-            headers: buildOllamaHeaders(ollamaToken),
-            body: JSON.stringify({ url }),
-        },
-    );
+    const response = await window.core.httpRequest(`${baseUrl}/api/web_fetch`, {
+        method: "POST",
+        headers: buildOllamaHeaders(ollamaToken),
+        body: JSON.stringify({ url }),
+    });
 
     return JSON.parse(response) as OllamaWebFetchResult;
 };
