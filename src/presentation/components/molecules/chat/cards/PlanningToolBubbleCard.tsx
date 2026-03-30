@@ -28,26 +28,22 @@ type PlanProgress = {
     percent: number;
 };
 
-const toRecord = (value: unknown): Record<string, unknown> | null => {
-    if (!value || typeof value !== "object" || Array.isArray(value)) {
-        return null;
-    }
-
-    return value as Record<string, unknown>;
+type TraceArgsShape = {
+    type?: string;
+    action?: string;
 };
 
 const readPlanStep = (value: unknown): PlanStepSummary | null => {
-    const record = toRecord(value);
+    const record = value as PlanStepSummary | null;
 
     if (!record) {
         return null;
     }
 
-    const id = typeof record.id === "number" ? record.id : null;
-    const description =
-        typeof record.description === "string" ? record.description : null;
+    const id = record.id;
+    const description = record.description;
 
-    if (id === null || !description) {
+    if (id === undefined || id === null || !description) {
         return null;
     }
 
@@ -65,22 +61,17 @@ const readPlanSteps = (value: unknown): PlanStepSummary[] => {
 };
 
 const readPlanResult = (value: unknown): PlanResultShape | null => {
-    const record = toRecord(value);
+    const record = value as PlanResultShape | null;
 
     if (!record) {
         return null;
     }
 
     return {
-        plan_id:
-            typeof record.plan_id === "string" ? record.plan_id : undefined,
-        title: typeof record.title === "string" ? record.title : undefined,
-        progress:
-            typeof record.progress === "string" ? record.progress : undefined,
-        is_complete:
-            typeof record.is_complete === "boolean"
-                ? record.is_complete
-                : undefined,
+        plan_id: record.plan_id,
+        title: record.title,
+        progress: record.progress,
+        is_complete: record.is_complete,
         next_step: readPlanStep(record.next_step),
         pending_steps: readPlanSteps(record.pending_steps),
         completed_steps: readPlanSteps(record.completed_steps),
@@ -122,15 +113,15 @@ const parseProgress = (raw: string | undefined): PlanProgress => {
 };
 
 const resolveTraceAction = (trace: ToolTrace) => {
-    const argsRecord = toRecord(trace.args);
+    const argsRecord = trace.args as TraceArgsShape | null;
 
-    const fromType = argsRecord?.type;
-    if (typeof fromType === "string" && fromType.length > 0) {
+    const fromType = argsRecord?.type?.trim();
+    if (fromType) {
         return fromType;
     }
 
-    const fromAction = argsRecord?.action;
-    if (typeof fromAction === "string" && fromAction.length > 0) {
+    const fromAction = argsRecord?.action?.trim();
+    if (fromAction) {
         return fromAction;
     }
 

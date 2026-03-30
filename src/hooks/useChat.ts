@@ -379,14 +379,8 @@ export const useChat = () => {
                 updateMessages(
                     (current) =>
                         toolsStorage.applyToolCall(current, {
-                            toolCallId:
-                                typeof part.toolCallId === "string"
-                                    ? part.toolCallId
-                                    : undefined,
-                            toolName:
-                                typeof part.toolName === "string"
-                                    ? part.toolName
-                                    : undefined,
+                            toolCallId: part.toolCallId as string | undefined,
+                            toolName: part.toolName as string | undefined,
                             input: part.input,
                             args: part.args,
                         }),
@@ -399,20 +393,11 @@ export const useChat = () => {
                 updateMessages(
                     (current) =>
                         toolsStorage.applyToolResult(current, {
-                            toolCallId:
-                                typeof part.toolCallId === "string"
-                                    ? part.toolCallId
-                                    : undefined,
-                            toolName:
-                                typeof part.toolName === "string"
-                                    ? part.toolName
-                                    : undefined,
+                            toolCallId: part.toolCallId as string | undefined,
+                            toolName: part.toolName as string | undefined,
                             output: part.output,
                             result: part.result,
-                            errorText:
-                                typeof part.errorText === "string"
-                                    ? part.errorText
-                                    : undefined,
+                            errorText: part.errorText as string | undefined,
                         }),
                     false,
                 );

@@ -13,14 +13,6 @@ interface BuildToolsInput {
     providerApiKey?: string;
 }
 
-const normalizeToolNames = (value?: string[]) => {
-    if (!Array.isArray(value)) {
-        return undefined;
-    }
-
-    return [...new Set(value.filter((item) => typeof item === "string"))];
-};
-
 export class ToolsRuntimeService {
     private readonly planningStateStorage = new PlanningStateStorage();
 
@@ -34,19 +26,18 @@ export class ToolsRuntimeService {
     }: BuildToolsInput): ToolSet {
         const resolvedPackIds =
             packIds && packIds.length > 0 ? packIds : ["systemTools"];
-        const allowedToolNames = normalizeToolNames(enabledToolNames);
 
         const packs = builtInToolPacks
             .filter((pack) => resolvedPackIds.includes(pack.id))
             .map((pack) => {
-                if (!allowedToolNames) {
+                if (!enabledToolNames) {
                     return pack;
                 }
 
                 return {
                     ...pack,
                     tools: pack.tools.filter((tool) =>
-                        allowedToolNames.includes(tool.name),
+                        enabledToolNames.includes(tool.name),
                     ),
                 };
             });

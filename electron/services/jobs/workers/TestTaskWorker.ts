@@ -1,18 +1,10 @@
 import type { JobWorker } from "./contracts";
 
-const normalizeStepCount = (value: unknown) => {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-        return 8;
-    }
-
+const normalizeStepCount = (value: number) => {
     return Math.min(100, Math.max(1, Math.floor(value)));
 };
 
-const normalizeStepDelayMs = (value: unknown) => {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-        return 900;
-    }
-
+const normalizeStepDelayMs = (value: number) => {
     return Math.min(30_000, Math.max(200, Math.floor(value)));
 };
 
@@ -20,8 +12,8 @@ export class TestTaskWorker implements JobWorker {
     readonly kind = "test-task" as const;
 
     async run({ payload, emitStage, delay }: Parameters<JobWorker["run"]>[0]) {
-        const totalSteps = normalizeStepCount(payload.totalSteps);
-        const stepDelayMs = normalizeStepDelayMs(payload.stepDelayMs);
+        const totalSteps = normalizeStepCount(payload.totalSteps ?? 10);
+        const stepDelayMs = normalizeStepDelayMs(payload.stepDelayMs ?? 1000);
 
         emitStage("Тестовая задача запущена", "info");
 
