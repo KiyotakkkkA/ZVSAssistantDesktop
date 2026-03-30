@@ -52,7 +52,7 @@ export class DatabaseService {
 
             CREATE TABLE IF NOT EXISTS jobs_events (
                 id TEXT PRIMARY KEY,
-                job_id TEXT NOT NULL,
+                job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
                 message TEXT NOT NULL,
                 tag TEXT NOT NULL,
                 created_at TEXT NOT NULL,
