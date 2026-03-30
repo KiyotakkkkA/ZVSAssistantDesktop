@@ -1,10 +1,12 @@
 import { tool, type ToolSet } from "ai";
 import type { ZodTypeAny } from "zod";
 import type { PlanningStateStorage } from "./planningStateStorage";
+import type { AllowedWebToolsProviders } from "../../../electron/models/user";
 
 export type ToolExecutionContext = {
     dialogId: string;
     planningStateStorage: PlanningStateStorage;
+    webToolsProvider?: AllowedWebToolsProviders;
     providerBaseUrl?: string;
     providerApiKey?: string;
 };

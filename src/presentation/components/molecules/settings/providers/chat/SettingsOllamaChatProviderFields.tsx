@@ -1,22 +1,23 @@
 import { useState } from "react";
 import { Button, InputSmall, Modal } from "@kiyotakkkka/zvs-uikit-lib";
 import { Icon } from "@iconify/react";
-import { SettingsChatOllamaModelsPickForm } from "../../../organisms/settings/forms/SettingsChatOllamaModelsPickForm";
-import type { ChatGenProviderConfig } from "../../../../../../electron/models/user";
+import { SettingsChatOllamaModelsPickForm } from "../../../../organisms/settings/forms/SettingsChatOllamaModelsPickForm";
+import type { ProviderConfig } from "../../../../../../../electron/models/user";
+import { Config } from "../../../../../../../electron/config";
 
-type SettingsOllamaProviderFieldsProps = {
-    providerConfig: ChatGenProviderConfig;
-    onChange: (nextConfig: ChatGenProviderConfig) => void;
+type SettingsOllamaChatProviderFieldsProps = {
+    providerConfig: ProviderConfig;
+    onChange: (nextConfig: ProviderConfig) => void;
 };
 
-export function SettingsOllamaProviderFields({
+export function SettingsOllamaChatProviderFields({
     providerConfig,
     onChange,
-}: SettingsOllamaProviderFieldsProps) {
+}: SettingsOllamaChatProviderFieldsProps) {
     const [isModelsPickOpen, setIsModelsPickOpen] = useState(false);
 
     const baseUrl = providerConfig.baseUrl ?? "";
-    const modelName = providerConfig.modelName;
+    const modelName = providerConfig.modelName ?? "";
     const apiKey = providerConfig.apiKey;
     const modelBase = modelName.split(":")[0];
     const canUseLinks = Boolean(baseUrl);
@@ -33,7 +34,7 @@ export function SettingsOllamaProviderFields({
                             baseUrl: event.target.value,
                         })
                     }
-                    placeholder="https://ollama.com"
+                    placeholder={Config.OLLAMA_BASE_URL}
                     className="w-full"
                 />
             </div>

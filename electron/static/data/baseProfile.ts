@@ -1,3 +1,4 @@
+import { Config } from "../../config";
 import type { CreateUserDto } from "../../models/user";
 
 export const defaultUser: CreateUserDto = {
@@ -6,6 +7,7 @@ export const defaultUser: CreateUserDto = {
         // Настройким ассистента
         assistantName: "Чарли",
         chatGenProvider: "ollama",
+        webToolsProvider: "ollama",
         maxToolsUsagePerResponse: 20,
         enabledPromptTools: [],
         requiredPromptTools: [],
@@ -23,8 +25,17 @@ export const defaultUser: CreateUserDto = {
     secureData: {
         chatGenProviders: {
             ollama: {
-                baseUrl: "https://ollama.com",
+                baseUrl: Config.OLLAMA_BASE_URL,
                 modelName: "gpt-oss:20b",
+                apiKey: "",
+            },
+        },
+        webToolsProviders: {
+            ollama: {
+                baseUrl: Config.OLLAMA_BASE_URL,
+                apiKey: "",
+            },
+            searchapi: {
                 apiKey: "",
             },
         },

@@ -61,7 +61,7 @@ class ProfileStore {
     }
 
     async updateProfile(id: string, data: UpdateUserDto) {
-        const payload = await window.profile.update(id, data);
+        const payload = await window.profile.update(id, toJS(data));
 
         runInAction(() => {
             this.hydrate(payload);
@@ -85,9 +85,11 @@ class ProfileStore {
     updateSecureData(nextData: Partial<SecureUserData>) {
         if (!this.user) return;
 
+        const currentSecureData = toJS(this.user.secureData);
+
         void this.updateProfile(this.user.id, {
             secureData: {
-                ...this.user.secureData,
+                ...currentSecureData,
                 ...nextData,
             },
         });

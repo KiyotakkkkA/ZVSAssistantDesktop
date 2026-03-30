@@ -32,6 +32,7 @@ const normalizeGeneralData = (data: GeneralUserData): GeneralUserData => {
 
     return {
         ...data,
+        webToolsProvider: data.webToolsProvider,
         enabledPromptTools,
         requiredPromptTools,
         notifyOnJobCompleteToast: Boolean(data.notifyOnJobCompleteToast),

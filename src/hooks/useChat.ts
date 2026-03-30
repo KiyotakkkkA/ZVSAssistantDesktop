@@ -6,7 +6,7 @@ import { workspaceStore } from "../stores/workspaceStore";
 import { profileStore } from "../stores/profileStore";
 import { DialogUiMessage } from "../../electron/models";
 import type { AskToolResult } from "../../electron/models/tool";
-import type { AllowedProviders } from "../../electron/models/user";
+import type { AllowedChatProviders } from "../../electron/models/user";
 import type { QaToolState } from "../utils/tools/qaTool";
 import { toolsStorage } from "../stores/toolsStorage";
 
@@ -88,7 +88,7 @@ export const useChat = () => {
         }
 
         const activeProvider = (currentUser.generalData.chatGenProvider ??
-            "ollama") as AllowedProviders;
+            "ollama") as AllowedChatProviders;
         const providerConfig =
             currentUser.secureData.chatGenProviders?.[activeProvider];
 

@@ -2,11 +2,13 @@ import { type ToolSet } from "ai";
 import { PlanningStateStorage } from "../../src/tools/runtime/planningStateStorage";
 import { buildToolSetFromPacks } from "../../src/tools/runtime/contracts";
 import { builtInToolPacks } from "../../src/tools";
+import type { AllowedWebToolsProviders } from "../models/user";
 
 interface BuildToolsInput {
     dialogId?: string;
     packIds?: string[];
     enabledToolNames?: string[];
+    webToolsProvider?: AllowedWebToolsProviders;
     providerBaseUrl?: string;
     providerApiKey?: string;
 }
@@ -26,6 +28,7 @@ export class ToolsRuntimeService {
         dialogId,
         packIds,
         enabledToolNames,
+        webToolsProvider,
         providerBaseUrl,
         providerApiKey,
     }: BuildToolsInput): ToolSet {
@@ -51,6 +54,7 @@ export class ToolsRuntimeService {
         return buildToolSetFromPacks(packs, {
             dialogId: dialogId ?? "default-dialog",
             planningStateStorage: this.planningStateStorage,
+            webToolsProvider,
             providerBaseUrl,
             providerApiKey,
         });

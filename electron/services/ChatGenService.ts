@@ -8,9 +8,15 @@ import type {
     ToolSet,
 } from "ai";
 import type { ResponseGenParams } from "../models/chat";
-import type { ChatGenProviderConfig, AllowedProviders } from "../models/user";
+import type {
+    AllowedChatProviders,
+    AllowedWebToolsProviders,
+    ProviderConfig,
+    User,
+} from "../models/user";
 import type { UserRepository } from "../repositories/UserRepository";
 import type { ToolsRuntimeService } from "./ToolsRuntimeService";
+import { Config } from "../config";
 
 interface ChatFenServiceDeps {
     userRepository: UserRepository;
@@ -47,18 +53,22 @@ export class ChatGenService {
         this.toolsRuntimeService = toolsRuntimeService;
     }
 
-    private getSelectedProviderConfig(): {
-        providerName: AllowedProviders;
-        providerConfig: ChatGenProviderConfig;
-    } {
+    private getCurrentUserOrThrow(): User {
         const currentUser = this.userRepository.findCurrentUser();
 
         if (!currentUser) {
             throw new Error("Current user is not found");
         }
 
+        return currentUser;
+    }
+
+    private getSelectedProviderConfig(currentUser: User): {
+        providerName: AllowedChatProviders;
+        providerConfig: ProviderConfig;
+    } {
         const providerName = (currentUser.generalData.chatGenProvider ??
-            "ollama") as AllowedProviders;
+            "ollama") as AllowedChatProviders;
         const providerConfig =
             currentUser.secureData.chatGenProviders?.[providerName];
 
@@ -72,13 +82,49 @@ export class ChatGenService {
         };
     }
 
+    private getSelectedWebToolsProviderConfig(currentUser: User): {
+        providerName: AllowedWebToolsProviders;
+        providerConfig: ProviderConfig;
+    } {
+        const providerName = (currentUser.generalData.webToolsProvider ??
+            "ollama") as AllowedWebToolsProviders;
+        const rawProviderConfig =
+            currentUser.secureData.webToolsProviders?.[providerName] ??
+            (providerName === "ollama"
+                ? {
+                      baseUrl: Config.OLLAMA_BASE_URL,
+                      apiKey: "",
+                  }
+                : {
+                      apiKey: "",
+                  });
+
+        const providerConfig: ProviderConfig =
+            providerName === "ollama"
+                ? {
+                      ...rawProviderConfig,
+                      baseUrl:
+                          rawProviderConfig.baseUrl ?? Config.OLLAMA_BASE_URL,
+                  }
+                : rawProviderConfig;
+
+        return {
+            providerName,
+            providerConfig,
+        };
+    }
+
     public streamResponseGeneration(params: ResponseGenParams): {
         fullStream: AsyncIterableStream<TextStreamPart<ToolSet>>;
         getTotalUsage: () => PromiseLike<LanguageModelUsage>;
     } {
-        const currentUser = this.userRepository.findCurrentUser();
+        const currentUser = this.getCurrentUserOrThrow();
         const { providerName, providerConfig } =
-            this.getSelectedProviderConfig();
+            this.getSelectedProviderConfig(currentUser);
+        const {
+            providerName: webToolsProvider,
+            providerConfig: webToolsProviderConfig,
+        } = this.getSelectedWebToolsProviderConfig(currentUser);
         const provider = createOpenAICompatible({
             name: providerName,
             baseURL: `${providerConfig.baseUrl}/v1`,
@@ -96,13 +142,14 @@ export class ChatGenService {
             dialogId: params.dialogId,
             packIds: params.toolPackIds,
             enabledToolNames: params.enabledToolNames,
-            providerBaseUrl: providerConfig.baseUrl,
-            providerApiKey: providerConfig.apiKey,
+            webToolsProvider,
+            providerBaseUrl: webToolsProviderConfig.baseUrl,
+            providerApiKey: webToolsProviderConfig.apiKey,
         });
 
         const { fullStream, totalUsage } = streamText({
             model: (provider as OpenAICompatibleProvider)(
-                providerConfig.modelName,
+                providerConfig.modelName ?? "",
             ),
             messages: toModelMessages(params),
             tools,
@@ -119,9 +166,13 @@ export class ChatGenService {
         text: string;
         usage: LanguageModelUsage;
     }> {
-        const currentUser = this.userRepository.findCurrentUser();
+        const currentUser = this.getCurrentUserOrThrow();
         const { providerName, providerConfig } =
-            this.getSelectedProviderConfig();
+            this.getSelectedProviderConfig(currentUser);
+        const {
+            providerName: webToolsProvider,
+            providerConfig: webToolsProviderConfig,
+        } = this.getSelectedWebToolsProviderConfig(currentUser);
         const provider = createOpenAICompatible({
             name: providerName,
             baseURL: `${providerConfig.baseUrl}/v1`,
@@ -139,13 +190,14 @@ export class ChatGenService {
             dialogId: params.dialogId,
             packIds: params.toolPackIds,
             enabledToolNames: params.enabledToolNames,
-            providerBaseUrl: providerConfig.baseUrl,
-            providerApiKey: providerConfig.apiKey,
+            webToolsProvider,
+            providerBaseUrl: webToolsProviderConfig.baseUrl,
+            providerApiKey: webToolsProviderConfig.apiKey,
         });
 
         const { text, usage } = await generateText({
             model: (provider as OpenAICompatibleProvider)(
-                providerConfig.modelName,
+                providerConfig.modelName ?? "",
             ),
             messages: toModelMessages(params),
             tools,
