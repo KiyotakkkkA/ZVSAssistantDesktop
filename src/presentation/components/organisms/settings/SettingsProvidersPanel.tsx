@@ -4,10 +4,12 @@ import {
     ProviderSelector,
     type ProviderSelectorOption,
     SettingsOllamaChatProviderFields,
+    SettingsOllamaEmbeddingsProviderFields,
     SettingsOllamaWebProviderField,
     SettingsSearchapiWebProviderField,
 } from "../../molecules/settings";
 import type {
+    AllowedEmbeddingsProviders,
     AllowedChatProviders,
     AllowedWebToolsProviders,
     ProviderConfig,
@@ -35,6 +37,15 @@ const webProviderOptions: ProviderSelectorOption[] = [
         value: "searchapi",
         label: "SearchAPI",
         logoIcon: "mdi:magnify",
+        logoClassName: "text-main-200",
+    },
+];
+
+const embeddingsProviderOptions: ProviderSelectorOption[] = [
+    {
+        value: "ollama",
+        label: "Ollama",
+        logoIcon: "simple-icons:ollama",
         logoClassName: "text-main-200",
     },
 ];
@@ -68,6 +79,21 @@ export const SettingsProvidersPanel = observer(() => {
     };
     const activeWebProviderConfig: ProviderConfig =
         webToolsProviders[activeWebProvider];
+    const activeEmbeddingsProvider = (generalData?.embeddingsProvider ??
+        "ollama") as AllowedEmbeddingsProviders;
+    const embeddingsProviders = {
+        ollama: {
+            baseUrl:
+                secureData?.embeddingsProviders?.ollama?.baseUrl ??
+                Config.OLLAMA_BASE_URL,
+            modelName:
+                secureData?.embeddingsProviders?.ollama?.modelName ??
+                "nomic-embed-text:latest",
+            apiKey: secureData?.embeddingsProviders?.ollama?.apiKey ?? "",
+        },
+    };
+    const activeEmbeddingsProviderConfig: ProviderConfig =
+        embeddingsProviders[activeEmbeddingsProvider];
 
     return (
         <div className="space-y-5 animate-page-fade-in">
@@ -138,6 +164,40 @@ export const SettingsProvidersPanel = observer(() => {
                                 webToolsProviders: {
                                     ...webToolsProviders,
                                     [activeWebProvider]: nextConfig,
+                                },
+                            });
+                        }}
+                    />
+                ) : null}
+            </div>
+
+            <PrettyBR
+                icon="mdi:database-search"
+                label="Создание эмбеддингов"
+                size={20}
+            />
+
+            <div className="relative z-10 rounded-2xl bg-main-900/40 animate-card-rise-in space-y-4">
+                <ProviderSelector
+                    value={activeEmbeddingsProvider}
+                    onChange={(nextProvider) => {
+                        profileStore.updateGeneralData({
+                            embeddingsProvider:
+                                nextProvider as AllowedEmbeddingsProviders,
+                        });
+                    }}
+                    options={embeddingsProviderOptions}
+                    placeholder="Выберите провайдера"
+                />
+
+                {activeEmbeddingsProvider === "ollama" ? (
+                    <SettingsOllamaEmbeddingsProviderFields
+                        providerConfig={activeEmbeddingsProviderConfig}
+                        onChange={(nextConfig) => {
+                            profileStore.updateSecureData({
+                                embeddingsProviders: {
+                                    ...embeddingsProviders,
+                                    [activeEmbeddingsProvider]: nextConfig,
                                 },
                             });
                         }}

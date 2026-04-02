@@ -5,7 +5,6 @@ import { WorkspaceSidebar } from "./presentation/layouts/WorkspaceSidebar";
 import { WelcomePage } from "./presentation/pages/WelcomePage";
 import { ChatViewPage } from "./presentation/pages/workspace/chat/ChatViewPage";
 import { AgentsViewPage } from "./presentation/pages/agents/AgentsViewPage";
-import { ScenariosViewPage } from "./presentation/pages/scenarios/ScenariosViewPage";
 import { ExtensionsViewPage } from "./presentation/pages/extensions/ExtensionsViewPage";
 import { StorageViewPage } from "./presentation/pages/storage/StorageViewPage";
 
@@ -45,10 +44,6 @@ export const router = createHashRouter([
             {
                 path: "agents",
                 element: createElement(AgentsViewPage),
-            },
-            {
-                path: "scenarios",
-                element: createElement(ScenariosViewPage),
             },
             {
                 path: "extensions",

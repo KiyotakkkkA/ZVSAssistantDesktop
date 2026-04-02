@@ -1,5 +1,6 @@
 export type AllowedChatProviders = "ollama";
 export type AllowedWebToolsProviders = "ollama" | "searchapi";
+export type AllowedEmbeddingsProviders = "ollama";
 
 export interface ProviderConfig {
     baseUrl?: string;
@@ -11,6 +12,7 @@ export interface GeneralUserData {
     // Настройки ассистента
     chatGenProvider: AllowedChatProviders;
     webToolsProvider: AllowedWebToolsProviders;
+    embeddingsProvider: AllowedEmbeddingsProviders;
     maxToolsUsagePerResponse: number;
     assistantName: string;
     enabledPromptTools: string[];
@@ -31,6 +33,7 @@ export interface SecureUserData {
     // Провайдеры
     chatGenProviders: Record<AllowedChatProviders, ProviderConfig>;
     webToolsProviders: Record<AllowedWebToolsProviders, ProviderConfig>;
+    embeddingsProviders: Record<AllowedEmbeddingsProviders, ProviderConfig>;
 }
 
 export interface User {

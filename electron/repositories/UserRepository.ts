@@ -25,6 +25,7 @@ const normalizeGeneralData = (data: GeneralUserData): GeneralUserData => {
     return {
         ...data,
         webToolsProvider: data.webToolsProvider,
+        embeddingsProvider: data.embeddingsProvider ?? "ollama",
         enabledPromptTools,
         requiredPromptTools,
         notifyOnJobCompleteToast: Boolean(data.notifyOnJobCompleteToast),

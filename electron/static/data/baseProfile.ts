@@ -8,6 +8,7 @@ export const defaultUser: CreateUserDto = {
         assistantName: "Чарли",
         chatGenProvider: "ollama",
         webToolsProvider: "ollama",
+        embeddingsProvider: "ollama",
         maxToolsUsagePerResponse: 20,
         enabledPromptTools: [],
         requiredPromptTools: [],
@@ -36,6 +37,13 @@ export const defaultUser: CreateUserDto = {
                 apiKey: "",
             },
             searchapi: {
+                apiKey: "",
+            },
+        },
+        embeddingsProviders: {
+            ollama: {
+                baseUrl: Config.OLLAMA_BASE_URL,
+                modelName: "nomic-embed-text:latest",
                 apiKey: "",
             },
         },
