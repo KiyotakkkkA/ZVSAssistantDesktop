@@ -1,5 +1,10 @@
 import { InputSmall, Switcher } from "@kiyotakkkka/zvs-uikit-lib";
 import { useState } from "react";
+import {
+    StorageConnectorsSelectPanel,
+    StorageFilesSelectPanel,
+    StorageVecstoresSelectPanel,
+} from "../../components/organisms/storage";
 
 type AllowedOptions = "vecstor" | "files" | "connectors";
 
@@ -9,27 +14,24 @@ const options: { value: AllowedOptions; label: string }[] = [
     { value: "connectors", label: "Коннекторы данных" },
 ];
 
-const switchContent: Record<AllowedOptions, { search_placeholder: string }> = {
-    vecstor: {
-        search_placeholder: "Поиск векторных хранилищ по имени или ID...",
-    },
-    files: {
-        search_placeholder: "Поиск файлов по имени или ID...",
-    },
-    connectors: {
-        search_placeholder: "Поиск папок с данными по имени...",
-    },
-};
-
 export const StorageViewPage = () => {
     const [selectedOption, setSelectedOption] = useState<AllowedOptions>(
         options[0].value,
     );
-    const [searchQuery, setSearchQuery] = useState("");
 
     const handleOptionChange = (value: string) => {
-        setSearchQuery("");
         setSelectedOption(value as AllowedOptions);
+    };
+
+    const renderSection = (option: AllowedOptions) => {
+        switch (option) {
+            case "vecstor":
+                return StorageVecstoresSelectPanel();
+            case "files":
+                return StorageFilesSelectPanel();
+            case "connectors":
+                return StorageConnectorsSelectPanel();
+        }
     };
 
     return (
@@ -43,18 +45,7 @@ export const StorageViewPage = () => {
                     className="border-transparent"
                 />
             </div>
-            <section className="flex h-full">
-                <aside className="w-1/4 p-4 border-r border-main-600/55">
-                    <InputSmall
-                        placeholder={
-                            switchContent[selectedOption].search_placeholder
-                        }
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </aside>
-                <div className="w-3/4 p-4">Контент</div>
-            </section>
+            {renderSection(selectedOption)}
         </div>
     );
 };
