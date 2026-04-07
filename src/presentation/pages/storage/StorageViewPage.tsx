@@ -1,4 +1,4 @@
-import { InputSmall, Switcher } from "@kiyotakkkka/zvs-uikit-lib";
+import { Switcher } from "@kiyotakkkka/zvs-uikit-lib";
 import { useState } from "react";
 import {
     StorageConnectorsSelectPanel,
@@ -26,16 +26,16 @@ export const StorageViewPage = () => {
     const renderSection = (option: AllowedOptions) => {
         switch (option) {
             case "vecstor":
-                return StorageVecstoresSelectPanel();
+                return <StorageVecstoresSelectPanel />;
             case "files":
-                return StorageFilesSelectPanel();
+                return <StorageFilesSelectPanel />;
             case "connectors":
-                return StorageConnectorsSelectPanel();
+                return <StorageConnectorsSelectPanel />;
         }
     };
 
     return (
-        <div className="flex-col h-full w-full rounded-3xl bg-main-800/70">
+        <div className="flex-col h-full w-full rounded-3xl bg-main-800/70 animate-page-fade-in">
             <div className="border-b border-main-600/55 w-full h-fit p-4">
                 <h1 className="text-xl mb-3">Хранилище</h1>
                 <Switcher
