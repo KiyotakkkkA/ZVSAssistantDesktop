@@ -61,9 +61,6 @@ export function SettingsChatOllamaModelPickCard({
                     <p className="truncate text-sm font-semibold text-main-100">
                         {model.name}
                     </p>
-                    <p className="mt-1 truncate text-xs text-main-400">
-                        ID: {model.model}
-                    </p>
                 </div>
 
                 {selected ? (
