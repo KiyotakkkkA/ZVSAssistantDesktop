@@ -1,3 +1,4 @@
+import type { MouseEvent } from "react";
 import { InputSmall } from "@kiyotakkkka/zvs-uikit-lib";
 import { Icon } from "@iconify/react";
 import type { ProviderConfig } from "../../../../../../../electron/models/user";
@@ -13,6 +14,12 @@ export function SettingsOllamaWebProviderField({
     onChange,
 }: SettingsOllamaWebProviderFieldProps) {
     const baseUrl = providerConfig.baseUrl?.trim() || Config.OLLAMA_BASE_URL;
+    const keysPageUrl = `${baseUrl}/settings/keys`;
+
+    const handleOpenExternal = (event: MouseEvent<HTMLAnchorElement>) => {
+        event.preventDefault();
+        void window.core.openExternal(event.currentTarget.href);
+    };
 
     return (
         <div className="space-y-2">
@@ -33,8 +40,8 @@ export function SettingsOllamaWebProviderField({
                     />
                 </div>
                 <a
-                    href={`${baseUrl}/settings/keys`}
-                    target="_blank"
+                    href={keysPageUrl}
+                    onClick={handleOpenExternal}
                     rel="noreferrer"
                     className="rounded-md p-2 text-white transition-all duration-200 flex items-center gap-1 text-xs bg-indigo-700 hover:bg-indigo-800 hover:-translate-y-0.5"
                 >

@@ -37,6 +37,12 @@ const coreNamespace: IpcCoreNamespace = {
     showOsNotification(params) {
         return ipcRenderer.invoke("core:show-os-notification", params);
     },
+    openExternal(url) {
+        return ipcRenderer.invoke("core:open-external", url);
+    },
+    openPath(path) {
+        return ipcRenderer.invoke("core:open-path", path);
+    },
 };
 
 contextBridge.exposeInMainWorld("core", coreNamespace);

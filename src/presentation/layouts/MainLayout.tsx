@@ -39,12 +39,6 @@ const navigationTabs: NavigationTab[] = [
         to: "/agents",
         icon: "mdi:account-group-outline",
     },
-    {
-        id: "scenarios",
-        label: "Сценарии",
-        to: "/scenarios",
-        icon: "mdi:file-document-edit-outline",
-    },
 ];
 
 export const MainLayout = observer(() => {

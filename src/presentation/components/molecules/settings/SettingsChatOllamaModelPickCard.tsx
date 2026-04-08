@@ -1,6 +1,6 @@
 import { Icon } from "@iconify/react";
 import { Button } from "@kiyotakkkka/zvs-uikit-lib";
-import { Link } from "react-router-dom";
+import type { MouseEvent } from "react";
 import type { OllamaCatalogModel } from "../../../../services/api";
 
 type SettingsChatOllamaModelPickCardProps = {
@@ -47,6 +47,12 @@ export function SettingsChatOllamaModelPickCard({
     onPick,
 }: SettingsChatOllamaModelPickCardProps) {
     const modelIdWithoutColon = model.name.split(":")[0];
+    const modelPageUrl = `${baseUrl}/library/${modelIdWithoutColon}`;
+
+    const handleOpenExternal = (event: MouseEvent<HTMLAnchorElement>) => {
+        event.preventDefault();
+        void window.core.openExternal(event.currentTarget.href);
+    };
 
     return (
         <article className="rounded-xl border border-main-700/80 bg-main-900/45 p-4">
@@ -86,14 +92,14 @@ export function SettingsChatOllamaModelPickCard({
             </p>
 
             <div className="mt-3 flex justify-between items-center">
-                <Link
-                    to={`${baseUrl}/library/${modelIdWithoutColon}`}
-                    target="_blank"
+                <a
+                    href={modelPageUrl}
+                    onClick={handleOpenExternal}
                     className="rounded-md p-2 text-white bg-indigo-700 hover:bg-indigo-800 transition-colors flex items-center gap-1 text-xs"
                 >
                     <Icon icon="mdi:open-in-new" width={18} height={18} />
                     Подробнее
-                </Link>
+                </a>
                 <Button
                     variant={selected ? "secondary" : "primary"}
                     shape="rounded-lg"

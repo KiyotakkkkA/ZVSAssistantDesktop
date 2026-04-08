@@ -1,4 +1,4 @@
-import { Notification } from "electron";
+import { Notification, shell } from "electron";
 import { handleManyIpc } from "./ipcUtils";
 
 export const registerIpcCorePack = () => {
@@ -30,6 +30,40 @@ export const registerIpcCorePack = () => {
 
                 notification.show();
                 return true;
+            },
+        ],
+        [
+            "core:open-external",
+            async (url: string) => {
+                try {
+                    const result = await shell.openExternal(url);
+                    return {
+                        success: true,
+                        result,
+                    };
+                } catch (error) {
+                    return {
+                        success: false,
+                        error: (error as Error).message,
+                    };
+                }
+            },
+        ],
+        [
+            "core:open-path",
+            async (path: string) => {
+                try {
+                    const result = await shell.openPath(path);
+                    return {
+                        success: true,
+                        result,
+                    };
+                } catch (error) {
+                    return {
+                        success: false,
+                        error: (error as Error).message,
+                    };
+                }
             },
         ],
     ]);

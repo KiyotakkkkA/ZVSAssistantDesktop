@@ -32,6 +32,16 @@ export interface IpcCoreNamespace {
         title: string;
         body: string;
     }): Promise<boolean>;
+    openExternal(url: string): Promise<{
+        success: boolean;
+        result?: string;
+        error?: string;
+    }>;
+    openPath(path: string): Promise<{
+        success: boolean;
+        result?: string;
+        error?: string;
+    }>;
 }
 
 export interface IpcChatNamespace {

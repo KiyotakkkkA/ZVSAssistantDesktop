@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { Button, InputSmall, Modal } from "@kiyotakkkka/zvs-uikit-lib";
 import { Icon } from "@iconify/react";
 import { SettingsChatOllamaModelsPickForm } from "../../../../organisms/settings/forms/SettingsChatOllamaModelsPickForm";
@@ -21,6 +21,19 @@ export function SettingsOllamaChatProviderFields({
     const apiKey = providerConfig.apiKey;
     const modelBase = modelName.split(":")[0];
     const canUseLinks = Boolean(baseUrl);
+    const modelPageUrl = `${baseUrl}/library/${modelBase}`;
+    const keysPageUrl = `${baseUrl}/settings/keys`;
+
+    const handleOpenExternal = (event: MouseEvent<HTMLAnchorElement>) => {
+        event.preventDefault();
+
+        const targetUrl = event.currentTarget.href;
+        if (!targetUrl || !canUseLinks) {
+            return;
+        }
+
+        void window.core.openExternal(targetUrl);
+    };
 
     return (
         <>
@@ -65,12 +78,8 @@ export function SettingsOllamaChatProviderFields({
                         Список
                     </Button>
                     <a
-                        href={
-                            canUseLinks
-                                ? `${baseUrl}/library/${modelBase}`
-                                : "#"
-                        }
-                        target="_blank"
+                        href={canUseLinks ? modelPageUrl : "#"}
+                        onClick={handleOpenExternal}
                         rel="noreferrer"
                         className={`rounded-md p-2 text-white transition-all duration-200 flex items-center gap-1 text-xs ${
                             canUseLinks
@@ -101,8 +110,8 @@ export function SettingsOllamaChatProviderFields({
                         />
                     </div>
                     <a
-                        href={canUseLinks ? `${baseUrl}/settings/keys` : "#"}
-                        target="_blank"
+                        href={canUseLinks ? keysPageUrl : "#"}
+                        onClick={handleOpenExternal}
                         rel="noreferrer"
                         className={`rounded-md p-2 text-white transition-all duration-200 flex items-center gap-1 text-xs ${
                             canUseLinks

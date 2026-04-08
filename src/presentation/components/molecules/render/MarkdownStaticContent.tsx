@@ -53,7 +53,15 @@ const MARKDOWN_COMPONENTS: Components = {
     a: ({ href, children }) => (
         <a
             href={href}
-            target="_blank"
+            onClick={(event) => {
+                event.preventDefault();
+
+                if (!href) {
+                    return;
+                }
+
+                void window.core.openExternal(href);
+            }}
             rel="noreferrer"
             className="underline decoration-main-400/80 underline-offset-2"
         >
