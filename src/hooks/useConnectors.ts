@@ -1,5 +1,5 @@
+import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { useCallback, useState } from "react";
-import { useToasts } from "./useToasts";
 
 type ConnectorProvider = "github" | "gitlab";
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
-import { Button, InputBig } from "@kiyotakkkka/zvs-uikit-lib";
+import { Button, InputBig } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import type { ToolTrace } from "../../../../../../electron/models/tool";
 import {
     normalizeQaToolState,

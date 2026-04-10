@@ -1,5 +1,5 @@
 import { Icon } from "@iconify/react";
-import { Button, Modal } from "@kiyotakkkka/zvs-uikit-lib";
+import { Button, Modal } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useRef, useState } from "react";
 import {
     SettingsView,

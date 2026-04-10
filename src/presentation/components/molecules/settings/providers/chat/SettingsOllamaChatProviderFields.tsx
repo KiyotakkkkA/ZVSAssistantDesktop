@@ -1,5 +1,5 @@
 import { useState, type MouseEvent } from "react";
-import { Button, InputSmall, Modal } from "@kiyotakkkka/zvs-uikit-lib";
+import { Button, InputSmall, Modal } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { Icon } from "@iconify/react";
 import { SettingsChatOllamaModelsPickForm } from "../../../../organisms/settings/forms/SettingsChatOllamaModelsPickForm";
 import type { ProviderConfig } from "../../../../../../../electron/models/user";

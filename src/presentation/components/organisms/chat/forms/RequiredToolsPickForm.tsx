@@ -2,7 +2,11 @@ import { Icon } from "@iconify/react";
 import { observer } from "mobx-react-lite";
 import { useMemo } from "react";
 import { toJS } from "mobx";
-import { Button, InputCheckbox, InputSmall } from "@kiyotakkkka/zvs-uikit-lib";
+import {
+    Button,
+    InputCheckbox,
+    InputSmall,
+} from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { profileStore } from "../../../../../stores/profileStore";
 import { builtInToolPacks } from "../../../../../tools";
 

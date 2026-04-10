@@ -1,4 +1,4 @@
-import { PrettyBR } from "@kiyotakkkka/zvs-uikit-lib";
+import { PrettyBR } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useNotifications } from "../../../../hooks";
 import { SettingsColoredCheckboxRow } from "../../molecules/settings";
 import { observer } from "mobx-react-lite";

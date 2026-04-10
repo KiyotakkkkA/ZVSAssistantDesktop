@@ -1,5 +1,5 @@
 import { Icon } from "@iconify/react";
-import { Button, InputBig } from "@kiyotakkkka/zvs-uikit-lib";
+import { Button, InputBig } from "@kiyotakkkka/zvs-uikit-lib/ui";
 
 type ChatUserBubbleCardProps = {
     content: string;

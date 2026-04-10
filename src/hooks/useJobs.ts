@@ -2,7 +2,7 @@ import { useCallback, useEffect } from "react";
 import { useObserver } from "mobx-react-lite";
 import type { CreateJobPayload } from "../types/ElectronApi";
 import { jobsStorage } from "../stores/jobsStorage";
-import { useToasts } from "./useToasts";
+import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 
 export const useJobs = () => {
     const toasts = useToasts();

@@ -1,5 +1,5 @@
 import { Icon } from "@iconify/react";
-import { Button } from "@kiyotakkkka/zvs-uikit-lib";
+import { Button } from "@kiyotakkkka/zvs-uikit-lib/ui";
 
 export type PlaceholderItem = {
     id: string;

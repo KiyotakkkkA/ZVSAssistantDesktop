@@ -1,4 +1,4 @@
-import { InputSmall } from "@kiyotakkkka/zvs-uikit-lib";
+import { InputSmall } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { observer } from "mobx-react-lite";
 import { profileStore } from "../../../../stores/profileStore";
 

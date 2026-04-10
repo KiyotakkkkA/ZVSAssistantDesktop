@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createHighlighter } from "shiki";
-import { Button } from "@kiyotakkkka/zvs-uikit-lib";
-import { useToasts } from "../../../../hooks/useToasts";
+import { Button } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 
 interface ShikiCodeBlockProps {
     code: string;

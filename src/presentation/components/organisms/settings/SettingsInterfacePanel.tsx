@@ -1,4 +1,4 @@
-import { Select } from "@kiyotakkkka/zvs-uikit-lib";
+import { Select } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useTheme } from "../../../../hooks/useTheme";
 import { SettingsColoredCheckboxRow } from "../../molecules/settings";
 import { observer } from "mobx-react-lite";

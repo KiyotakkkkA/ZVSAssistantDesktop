@@ -1,5 +1,10 @@
 import { Icon } from "@iconify/react";
-import { Button, Dropdown, InputBig, Modal } from "@kiyotakkkka/zvs-uikit-lib";
+import {
+    Button,
+    Dropdown,
+    InputBig,
+    Modal,
+} from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useRef, useState } from "react";
 import { RequiredToolsPickForm } from "./forms";
 
@@ -80,36 +85,34 @@ export const MessageComposer = ({
                                     <Icon icon="mdi:script" />
                                 </Button>
 
-                                <div className="z-20">
-                                    <Dropdown
-                                        options={attachOptions}
-                                        menuPlacement="top"
-                                        menuClassName="w-66"
-                                        matchTriggerWidth={false}
-                                        renderTrigger={({
-                                            toggleOpen,
-                                            triggerRef,
-                                            disabled,
-                                            ariaProps,
-                                        }) => (
-                                            <Button
-                                                label="Attach"
-                                                variant="primary"
-                                                className="h-9 w-9 p-0"
-                                                shape="rounded-r-full"
-                                                ref={triggerRef}
-                                                disabled={disabled}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleOpen();
-                                                }}
-                                                {...ariaProps}
-                                            >
-                                                <Icon icon={"mdi:paperclip"} />
-                                            </Button>
-                                        )}
-                                    />
-                                </div>
+                                <Dropdown
+                                    options={attachOptions}
+                                    menuPlacement="top"
+                                    menuClassName="w-66"
+                                    matchTriggerWidth={false}
+                                    renderTrigger={({
+                                        toggleOpen,
+                                        triggerRef,
+                                        disabled,
+                                        ariaProps,
+                                    }) => (
+                                        <Button
+                                            label="Attach"
+                                            variant="primary"
+                                            className="h-9 w-9 p-0"
+                                            shape="rounded-r-full"
+                                            ref={triggerRef}
+                                            disabled={disabled}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleOpen();
+                                            }}
+                                            {...ariaProps}
+                                        >
+                                            <Icon icon={"mdi:paperclip"} />
+                                        </Button>
+                                    )}
+                                />
                             </div>
 
                             <div className="flex items-center gap-2">

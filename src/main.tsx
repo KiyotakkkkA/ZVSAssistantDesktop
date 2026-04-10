@@ -1,5 +1,6 @@
 import ReactDOM from "react-dom/client";
-import { ThemeProvider, ToastProvider } from "./providers";
+import { ThemeProvider } from "./providers";
+import { ToastProvider } from "@kiyotakkkka/zvs-uikit-lib/providers";
 
 import "./index.css";
 import App from "./App";

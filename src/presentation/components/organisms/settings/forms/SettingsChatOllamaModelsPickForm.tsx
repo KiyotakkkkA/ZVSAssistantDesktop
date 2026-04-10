@@ -1,6 +1,11 @@
 import { Icon } from "@iconify/react";
 import { useEffect, useMemo, useState } from "react";
-import { Button, InputSmall, Loader, Select } from "@kiyotakkkka/zvs-uikit-lib";
+import {
+    Button,
+    InputSmall,
+    Loader,
+    Select,
+} from "@kiyotakkkka/zvs-uikit-lib/ui";
 import {
     getOllamaModelsCatalog,
     type OllamaCatalogModel,

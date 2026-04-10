@@ -1,5 +1,5 @@
 import { Icon } from "@iconify/react";
-import { Accordeon, Loader } from "@kiyotakkkka/zvs-uikit-lib";
+import { Accordeon, Loader } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { ShikiCodeBlock } from "../../render/ShikiCodeBlock";
 import type { ToolTrace } from "../../../../../../electron/models/tool";
 
@@ -47,8 +47,6 @@ export function ToolBubbleCard({
         <div className="text-xs leading-relaxed text-main-200 animate-card-rise-in">
             <Accordeon
                 title={`Инструмент: ${toolTrace.toolName || "unknown"}`}
-                variant="tool"
-                compact
                 titleIcon={
                     <span className="flex items-center gap-1.5">
                         <Icon icon="mdi:tools" width={14} height={14} />

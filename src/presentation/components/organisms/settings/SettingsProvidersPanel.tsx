@@ -1,4 +1,4 @@
-import { PrettyBR } from "@kiyotakkkka/zvs-uikit-lib";
+import { PrettyBR } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { observer } from "mobx-react-lite";
 import {
     ProviderSelector,
@@ -99,7 +99,7 @@ export const SettingsProvidersPanel = observer(() => {
         <div className="space-y-5 animate-page-fade-in">
             <PrettyBR icon="mdi:text" label="Генерация текста" size={20} />
 
-            <div className="relative z-30 rounded-2xl bg-main-900/40 animate-card-rise-in space-y-4">
+            <div className="relative rounded-2xl bg-main-900/40 animate-card-rise-in space-y-4">
                 <ProviderSelector
                     value={activeProvider}
                     onChange={(nextProvider) => {
@@ -129,7 +129,7 @@ export const SettingsProvidersPanel = observer(() => {
 
             <PrettyBR icon="mdi:web" label="Поиск в интернете" size={20} />
 
-            <div className="relative z-20 rounded-2xl bg-main-900/40 animate-card-rise-in space-y-4">
+            <div className="relative rounded-2xl bg-main-900/40 animate-card-rise-in space-y-4">
                 <ProviderSelector
                     value={activeWebProvider}
                     onChange={(nextProvider) => {
@@ -177,7 +177,7 @@ export const SettingsProvidersPanel = observer(() => {
                 size={20}
             />
 
-            <div className="relative z-10 rounded-2xl bg-main-900/40 animate-card-rise-in space-y-4">
+            <div className="relative rounded-2xl bg-main-900/40 animate-card-rise-in space-y-4">
                 <ProviderSelector
                     value={activeEmbeddingsProvider}
                     onChange={(nextProvider) => {

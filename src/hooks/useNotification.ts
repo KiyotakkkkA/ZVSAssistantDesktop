@@ -3,7 +3,7 @@ import { useObserver } from "mobx-react-lite";
 import type { GeneralUserData } from "../../electron/models/user";
 import type { JobRecord } from "../types/ElectronApi";
 import { profileStore } from "../stores/profileStore";
-import { useToasts } from "./useToasts";
+import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 
 type NotificationFields = Pick<
     GeneralUserData,

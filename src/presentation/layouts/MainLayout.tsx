@@ -1,6 +1,6 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Icon } from "@iconify/react";
-import { Button, Modal } from "@kiyotakkkka/zvs-uikit-lib";
+import { Button, Modal } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useState } from "react";
 import { JobManageForm } from "../components/organisms/chat/forms";
 import { useNotifications } from "../../hooks";

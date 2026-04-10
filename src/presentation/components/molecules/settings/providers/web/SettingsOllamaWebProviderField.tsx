@@ -1,5 +1,5 @@
 import type { MouseEvent } from "react";
-import { InputSmall } from "@kiyotakkkka/zvs-uikit-lib";
+import { InputSmall } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { Icon } from "@iconify/react";
 import type { ProviderConfig } from "../../../../../../../electron/models/user";
 import { Config } from "../../../../../../../electron/config";

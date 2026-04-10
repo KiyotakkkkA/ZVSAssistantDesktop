@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
-import { Button } from "@kiyotakkkka/zvs-uikit-lib";
+import { Button } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { ImagePreviewBlock } from "./ImagePreviewBlock";
 import { ShikiCodeBlock } from "./ShikiCodeBlock";
 

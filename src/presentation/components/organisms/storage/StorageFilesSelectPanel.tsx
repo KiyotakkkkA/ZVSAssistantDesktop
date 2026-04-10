@@ -5,7 +5,7 @@ import {
     PrettyBR,
     Separator,
     TreeView,
-} from "@kiyotakkkka/zvs-uikit-lib";
+} from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useState } from "react";
 
 type StorageFileMock = {

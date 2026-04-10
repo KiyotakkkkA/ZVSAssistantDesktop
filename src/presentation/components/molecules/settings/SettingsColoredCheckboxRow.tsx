@@ -1,5 +1,5 @@
 import { Icon } from "@iconify/react";
-import { InputCheckbox } from "@kiyotakkkka/zvs-uikit-lib";
+import { InputCheckbox } from "@kiyotakkkka/zvs-uikit-lib/ui";
 
 interface InputCheckboxProps {
     checked: boolean;

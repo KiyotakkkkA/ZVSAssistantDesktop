@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Icon } from "@iconify/react";
-import { Dropdown } from "@kiyotakkkka/zvs-uikit-lib";
+import { Dropdown } from "@kiyotakkkka/zvs-uikit-lib/ui";
 
 export type ProviderSelectorOption = {
     value: string;
@@ -55,7 +55,7 @@ export function ProviderSelector({
             options={dropdownOptions}
             disabled={disabled}
             menuPlacement="bottom"
-            menuClassName="w-full z-[120] border border-main-700/80 bg-main-900 shadow-xl"
+            menuClassName="border border-main-700/80 bg-main-900 shadow-xl"
             matchTriggerWidth={true}
             renderTrigger={({
                 toggleOpen,
@@ -68,7 +68,7 @@ export function ProviderSelector({
                     ref={triggerRef}
                     disabled={disabled}
                     onClick={toggleOpen}
-                    className={`relative z-121 flex w-full items-center justify-between gap-3 rounded-xl border border-main-700/80 bg-main-800/65 px-3 py-2.5 text-left transition-colors hover:bg-main-700/70 ${className ?? ""} cursor-pointer`}
+                    className={`relative flex w-full items-center justify-between gap-3 rounded-xl border border-main-700/80 bg-main-800/65 px-3 py-2.5 text-left transition-colors hover:bg-main-700/70 ${className ?? ""} cursor-pointer`}
                     {...ariaProps}
                 >
                     <span className="flex min-w-0 items-center gap-2">

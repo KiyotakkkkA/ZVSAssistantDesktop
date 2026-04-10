@@ -1,5 +1,5 @@
 import { Icon } from "@iconify/react";
-import { Button } from "@kiyotakkkka/zvs-uikit-lib";
+import { Button } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import type { MouseEvent } from "react";
 import type { OllamaCatalogModel } from "../../../../services/api";
 

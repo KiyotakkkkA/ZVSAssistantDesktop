@@ -1,5 +1,5 @@
 import { Icon } from "@iconify/react";
-import { Accordeon, Loader } from "@kiyotakkkka/zvs-uikit-lib";
+import { Accordeon, Loader } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { resolveText } from "../../../../../utils/resolvers";
 
 type ThinkingBubbleCardProps = {
@@ -22,8 +22,6 @@ export function ChatThinkingBubbleCard({
             <Accordeon
                 title="Размышления"
                 subtitle="Размышления ассистента в процессе генерации ответа"
-                variant="thinking"
-                compact
                 className="max-w-172"
                 titleIcon={
                     <span className="flex items-center gap-1.5">

@@ -1,4 +1,4 @@
-import { Button, InputSmall, Select } from "@kiyotakkkka/zvs-uikit-lib";
+import { Button, InputSmall, Select } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useEffect, useMemo, useState } from "react";
 import { useConnectors } from "../../../../../hooks";
 

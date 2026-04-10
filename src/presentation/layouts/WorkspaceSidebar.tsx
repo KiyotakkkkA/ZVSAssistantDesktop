@@ -4,7 +4,7 @@ import {
     Dropdown,
     InputSmall,
     Modal,
-} from "@kiyotakkkka/zvs-uikit-lib";
+} from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { Outlet } from "react-router-dom";
 import { observer } from "mobx-react-lite";
 import { useState } from "react";
@@ -13,7 +13,7 @@ import {
     SidebarItem,
 } from "../components/molecules/chat/cards";
 import { workspaceStore } from "../../stores/workspaceStore";
-import { useToasts } from "../../hooks/useToasts";
+import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 
 type TargetType = "dialog" | "project";
 

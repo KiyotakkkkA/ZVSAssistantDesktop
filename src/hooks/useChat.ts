@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toJS } from "mobx";
-import { useToasts } from "./useToasts";
 import { resolveText } from "../utils/resolvers";
 import { workspaceStore } from "../stores/workspaceStore";
 import { profileStore } from "../stores/profileStore";
@@ -9,6 +8,7 @@ import type { AskToolResult } from "../../electron/models/tool";
 import type { AllowedChatProviders } from "../../electron/models/user";
 import type { QaToolState } from "../utils/tools/qaTool";
 import { toolsStorage } from "../stores/toolsStorage";
+import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 
 const createId = (): `msg-${string}` =>
     `msg-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;

@@ -1,4 +1,4 @@
-import { Switcher } from "@kiyotakkkka/zvs-uikit-lib";
+import { Switcher } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useState } from "react";
 import {
     StorageConnectorsSelectPanel,

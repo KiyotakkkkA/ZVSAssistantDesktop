@@ -5,7 +5,7 @@ import {
     InputSmall,
     PrettyBR,
     Select,
-} from "@kiyotakkkka/zvs-uikit-lib";
+} from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useJobs } from "../../../../../hooks";
 import type { JobEventTag, JobRecord } from "../../../../../types/ElectronApi";
 
@@ -223,7 +223,7 @@ export const JobManageForm = () => {
     return (
         <div className="flex h-full min-h-[68vh] flex-col gap-4 animate-page-fade-in lg:flex-row">
             <aside className="flex min-h-0 w-full flex-col p-3 animate-panel-slide-in lg:w-85 lg:max-w-85 lg:shrink-0 border-r border-main-600/65">
-                <div className="space-y-3 rounded-xl animate-card-rise-in z-40">
+                <div className="space-y-3 rounded-xl animate-card-rise-in">
                     <div className="flex items-center justify-between gap-2">
                         <div>
                             <p className="text-xs uppercase tracking-[0.14em] text-main-400">
@@ -287,7 +287,7 @@ export const JobManageForm = () => {
                     </div>
                 </div>
 
-                <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 z-0">
+                <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                     {isLoading ? (
                         <div className="rounded-xl bg-main-900/48 px-3 py-6 text-center text-sm text-main-300 animate-card-rise-in">
                             Загрузка задач...
@@ -421,7 +421,7 @@ export const JobManageForm = () => {
                             ) : null}
                         </div>
 
-                        <div className="relative z-40 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl px-2 py-2 animate-card-rise-in">
+                        <div className="relative mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl px-2 py-2 animate-card-rise-in">
                             <p className="inline-flex items-center gap-2 text-sm font-semibold text-main-100">
                                 <Icon icon="mdi:timeline-outline" width={16} />
                                 События задачи
@@ -454,7 +454,7 @@ export const JobManageForm = () => {
                             size={20}
                         />
 
-                        <div className="relative z-0 mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                        <div className="relative mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                             {filteredAndSortedEvents.length > 0 ? (
                                 filteredAndSortedEvents.map((event, index) => (
                                     <div

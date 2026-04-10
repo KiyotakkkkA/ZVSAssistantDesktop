@@ -1,5 +1,5 @@
 import { Icon } from "@iconify/react";
-import { Accordeon, Loader } from "@kiyotakkkka/zvs-uikit-lib";
+import { Accordeon, Loader } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import type { ToolTrace } from "../../../../../../electron/models/tool";
 
 type PlanningToolBubbleCardProps = {
@@ -152,8 +152,6 @@ export function PlanningToolBubbleCard({
         <div className="text-xs leading-relaxed text-main-200 animate-card-rise-in">
             <Accordeon
                 title={`План: ${planTitle}`}
-                variant="plan"
-                compact
                 titleIcon={
                     <span className="flex items-center gap-1.5">
                         <Icon
