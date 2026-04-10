@@ -10,7 +10,8 @@ import type {
     WebFetchPayload,
     WebFetchSearchapiResponse,
     WebSearchPayload,
-    WebSearchSearchapiResponse,
+    WebSearchResult,
+    WebToolResult,
 } from "./types";
 
 const searchApiSearchEndpoint = "https://www.searchapi.io/api/v1/search";
@@ -18,23 +19,16 @@ const contentPreviewLimit = 12000;
 const defaultFetchUserAgent =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
-type SearchApiOrganicResult = {
-    title?: string;
-    link?: string;
-    snippet?: string;
-};
-
-type SearchApiResponse = {
-    organic_results?: SearchApiOrganicResult[];
-};
-
 export const executeSearchapiWebSearch = async (
     payload: WebSearchPayload,
     context: ToolExecutionContext,
-): Promise<WebSearchSearchapiResponse | Record<string, unknown>> => {
+): Promise<WebToolResult<WebSearchResult[]>> => {
     const token = context.providerApiKey?.trim();
     if (!token) {
-        throw new Error("SearchAPI token is not configured");
+        return {
+            ok: false,
+            error: "SearchAPI token is not configured",
+        };
     }
 
     const requestUrl = new URL(searchApiSearchEndpoint);
@@ -55,38 +49,37 @@ export const executeSearchapiWebSearch = async (
     if (!response.ok) {
         return {
             ok: false,
-            status: response.status,
             error: `SearchAPI request failed with status ${response.status}`,
             details: parseJsonSafely(raw),
         };
     }
 
-    const parsedRecord = JSON.parse(raw) as SearchApiResponse;
+    const parsedRecord = JSON.parse(raw) as {
+        organic_results: {
+            title: string;
+            link: string;
+            snippet: string;
+        }[];
+    };
     const organicResults = parsedRecord.organic_results ?? [];
 
     const results = organicResults.slice(0, payload.max_results).map((item) => {
-        const result = item as SearchApiOrganicResult;
         return {
-            title: result.title,
-            link: result.link,
-            snippet: result.snippet,
-        };
+            title: item.title,
+            url: item.link,
+            content: item.snippet,
+        } as WebSearchResult;
     });
 
     return {
-        provider: "searchapi",
-        query: payload.query,
-        results: results.map((result) => ({
-            title: result.title ?? "",
-            link: result.link ?? "",
-            snippet: result.snippet ?? "",
-        })),
+        ok: true,
+        data: results,
     };
 };
 
 export const executeCustomWebFetch = async (
     payload: WebFetchPayload,
-): Promise<WebFetchSearchapiResponse | Record<string, unknown>> => {
+): Promise<WebToolResult<WebFetchSearchapiResponse>> => {
     const response = await fetch(payload.url, {
         method: "GET",
         headers: {
@@ -101,7 +94,6 @@ export const executeCustomWebFetch = async (
     if (!response.ok) {
         return {
             ok: false,
-            status: response.status,
             error: `Request failed with status ${response.status}`,
             details: parseJsonSafely(rawBody),
         };
@@ -117,11 +109,14 @@ export const executeCustomWebFetch = async (
         : normalizeWhitespace(rawBody);
 
     return {
-        provider: "searchapi",
-        url: payload.url,
-        status: response.status,
-        title,
-        content: extractedText.slice(0, contentPreviewLimit),
-        links,
+        ok: true,
+        data: {
+            provider: "searchapi",
+            url: payload.url,
+            status: response.status,
+            title,
+            content: extractedText.slice(0, contentPreviewLimit),
+            links,
+        },
     };
 };

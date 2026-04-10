@@ -9,15 +9,24 @@ export type WebFetchPayload = {
     url: string;
 };
 
-export type WebSearchSearchapiResponse = {
-    provider: "searchapi";
-    query: string;
-    results: {
-        title: string;
-        link: string;
-        snippet: string;
-    }[];
+export type WebSearchResult = {
+    title: string;
+    url: string;
+    content: string;
 };
+
+export type WebToolError = {
+    ok: false;
+    error: string;
+    details?: unknown;
+};
+
+export type WebToolSuccess<T> = {
+    ok: true;
+    data: T;
+};
+
+export type WebToolResult<T> = WebToolSuccess<T> | WebToolError;
 
 export type WebFetchSearchapiResponse = {
     provider: "searchapi";
@@ -32,9 +41,9 @@ export type WebToolsStrategy = {
     executeWebSearch: (
         payload: WebSearchPayload,
         context: ToolExecutionContext,
-    ) => Promise<unknown>;
+    ) => Promise<WebToolResult<WebSearchResult[]>>;
     executeWebFetch: (
         payload: WebFetchPayload,
         context: ToolExecutionContext,
-    ) => Promise<unknown>;
+    ) => Promise<WebToolResult<unknown>>;
 };

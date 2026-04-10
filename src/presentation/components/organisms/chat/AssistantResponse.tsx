@@ -5,6 +5,7 @@ import {
     PlanningToolBubbleCard,
     QaToolBubbleCard,
     ToolBubbleCard,
+    WebSearchBubbleCard,
 } from "../../molecules/chat/cards";
 import type { AssistantMessageStage } from "../../../../../electron/models/dialog";
 import type { ToolTrace } from "../../../../../electron/models/tool";
@@ -222,6 +223,17 @@ export const AssistantResponse = ({
                                                 qaState,
                                             );
                                         }}
+                                    />
+                                </StageRow>
+                            );
+                        }
+
+                        if (trace.toolName === "web_search") {
+                            return (
+                                <StageRow key={stage.id} icon="mdi:web">
+                                    <WebSearchBubbleCard
+                                        toolTrace={trace}
+                                        isLoading={isStreaming}
                                     />
                                 </StageRow>
                             );

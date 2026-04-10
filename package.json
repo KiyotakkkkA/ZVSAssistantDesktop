@@ -18,7 +18,7 @@
     "dependencies": {
         "@ai-sdk/openai-compatible": "^2.0.35",
         "@iconify/react": "^6.0.2",
-        "@kiyotakkkka/zvs-uikit-lib": "^2.0.3",
+        "@kiyotakkkka/zvs-uikit-lib": "^2.0.4",
         "ai": "^6.0.116",
         "better-sqlite3": "^12.6.2",
         "bufferutil": "^4.1.0",

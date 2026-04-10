@@ -53,13 +53,15 @@ export const webSearchTool: ToolDefinition = {
                 resolveWebToolsProvider(context.webToolsProvider)
             ];
 
-        return strategy.executeWebSearch(
+        const result = await strategy.executeWebSearch(
             {
                 query,
                 max_results: max_results ?? 5,
             },
             context,
         );
+
+        return result;
     },
 };
 
@@ -75,6 +77,6 @@ export const webFetchTool: ToolDefinition = {
                 resolveWebToolsProvider(context.webToolsProvider)
             ];
 
-        return strategy.executeWebFetch({ url }, context);
+        return await strategy.executeWebFetch({ url }, context);
     },
 };

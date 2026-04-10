@@ -1,4 +1,4 @@
-import { makeAutoObservable, toJS } from "mobx";
+import { action, makeAutoObservable, runInAction, toJS } from "mobx";
 import type {
     CreateDialogDto,
     DialogContextMessage,
@@ -36,16 +36,37 @@ class WorkspaceStore {
     activeProjectId: ProjectIdFormat | null = null;
 
     constructor() {
-        makeAutoObservable(this);
+        makeAutoObservable(
+            this,
+            {
+                bootstrap: action.bound,
+                createDialog: action.bound,
+                setDialogMessages: action.bound,
+                addMessages: action.bound,
+                addContextUserMessage: action.bound,
+                truncateMessagesFromId: action.bound,
+                openDialog: action.bound,
+                renameDialog: action.bound,
+                deleteDialog: action.bound,
+                updateDialogState: action.bound,
+                renameProject: action.bound,
+                openProject: action.bound,
+                deleteProject: action.bound,
+            },
+            { autoBind: true },
+        );
         void this.bootstrap();
     }
 
     async bootstrap() {
         const persistedDialogs = await window.workspace.getDialogs();
-        this.dialogs = persistedDialogs.map((dialog) =>
-            this.mapPersistedDialog(dialog),
-        );
-        this.restoreLastOpened();
+
+        runInAction(() => {
+            this.dialogs = persistedDialogs.map((dialog) =>
+                this.mapPersistedDialog(dialog),
+            );
+            this.restoreLastOpened();
+        });
     }
 
     async createDialog(name = null) {
@@ -72,7 +93,9 @@ class WorkspaceStore {
             await window.workspace.createDialog(createDialogDto);
         }
 
-        this.openDialog(dialogId);
+        runInAction(() => {
+            this.openDialog(dialogId);
+        });
         return dialogId;
     }
 
@@ -203,7 +226,9 @@ class WorkspaceStore {
             await window.workspace.deleteDialog(dialogId);
         }
 
-        this.ensureActiveSelection();
+        runInAction(() => {
+            this.ensureActiveSelection();
+        });
     }
 
     async updateDialogState(dialogId: DialogIdFormat, tokenUsage?: unknown) {

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef } from "react";
-import { useObserver } from "mobx-react-lite";
 import type { GeneralUserData } from "../../electron/models/user";
 import type { JobRecord } from "../types/ElectronApi";
 import { profileStore } from "../stores/profileStore";
@@ -137,8 +136,8 @@ export const useNotifications = (
         };
     }, [shouldListenJobCompletion]);
 
-    return useObserver(() => ({
+    return {
         isReady: profileStore.isBootstrapped,
         updateNotificationSettings,
-    }));
+    };
 };
