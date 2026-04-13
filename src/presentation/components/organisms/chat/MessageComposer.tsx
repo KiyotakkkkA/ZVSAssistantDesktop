@@ -2,8 +2,10 @@ import { Icon } from "@iconify/react";
 import {
     Button,
     Dropdown,
+    Floating,
     InputBig,
     Modal,
+    Separator,
 } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useRef, useState } from "react";
 import type { ChatImageAttachment } from "../../../../../electron/models/chat";
@@ -20,6 +22,29 @@ type MessageComposerProps = {
     isGenerating: boolean;
 };
 
+const composerModes = [
+    {
+        key: "chat",
+        label: "Чат",
+        icon: "mdi:message-text-outline",
+        placeholder: "Задайте вопрос...",
+    },
+    {
+        key: "agent",
+        label: "Агент",
+        icon: "mdi:robot-outline",
+        placeholder: "Поручите задачу агенту...",
+    },
+    {
+        key: "planning",
+        label: "Планирование",
+        icon: "mdi:timeline-text-outline",
+        placeholder: "Опишите цель и получите план...",
+    },
+] as const;
+
+type ComposerMode = (typeof composerModes)[number]["key"];
+
 export const MessageComposer = ({
     input,
     setInput,
@@ -27,6 +52,7 @@ export const MessageComposer = ({
     isGenerating,
 }: MessageComposerProps) => {
     const areaRef = useRef<HTMLTextAreaElement>(null);
+    const [activeMode, setActiveMode] = useState<ComposerMode>("chat");
     const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
     const [toolsQuery, setToolsQuery] = useState("");
     const {
@@ -51,6 +77,9 @@ export const MessageComposer = ({
     ];
 
     const canSubmit = input.trim().length > 0 || attachments.length > 0;
+    const activeModeConfig =
+        composerModes.find((mode) => mode.key === activeMode) ??
+        composerModes[0];
 
     const handleSubmit = async () => {
         const isStarted = await onSubmit({
@@ -66,7 +95,7 @@ export const MessageComposer = ({
         <>
             <footer className="shrink-0 rounded-2xl pt-2">
                 <div
-                    className="mx-auto w-full max-w-5xl rounded-[1.75rem] border border-main-700/70 bg-main-800/65 p-1 hover:border-main-600/90 group transition-colors hover:cursor-text animate-card-rise-in animate-soft-pulse-glow"
+                    className="mx-auto w-full max-w-5xl rounded-[1.75rem] border border-main-700/70 bg-main-800/65 p-1 hover:border-main-600/90 transition-colors hover:cursor-text animate-card-rise-in animate-soft-pulse-glow"
                     onClick={() => {
                         areaRef.current?.focus();
                     }}
@@ -151,7 +180,7 @@ export const MessageComposer = ({
                             ref={areaRef}
                             value={input}
                             onChange={(value) => setInput(value.target.value)}
-                            placeholder="Задайте вопрос..."
+                            placeholder={activeModeConfig.placeholder}
                             className="h-auto! min-h-9 w-full rounded-lg border-0 bg-transparent p-2 text-main-100 placeholder:text-main-400 focus-visible:ring-0"
                             onKeyDown={(event) => {
                                 if (event.key === "Enter" && !event.shiftKey) {
@@ -192,7 +221,7 @@ export const MessageComposer = ({
                                     options={attachOptions}
                                     menuPlacement="top"
                                     classNames={{
-                                        menu: "w-66",
+                                        menu: "border border-main-700/70 shadow-lg bg-main-900/92 backdrop-blur-md",
                                     }}
                                     renderTrigger={({
                                         toggleOpen,
@@ -220,6 +249,105 @@ export const MessageComposer = ({
                             </div>
 
                             <div className="flex items-center gap-2">
+                                <Floating
+                                    anchor="top-right"
+                                    className="inline-flex"
+                                    classNames={{
+                                        panel: "mb-2 border-0 bg-transparent p-0 shadow-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto",
+                                        content:
+                                            "rounded-xl bg-main-900/92 p-1.5 border border-main-700/70 backdrop-blur-md",
+                                    }}
+                                    content={
+                                        <div
+                                            className="flex min-w-44 flex-col gap-1"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                            }}
+                                        >
+                                            {composerModes.map((mode) => {
+                                                const isActive =
+                                                    mode.key === activeMode;
+
+                                                return (
+                                                    <Button
+                                                        key={mode.key}
+                                                        onMouseDown={(
+                                                            event,
+                                                        ) => {
+                                                            event.preventDefault();
+                                                        }}
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            setActiveMode(
+                                                                mode.key,
+                                                            );
+                                                        }}
+                                                        variant=""
+                                                        shape="rounded-lg"
+                                                        className={`group/aimode inline-flex h-9 px-2.5 text-[12px] border-transparent w-full justify-start ${
+                                                            isActive
+                                                                ? "bg-main-700/70 text-main-50"
+                                                                : "text-main-300 hover:bg-main-700/45 hover:text-main-100"
+                                                        }`}
+                                                    >
+                                                        <div className="flex justify-between w-full">
+                                                            <span className="inline-flex items-center gap-2">
+                                                                <Icon
+                                                                    icon={
+                                                                        mode.icon
+                                                                    }
+                                                                    width={14}
+                                                                    height={14}
+                                                                />
+                                                                {mode.label}
+                                                            </span>
+                                                            <Icon
+                                                                icon="mdi:cog"
+                                                                width={24}
+                                                                height={24}
+                                                                className="hover:bg-main-700 rounded-md p-0.75 transition-colors opacity-0 group-hover/aimode:opacity-100 hover:cursor-pointer"
+                                                                onClick={(
+                                                                    e,
+                                                                ) => {
+                                                                    e.stopPropagation();
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </Button>
+                                                );
+                                            })}
+                                            <Separator className="my-1 border-main-700/30" />
+                                            <Button
+                                                variant=""
+                                                className="border-transparent"
+                                            >
+                                                <span className="inline-flex items-center gap-2 text-[12px] text-main-300 hover:text-main-100 py-1">
+                                                    <Icon
+                                                        icon="mdi:plus-circle"
+                                                        width="14"
+                                                        height="14"
+                                                    />
+                                                    Добавить агента
+                                                </span>
+                                            </Button>
+                                        </div>
+                                    }
+                                >
+                                    <Button
+                                        type="button"
+                                        className="flex h-9 w-9 items-center justify-center rounded-full bg-main-700/70 text-main-200 transition-colors hover:bg-main-600/80"
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                        }}
+                                        title={`Режим: ${activeModeConfig.label}`}
+                                        aria-label={`Режим: ${activeModeConfig.label}`}
+                                    >
+                                        <Icon
+                                            icon={`${activeModeConfig.icon}`}
+                                        />
+                                    </Button>
+                                </Floating>
+
                                 <Button
                                     className="h-9 w-9 p-0"
                                     onClick={(e) => {

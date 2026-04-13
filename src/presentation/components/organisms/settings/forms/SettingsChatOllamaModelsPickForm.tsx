@@ -163,7 +163,8 @@ export function SettingsChatOllamaModelsPickForm({
                             { value: "name_desc", label: "Имя Z → A" },
                         ]}
                         classNames={{
-                            trigger: "bg-main-800 border-main-700/80",
+                            menu: "border border-main-700/70 shadow-lg bg-main-900/92 backdrop-blur-md",
+                            trigger: "bg-main-700/45",
                         }}
                     />
                 </div>

@@ -252,6 +252,7 @@ export const JobManageForm = () => {
                             }
                             options={STATUS_FILTER_OPTIONS}
                             classNames={{
+                                menu: "border border-main-700/70 shadow-lg bg-main-900/92 backdrop-blur-md",
                                 trigger: "bg-main-700/45 min-w-79",
                             }}
                         />
@@ -260,6 +261,7 @@ export const JobManageForm = () => {
                             onChange={(value) => setJobSort(value as JobSort)}
                             options={JOB_SORT_OPTIONS}
                             classNames={{
+                                menu: "border border-main-700/70 shadow-lg bg-main-900/92 backdrop-blur-md",
                                 trigger: "bg-main-700/45 min-w-79",
                             }}
                         />
@@ -430,7 +432,7 @@ export const JobManageForm = () => {
                                 <Icon icon="mdi:timeline-outline" width={16} />
                                 События задачи
                             </p>
-                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2">
                                 <Select
                                     value={eventTagFilter}
                                     onChange={(value) =>
@@ -440,6 +442,7 @@ export const JobManageForm = () => {
                                     }
                                     options={EVENT_TAG_OPTIONS}
                                     classNames={{
+                                        menu: "border border-main-700/70 shadow-lg bg-main-900/92 backdrop-blur-md",
                                         trigger: "bg-main-700/45",
                                     }}
                                 />
@@ -450,6 +453,7 @@ export const JobManageForm = () => {
                                     }
                                     options={EVENT_SORT_OPTIONS}
                                     classNames={{
+                                        menu: "border border-main-700/70 shadow-lg bg-main-900/92 backdrop-blur-md",
                                         trigger: "bg-main-700/45",
                                     }}
                                 />

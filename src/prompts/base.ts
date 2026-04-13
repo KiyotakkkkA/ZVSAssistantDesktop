@@ -1,11 +1,4 @@
-const compact = (value: string) => value.replace(/\s+/g, " ").trim();
-
-const section = (title: string, lines: string[]) => {
-    const content = lines.map((line) => `- ${compact(line)}`).join("\n");
-    return `${title}:\n${content}`;
-};
-
-const unique = (values: string[]) => [...new Set(values.map(compact))];
+import { section, unique } from "../utils/prompting";
 
 export const getSystemPrompt = (assistantName: string) => {
     return [

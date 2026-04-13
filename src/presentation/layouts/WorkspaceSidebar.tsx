@@ -173,6 +173,9 @@ export const WorkspaceSidebar = observer(() => {
                     <Dropdown
                         options={createOptionsList}
                         menuPlacement="bottom"
+                        classNames={{
+                            menu: "border border-main-700/70 shadow-lg bg-main-900/92 backdrop-blur-md",
+                        }}
                         renderTrigger={({
                             toggleOpen,
                             triggerRef,
