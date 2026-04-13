@@ -2,10 +2,10 @@ import { Icon } from "@iconify/react";
 import {
     ChatAssistantBubbleCard,
     ChatThinkingBubbleCard,
-    PlanningToolBubbleCard,
-    QaToolBubbleCard,
+    ToolPlanningBubbleCard,
+    ToolQaBubbleCard,
     ToolBubbleCard,
-    WebSearchBubbleCard,
+    ToolWebSearchBubbleCard,
 } from "../../molecules/chat/cards";
 import type { AssistantMessageStage } from "../../../../../electron/models/dialog";
 import type { ToolTrace } from "../../../../../electron/models/tool";
@@ -13,13 +13,11 @@ import type { QaToolState } from "../../../../utils/tools/qaTool";
 
 type AssistantResponseProps = {
     messageId: string;
-    content: string;
-    reasoning?: string;
     timestamp?: string;
     isStreaming?: boolean;
     isError?: boolean;
-    stages?: AssistantMessageStage[];
-    toolTraces?: ToolTrace[];
+    stages: AssistantMessageStage[];
+    toolTraces: ToolTrace[];
     onSelectAskQuestion?: (
         messageId: string,
         toolCallId: string,
@@ -60,13 +58,11 @@ const StageRow = ({
 
 export const AssistantResponse = ({
     messageId,
-    content,
-    reasoning = "",
     timestamp,
     isStreaming = false,
     isError = false,
-    stages = [],
-    toolTraces = [],
+    stages,
+    toolTraces,
     onSelectAskQuestion,
     onSaveAskAnswer,
     onSendAskAnswers,
@@ -78,38 +74,7 @@ export const AssistantResponse = ({
         toolTraces.map((trace) => [trace.callId, trace]),
     );
 
-    const buildLegacyStages = (): AssistantMessageStage[] => {
-        const legacyStages: AssistantMessageStage[] = [];
-
-        for (const trace of toolTraces) {
-            legacyStages.push({
-                id: `stg-legacy-tool-${trace.callId}` as `stg-${string}`,
-                type: "tool",
-                toolCallId: trace.callId,
-            });
-        }
-
-        if (reasoning.trim()) {
-            legacyStages.push({
-                id: "stg-legacy-reasoning" as `stg-${string}`,
-                type: "reasoning",
-                content: reasoning,
-            });
-        }
-
-        if (content.trim() || isStreaming || isError) {
-            legacyStages.push({
-                id: "stg-legacy-answer" as `stg-${string}`,
-                type: "answer",
-                content,
-            });
-        }
-
-        return legacyStages;
-    };
-
-    const orderedStages = stages.length > 0 ? stages : buildLegacyStages();
-    const lastAnswerStageIndex = [...orderedStages]
+    const lastAnswerStageIndex = [...stages]
         .map((stage) => stage.type)
         .lastIndexOf("answer");
 
@@ -121,7 +86,7 @@ export const AssistantResponse = ({
                 <div className="pointer-events-none absolute bottom-4 left-3.5 top-3 w-px bg-main-700/70" />
 
                 <div className="space-y-2">
-                    {orderedStages.map((stage, index) => {
+                    {stages.map((stage, index) => {
                         if (stage.type === "reasoning") {
                             return (
                                 <StageRow
@@ -174,7 +139,7 @@ export const AssistantResponse = ({
                                     key={stage.id}
                                     icon="mdi:clipboard-text-outline"
                                 >
-                                    <PlanningToolBubbleCard
+                                    <ToolPlanningBubbleCard
                                         traces={planningTraces}
                                         isLoading={isStreaming}
                                     />
@@ -195,7 +160,7 @@ export const AssistantResponse = ({
                                     key={stage.id}
                                     icon="mdi:help-circle-outline"
                                 >
-                                    <QaToolBubbleCard
+                                    <ToolQaBubbleCard
                                         toolTrace={trace}
                                         answered={Boolean(answered)}
                                         onSelectQuestion={(questionIndex) => {
@@ -231,7 +196,7 @@ export const AssistantResponse = ({
                         if (trace.toolName === "web_search") {
                             return (
                                 <StageRow key={stage.id} icon="mdi:web">
-                                    <WebSearchBubbleCard
+                                    <ToolWebSearchBubbleCard
                                         toolTrace={trace}
                                         isLoading={isStreaming}
                                     />

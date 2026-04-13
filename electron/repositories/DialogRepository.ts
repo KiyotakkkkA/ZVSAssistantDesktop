@@ -3,10 +3,10 @@ import type {
     CreateDialogDto,
     DialogContextMessage,
     DialogEntity,
-    DialogId,
     DialogUiMessage,
     UpdateDialogStateDto,
 } from "../models/dialog";
+import { DialogIdFormat } from "../../src/utils/creators";
 
 interface RawDialogData {
     id: string;
@@ -19,7 +19,7 @@ interface RawDialogData {
 }
 
 const mapDialog = (raw: RawDialogData): DialogEntity => ({
-    id: raw.id as DialogId,
+    id: raw.id as DialogIdFormat,
     owner_id: raw.owner_id,
     name: raw.name,
     is_for_project: raw.is_for_project === 1,
@@ -64,7 +64,7 @@ export class DialogRepository {
         return this.findById(dialog.id);
     }
 
-    findById(id: DialogId) {
+    findById(id: DialogIdFormat) {
         const raw = this.databaseService
             .getDatabase()
             .prepare("SELECT * FROM dialogs WHERE id = ?")
@@ -77,7 +77,7 @@ export class DialogRepository {
         return mapDialog(raw);
     }
 
-    updateName(id: DialogId, name: string) {
+    updateName(id: DialogIdFormat, name: string) {
         this.databaseService
             .getDatabase()
             .prepare("UPDATE dialogs SET name = @name WHERE id = @id")
@@ -102,7 +102,7 @@ export class DialogRepository {
             });
     }
 
-    deleteDialog(id: DialogId) {
+    deleteDialog(id: DialogIdFormat) {
         this.databaseService
             .getDatabase()
             .prepare("DELETE FROM dialogs WHERE id = ?")

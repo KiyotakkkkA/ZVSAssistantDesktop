@@ -3,7 +3,7 @@ import { Accordeon, Loader } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { z } from "zod";
 import type { ToolTrace } from "../../../../../../electron/models/tool";
 
-type WebSearchBubbleCardProps = {
+type ToolWebSearchBubbleCardProps = {
     toolTrace?: ToolTrace;
     isLoading?: boolean;
 };
@@ -52,10 +52,10 @@ const extractUrls = (result: unknown) => {
     return [];
 };
 
-export function WebSearchBubbleCard({
+export function ToolWebSearchBubbleCard({
     toolTrace,
     isLoading = false,
-}: WebSearchBubbleCardProps) {
+}: ToolWebSearchBubbleCardProps) {
     if (!toolTrace) {
         return null;
     }

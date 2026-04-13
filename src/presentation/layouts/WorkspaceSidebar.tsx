@@ -14,6 +14,7 @@ import {
 } from "../components/molecules/chat/cards";
 import { workspaceStore } from "../../stores/workspaceStore";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
+import { DialogIdFormat, ProjectIdFormat } from "../../utils/creators";
 
 type TargetType = "dialog" | "project";
 
@@ -81,12 +82,12 @@ export const WorkspaceSidebar = observer(() => {
 
         if (renameTarget.type === "dialog") {
             workspaceStore.renameDialog(
-                renameTarget.id as `dlg-${string}`,
+                renameTarget.id as DialogIdFormat,
                 newTitle,
             );
         } else {
             workspaceStore.renameProject(
-                renameTarget.id as `prj-${string}`,
+                renameTarget.id as ProjectIdFormat,
                 newTitle,
             );
         }
@@ -104,9 +105,9 @@ export const WorkspaceSidebar = observer(() => {
         }
 
         if (deleteTarget.type === "dialog") {
-            workspaceStore.deleteDialog(deleteTarget.id as `dlg-${string}`);
+            workspaceStore.deleteDialog(deleteTarget.id as DialogIdFormat);
         } else {
-            workspaceStore.deleteProject(deleteTarget.id as `prj-${string}`);
+            workspaceStore.deleteProject(deleteTarget.id as ProjectIdFormat);
         }
 
         closeDeleteModal();
@@ -149,7 +150,7 @@ export const WorkspaceSidebar = observer(() => {
                 time: linkedDialog?.messages.at(-1)?.timestamp || "--:--",
                 active: workspaceStore.activeProjectId === project.id,
                 onSelect: (id) => {
-                    workspaceStore.openProject(id as `prj-${string}`);
+                    workspaceStore.openProject(id as ProjectIdFormat);
                 },
                 onRename: (id) => {
                     setRenameTarget({ type: "project", id });

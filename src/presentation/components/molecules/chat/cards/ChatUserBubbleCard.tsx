@@ -1,8 +1,11 @@
 import { Icon } from "@iconify/react";
 import { Button, InputBig } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import type { ChatImageAttachment } from "../../../../../../electron/models/chat";
+import { ChatUserAttachmentCard } from "./ChatUserAttachmentCard";
 
 type ChatUserBubbleCardProps = {
     content: string;
+    attachments?: ChatImageAttachment[];
     timestamp?: string;
     msgDelete?: () => void;
     msgEdit?: () => void;
@@ -17,6 +20,7 @@ type ChatUserBubbleCardProps = {
 
 export function ChatUserBubbleCard({
     content,
+    attachments = [],
     timestamp,
     msgDelete,
     msgEdit,
@@ -30,6 +34,17 @@ export function ChatUserBubbleCard({
 }: ChatUserBubbleCardProps) {
     return (
         <article className="flex flex-col w-fit group">
+            {attachments.length > 0 && !isEditing ? (
+                <div className="mb-2 flex max-w-[88%] flex-wrap justify-end gap-2 self-end">
+                    {attachments.map((attachment) => (
+                        <ChatUserAttachmentCard
+                            key={attachment.id}
+                            attachment={attachment}
+                        />
+                    ))}
+                </div>
+            ) : null}
+
             <div className="max-w-[88%] self-end rounded-2xl bg-main-500/20 px-4 py-3 text-sm leading-relaxed text-main-100 ring-main-300/30">
                 {isEditing ? (
                     <div className="space-y-3">
@@ -61,9 +76,13 @@ export function ChatUserBubbleCard({
                         </div>
                     </div>
                 ) : (
-                    <p className="whitespace-pre-wrap wrap-break-word">
-                        {content}
-                    </p>
+                    <div className="space-y-2">
+                        {content.trim().length > 0 ? (
+                            <p className="whitespace-pre-wrap wrap-break-word">
+                                {content}
+                            </p>
+                        ) : null}
+                    </div>
                 )}
                 {timestamp ? (
                     <p className="mt-2 text-[11px] text-main-400">

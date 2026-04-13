@@ -1,6 +1,5 @@
 import { useEffect, useId, useMemo, useState } from "react";
-import { Icon } from "@iconify/react";
-import { Button } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import { Switcher } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { ImagePreviewBlock } from "./ImagePreviewBlock";
 import { ShikiCodeBlock } from "./ShikiCodeBlock";
 
@@ -148,34 +147,24 @@ export function MermaidDiagramBlock({ code }: MermaidDiagramBlockProps) {
     }, [code, diagramId]);
 
     return (
-        <div className="last:mb-0">
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-main-400/20 bg-main-900/80 p-2">
-                <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-main-300">
-                    <Icon icon="mdi:graph-outline" width="14" height="14" />
-                    Mermaid
-                </div>
-                <div className="flex items-center gap-1 rounded-xl border border-main-400/20 bg-main-800/60 p-1">
-                    <Button
-                        variant="secondary"
-                        label="Show diagram"
-                        shape="rounded-lg"
-                        className={`gap-1 p-1 text-xs ${viewMode === "image" ? "border-main-300/40 bg-main-700/70 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.25)]" : ""}`}
-                        onClick={() => setViewMode("image")}
-                    >
-                        <Icon icon="mdi:image-outline" width="14" height="14" />
-                        Изображение
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        label="Show source"
-                        shape="rounded-lg"
-                        className={`gap-1 p-1 text-xs ${viewMode === "code" ? "border-main-300/40 bg-main-700/70 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.25)]" : ""}`}
-                        onClick={() => setViewMode("code")}
-                    >
-                        <Icon icon="mdi:code-tags" width="14" height="14" />
-                        Код
-                    </Button>
-                </div>
+        <div className="mb-2">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-main-900/80">
+                <Switcher
+                    value={viewMode}
+                    options={[
+                        {
+                            label: "Изображение",
+                            value: "image",
+                        },
+                        {
+                            label: "Код",
+                            value: "code",
+                        },
+                    ]}
+                    onChange={(value) => {
+                        setViewMode(value as "code" | "image");
+                    }}
+                ></Switcher>
             </div>
 
             {viewMode === "code" && (

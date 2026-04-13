@@ -8,7 +8,7 @@ import {
     type QaToolState,
 } from "../../../../../utils/tools/qaTool";
 
-type QaToolBubbleCardProps = {
+type ToolQaBubbleCardProps = {
     toolTrace?: ToolTrace;
     answered?: boolean;
     onSelectQuestion: (questionIndex: number) => void;
@@ -16,13 +16,13 @@ type QaToolBubbleCardProps = {
     onSendAnswers: (qaState: QaToolState) => void;
 };
 
-export function QaToolBubbleCard({
+export function ToolQaBubbleCard({
     toolTrace,
     answered = false,
     onSelectQuestion,
     onSaveAnswer,
     onSendAnswers,
-}: QaToolBubbleCardProps) {
+}: ToolQaBubbleCardProps) {
     const qaState = useMemo(() => normalizeQaToolState(toolTrace), [toolTrace]);
     const [draftAnswers, setDraftAnswers] = useState<Record<string, string>>(
         {},

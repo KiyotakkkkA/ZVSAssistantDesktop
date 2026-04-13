@@ -1,10 +1,7 @@
 import type { DialogRepository } from "../repositories/DialogRepository";
-import type {
-    CreateDialogDto,
-    DialogId,
-    UpdateDialogStateDto,
-} from "../models/dialog";
+import type { CreateDialogDto, UpdateDialogStateDto } from "../models/dialog";
 import { handleManyIpc } from "./ipcUtils";
+import { DialogIdFormat } from "../../src/utils/creators";
 
 interface IpcWorkspacePackDeps {
     dialogRepository: DialogRepository;
@@ -21,13 +18,13 @@ export const registerIpcWorkspacePack = ({
         ],
         [
             "workspace:rename-dialog",
-            (id: DialogId, name: string) => {
+            (id: DialogIdFormat, name: string) => {
                 dialogRepository.updateName(id, name);
             },
         ],
         [
             "workspace:delete-dialog",
-            (id: DialogId) => {
+            (id: DialogIdFormat) => {
                 dialogRepository.deleteDialog(id);
             },
         ],

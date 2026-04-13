@@ -4,17 +4,18 @@ import { resolveText } from "../utils/resolvers";
 import { workspaceStore } from "../stores/workspaceStore";
 import { profileStore } from "../stores/profileStore";
 import { DialogUiMessage } from "../../electron/models";
+import type {
+    ChatImageAttachment,
+    ChatRequestContentPart,
+    ChatRequestMessage,
+} from "../../electron/models/chat";
+import type { DialogContextMessage } from "../../electron/models/dialog";
 import type { AskToolResult } from "../../electron/models/tool";
 import type { AllowedChatProviders } from "../../electron/models/user";
 import type { QaToolState } from "../utils/tools/qaTool";
 import { toolsStorage } from "../stores/toolsStorage";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
-
-const createId = (): `msg-${string}` =>
-    `msg-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-
-const createStageId = (): `stg-${string}` =>
-    `stg-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+import { createId, createStageId } from "../utils/creators";
 
 const appendAssistantStageDelta = (
     message: DialogUiMessage,
@@ -56,9 +57,80 @@ const findUserMessageById = (items: DialogUiMessage[], messageId: string) => {
     );
 };
 
+const toTextRequestContent = (text: string): ChatRequestContentPart[] => {
+    return [
+        {
+            type: "text",
+            text,
+        },
+    ];
+};
+
+const toBase64ImageData = (dataUrl: string) => {
+    const commaIndex = dataUrl.indexOf(",");
+
+    if (commaIndex < 0) {
+        return dataUrl;
+    }
+
+    return dataUrl.slice(commaIndex + 1);
+};
+
+const toUserRequestContent = (
+    content: string,
+    attachments: ChatImageAttachment[],
+): ChatRequestContentPart[] => {
+    const nextContent: ChatRequestContentPart[] = [];
+
+    if (content.trim().length > 0) {
+        nextContent.push({
+            type: "text",
+            text: content,
+        });
+    }
+
+    for (const attachment of attachments) {
+        nextContent.push({
+            type: "image",
+            image: toBase64ImageData(attachment.dataUrl),
+            mediaType: attachment.mimeType,
+        });
+    }
+
+    return nextContent;
+};
+
+const toModelMessage = (message: DialogContextMessage): ChatRequestMessage => {
+    if (message.role !== "user") {
+        return {
+            role: message.role,
+            content: toTextRequestContent(message.content),
+        };
+    }
+
+    const attachments = message.attachments ?? [];
+
+    if (attachments.length === 0) {
+        return {
+            role: message.role,
+            content: toTextRequestContent(message.content),
+        };
+    }
+
+    return {
+        role: message.role,
+        content: toUserRequestContent(message.content, attachments),
+    };
+};
+
 type StartGenerationOptions = {
     skipUserUiMessage?: boolean;
     contextOnlyUserMessage?: string;
+    attachments?: ChatImageAttachment[];
+};
+
+type SendMessageOptions = {
+    attachments?: ChatImageAttachment[];
 };
 
 export const useChat = () => {
@@ -125,7 +197,7 @@ export const useChat = () => {
     );
 
     const buildModelMessages = useCallback(() => {
-        return [...workspaceStore.contextMessages];
+        return workspaceStore.contextMessages.map(toModelMessage);
     }, []);
 
     const applyAssistantDelta = useCallback(
@@ -247,8 +319,9 @@ export const useChat = () => {
             }
 
             const normalizedPrompt = prompt.trim();
+            const attachments = options?.attachments ?? [];
 
-            if (!normalizedPrompt) {
+            if (!normalizedPrompt && attachments.length === 0) {
                 return false;
             }
 
@@ -290,6 +363,7 @@ export const useChat = () => {
                     id: userMessageId,
                     role: "user",
                     content: normalizedPrompt,
+                    attachments,
                     timestamp: formatTime(),
                     status: "done",
                 };
@@ -312,7 +386,10 @@ export const useChat = () => {
 
                 window.chat.streamResponseGeneration({
                     requestId,
-                    prompt: skipUserUiMessage ? undefined : normalizedPrompt,
+                    prompt:
+                        skipUserUiMessage || normalizedPrompt.length === 0
+                            ? undefined
+                            : normalizedPrompt,
                     messages: modelMessages,
                     dialogId: activeDialogId,
                     toolPackIds: ["systemTools"],
@@ -432,23 +509,31 @@ export const useChat = () => {
         updateMessages,
     ]);
 
-    const sendMessage = useCallback(async () => {
-        if (isGenerating) {
-            return;
-        }
+    const sendMessage = useCallback(
+        async (options?: SendMessageOptions) => {
+            if (isGenerating) {
+                return false;
+            }
 
-        const prompt = input.trim();
+            const prompt = input.trim();
+            const attachments = options?.attachments ?? [];
 
-        if (!prompt) {
-            return;
-        }
+            if (!prompt && attachments.length === 0) {
+                return false;
+            }
 
-        const isStarted = await startGeneration(prompt);
+            const isStarted = await startGeneration(prompt, {
+                attachments,
+            });
 
-        if (isStarted) {
-            setInput("");
-        }
-    }, [input, isGenerating, startGeneration]);
+            if (isStarted) {
+                setInput("");
+            }
+
+            return isStarted;
+        },
+        [input, isGenerating, startGeneration],
+    );
 
     const copyMessage = useCallback(
         async (content: string) => {
@@ -481,8 +566,9 @@ export const useChat = () => {
             }
 
             const prompt = (nextContent ?? target.content).trim();
+            const attachments = target.attachments ?? [];
 
-            if (!prompt) {
+            if (!prompt && attachments.length === 0) {
                 return;
             }
 
@@ -498,7 +584,9 @@ export const useChat = () => {
             const truncated = [...workspaceStore.messages];
             setMessages(truncated);
 
-            await startGeneration(prompt);
+            await startGeneration(prompt, {
+                attachments,
+            });
         },
         [
             activeDialogId,

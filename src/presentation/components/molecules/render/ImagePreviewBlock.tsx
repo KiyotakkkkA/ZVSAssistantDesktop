@@ -13,6 +13,9 @@ interface ImagePreviewBlockProps {
     src: string;
     title?: string;
     downloadFileName?: string;
+    expanded?: boolean;
+    onExpandedChange?: (nextValue: boolean) => void;
+    showInlinePreview?: boolean;
 }
 
 const buildDownloadName = (preferred?: string) => {
@@ -58,8 +61,11 @@ export function ImagePreviewBlock({
     src,
     title = "Image Preview",
     downloadFileName,
+    expanded,
+    onExpandedChange,
+    showInlinePreview = true,
 }: ImagePreviewBlockProps) {
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [internalExpanded, setInternalExpanded] = useState(false);
     const [scale, setScale] = useState(1);
     const [offsetX, setOffsetX] = useState(0);
     const [offsetY, setOffsetY] = useState(0);
@@ -72,6 +78,16 @@ export function ImagePreviewBlock({
         startY: 0,
     });
 
+    const isExpanded = expanded ?? internalExpanded;
+
+    const setExpanded = (nextValue: boolean) => {
+        if (expanded === undefined) {
+            setInternalExpanded(nextValue);
+        }
+
+        onExpandedChange?.(nextValue);
+    };
+
     const resetView = () => {
         setScale(1);
         setOffsetX(0);
@@ -79,7 +95,7 @@ export function ImagePreviewBlock({
     };
 
     const closeExpanded = () => {
-        setIsExpanded(false);
+        setExpanded(false);
         setIsDragging(false);
     };
 
@@ -93,10 +109,6 @@ export function ImagePreviewBlock({
 
     const handleDownload = async () => {
         await downloadFromUrl(src, buildDownloadName(downloadFileName));
-    };
-
-    const handleOpenPreview = async () => {
-        window.open(src, "_blank", "noopener,noreferrer");
     };
 
     const onPointerDown: PointerEventHandler<HTMLDivElement> = (event) => {
@@ -139,7 +151,9 @@ export function ImagePreviewBlock({
     };
 
     const onWheel: WheelEventHandler<HTMLDivElement> = (event) => {
-        event.preventDefault();
+        if (event.nativeEvent.cancelable) {
+            event.preventDefault();
+        }
         event.stopPropagation();
 
         setIsZooming(true);
@@ -267,17 +281,6 @@ export function ImagePreviewBlock({
             <div className="flex items-center gap-1 rounded-xl border border-main-400/20 bg-main-900/70 p-1">
                 <Button
                     variant="secondary"
-                    label="Open source"
-                    shape="rounded-lg"
-                    className="p-1 text-xs"
-                    onClick={() => {
-                        void handleOpenPreview();
-                    }}
-                >
-                    <Icon icon="mdi:open-in-new" width="14" height="14" />
-                </Button>
-                <Button
-                    variant="secondary"
                     label="Download image"
                     shape="rounded-lg"
                     className="p-1 text-xs"
@@ -293,7 +296,7 @@ export function ImagePreviewBlock({
                     shape="rounded-lg"
                     className="p-1 text-xs"
                     onClick={() => {
-                        setIsExpanded(true);
+                        setExpanded(true);
                     }}
                 >
                     <Icon icon="mdi:fullscreen" width="14" height="14" />
@@ -342,6 +345,10 @@ export function ImagePreviewBlock({
                   document.body,
               )
             : null;
+
+    if (!showInlinePreview) {
+        return <>{overlay}</>;
+    }
 
     return (
         <>

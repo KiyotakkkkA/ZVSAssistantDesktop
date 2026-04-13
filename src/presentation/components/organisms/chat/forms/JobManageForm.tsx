@@ -251,13 +251,17 @@ export const JobManageForm = () => {
                                 setStatusFilter(value as JobStatusFilter)
                             }
                             options={STATUS_FILTER_OPTIONS}
-                            className="bg-main-700/45 min-w-79"
+                            classNames={{
+                                trigger: "bg-main-700/45 min-w-79",
+                            }}
                         />
                         <Select
                             value={jobSort}
                             onChange={(value) => setJobSort(value as JobSort)}
                             options={JOB_SORT_OPTIONS}
-                            className="bg-main-700/45 min-w-79"
+                            classNames={{
+                                trigger: "bg-main-700/45 min-w-79",
+                            }}
                         />
                     </div>
 
@@ -435,7 +439,9 @@ export const JobManageForm = () => {
                                         )
                                     }
                                     options={EVENT_TAG_OPTIONS}
-                                    className="bg-main-700/45 backdrop-blur-sm"
+                                    classNames={{
+                                        trigger: "bg-main-700/45",
+                                    }}
                                 />
                                 <Select
                                     value={eventSort}
@@ -443,7 +449,9 @@ export const JobManageForm = () => {
                                         setEventSort(value as EventSort)
                                     }
                                     options={EVENT_SORT_OPTIONS}
-                                    className="bg-main-700/45 backdrop-blur-sm"
+                                    classNames={{
+                                        trigger: "bg-main-700/45",
+                                    }}
                                 />
                             </div>
                         </div>

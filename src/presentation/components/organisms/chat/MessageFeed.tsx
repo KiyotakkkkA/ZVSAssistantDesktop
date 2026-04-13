@@ -124,6 +124,7 @@ export const MessageFeed = ({
                             >
                                 <ChatUserBubbleCard
                                     content={message.content}
+                                    attachments={message.attachments ?? []}
                                     timestamp={message.timestamp}
                                     isEditing={editingMessageId === message.id}
                                     editValue={editingValue}
@@ -160,8 +161,6 @@ export const MessageFeed = ({
                         >
                             <AssistantResponse
                                 messageId={message.id}
-                                content={message.content}
-                                reasoning={message.reasoning ?? ""}
                                 timestamp={message.timestamp}
                                 isStreaming={isStreaming}
                                 isError={isError}

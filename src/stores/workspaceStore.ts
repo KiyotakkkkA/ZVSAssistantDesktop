@@ -9,9 +9,11 @@ import { globalStorage } from "./globalStorage";
 import type { PersistedDialog } from "../types/electron";
 import { getSystemPrompt, getUserPrompt } from "../prompts/base";
 import { profileStore } from "./profileStore";
-
-export type DialogIdFormat = `dlg-${string}`;
-export type ProjectIdFormat = `prj-${string}`;
+import {
+    createDialogId,
+    DialogIdFormat,
+    ProjectIdFormat,
+} from "../utils/creators";
 
 export type ChatDialog = {
     id: DialogIdFormat;
@@ -70,8 +72,7 @@ class WorkspaceStore {
     }
 
     async createDialog(name = null) {
-        const dialogId =
-            `dlg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` as DialogIdFormat;
+        const dialogId = createDialogId();
         const createDialogDto: CreateDialogDto = {
             id: dialogId,
             owner_id: profileStore.user?.id ?? "unknown-owner",
@@ -377,10 +378,14 @@ class WorkspaceStore {
             isForProject: dialog.is_for_project,
             messages: dialog.ui_messages.map((message) => ({
                 ...message,
+                attachments: message.attachments ?? [],
                 toolTraces: message.toolTraces ?? [],
                 stages: message.stages ?? [],
             })),
-            contextMessages: dialog.context_messages,
+            contextMessages: dialog.context_messages.map((message) => ({
+                ...message,
+                attachments: message.attachments ?? [],
+            })),
             tokenUsage: dialog.token_usage,
         };
     }
@@ -394,12 +399,16 @@ class WorkspaceStore {
             .filter(
                 (message) =>
                     message.status !== "streaming" &&
-                    (message.role === "user" ||
-                        message.content.trim().length > 0),
+                    (message.role === "user"
+                        ? message.content.trim().length > 0 ||
+                          (message.attachments?.length ?? 0) > 0
+                        : message.content.trim().length > 0),
             )
             .map((message) => ({
                 role: message.role,
                 content: message.content,
+                attachments:
+                    message.role === "user" ? (message.attachments ?? []) : [],
             }));
 
         const hasUserMessage = modelMessages.some(
@@ -447,7 +456,7 @@ class WorkspaceStore {
             return;
         }
 
-        if (nextMessages.length < previousMessages.length) {
+        if (nextMessages.length > previousMessages.length) {
             const appended = nextMessages.slice(previousMessages.length);
             this.appendContextMessages(dialog, appended);
             return;
@@ -486,6 +495,13 @@ class WorkspaceStore {
     ) {
         for (const message of messages) {
             if (message.role === "user") {
+                const hasText = message.content.trim().length > 0;
+                const hasAttachments = (message.attachments?.length ?? 0) > 0;
+
+                if (!hasText && !hasAttachments) {
+                    continue;
+                }
+
                 if (
                     !dialog.contextMessages.some((item) => item.role === "user")
                 ) {
@@ -497,6 +513,7 @@ class WorkspaceStore {
                 dialog.contextMessages.push({
                     role: "user",
                     content: message.content,
+                    attachments: message.attachments ?? [],
                 });
                 continue;
             }

@@ -2,7 +2,7 @@ import { Icon } from "@iconify/react";
 import { Accordeon, Loader } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import type { ToolTrace } from "../../../../../../electron/models/tool";
 
-type PlanningToolBubbleCardProps = {
+type ToolPlanningBubbleCardProps = {
     traces: ToolTrace[];
     isLoading?: boolean;
 };
@@ -128,10 +128,10 @@ const resolveTraceAction = (trace: ToolTrace) => {
     return "unknown";
 };
 
-export function PlanningToolBubbleCard({
+export function ToolPlanningBubbleCard({
     traces,
     isLoading = false,
-}: PlanningToolBubbleCardProps) {
+}: ToolPlanningBubbleCardProps) {
     const latestResult =
         [...traces]
             .reverse()

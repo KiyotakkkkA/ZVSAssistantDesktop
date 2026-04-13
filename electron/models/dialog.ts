@@ -1,35 +1,41 @@
+import {
+    DialogIdFormat,
+    MsgIdFormat,
+    StageIdFormat,
+} from "../../src/utils/creators";
 import type { ChatRole } from "./chat";
+import type { ChatImageAttachment } from "./chat";
 import type { ToolTrace } from "./tool";
-
-export type DialogId = `dlg-${string}`;
 
 export type DialogContextMessage = {
     role: ChatRole;
     content: string;
+    attachments?: ChatImageAttachment[];
 };
 
 export type AssistantMessageStage =
     | {
-          id: `stg-${string}`;
+          id: StageIdFormat;
           type: "reasoning";
           content: string;
       }
     | {
-          id: `stg-${string}`;
+          id: StageIdFormat;
           type: "answer";
           content: string;
       }
     | {
-          id: `stg-${string}`;
+          id: StageIdFormat;
           type: "tool";
           toolCallId: string;
       };
 
 export type DialogUiMessage = {
-    id: `msg-${string}`;
+    id: MsgIdFormat;
     role: ChatRole;
     answeringAt?: string;
     content: string;
+    attachments?: ChatImageAttachment[];
     reasoning?: string;
     toolTraces?: ToolTrace[];
     stages?: AssistantMessageStage[];
@@ -38,7 +44,7 @@ export type DialogUiMessage = {
 };
 
 export interface DialogEntity {
-    id: DialogId;
+    id: DialogIdFormat;
     owner_id: string;
     name: string | null;
     is_for_project: boolean;
@@ -48,14 +54,14 @@ export interface DialogEntity {
 }
 
 export type CreateDialogDto = {
-    id: DialogId;
+    id: DialogIdFormat;
     owner_id: string;
     name: string | null;
     is_for_project: boolean;
 };
 
 export type UpdateDialogStateDto = {
-    id: DialogId;
+    id: DialogIdFormat;
     ui_messages: DialogUiMessage[];
     context_messages: DialogContextMessage[];
     token_usage: unknown;

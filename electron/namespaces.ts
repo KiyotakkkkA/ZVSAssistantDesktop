@@ -2,7 +2,6 @@ import type { ResponseGenParams } from "./models/chat";
 import type {
     CreateDialogDto,
     DialogEntity,
-    DialogId,
     UpdateDialogStateDto,
 } from "./models/dialog";
 import type { ProfileBootPayload } from "./models/profile";
@@ -14,6 +13,7 @@ import type {
     JobRealtimeEvent,
     JobRecord,
 } from "./models/job";
+import { DialogIdFormat } from "../src/utils/creators";
 
 export type ChatStreamEventPayload = {
     requestId: string;
@@ -66,8 +66,8 @@ export interface IpcProfileNamespace {
 export interface IpcWorkspaceNamespace {
     getDialogs(): Promise<DialogEntity[]>;
     createDialog(dialog: CreateDialogDto): Promise<DialogEntity>;
-    renameDialog(id: DialogId, name: string): Promise<void>;
-    deleteDialog(id: DialogId): Promise<void>;
+    renameDialog(id: DialogIdFormat, name: string): Promise<void>;
+    deleteDialog(id: DialogIdFormat): Promise<void>;
     updateDialogState(payload: UpdateDialogStateDto): Promise<void>;
 }
 
