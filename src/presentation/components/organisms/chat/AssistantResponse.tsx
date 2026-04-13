@@ -14,6 +14,8 @@ import type { QaToolState } from "../../../../utils/tools/qaTool";
 type AssistantResponseProps = {
     messageId: string;
     timestamp?: string;
+    content?: string;
+    reasoning?: string;
     isStreaming?: boolean;
     isError?: boolean;
     stages: AssistantMessageStage[];
@@ -59,6 +61,8 @@ const StageRow = ({
 export const AssistantResponse = ({
     messageId,
     timestamp,
+    content = "",
+    reasoning = "",
     isStreaming = false,
     isError = false,
     stages,
@@ -67,6 +71,10 @@ export const AssistantResponse = ({
     onSaveAskAnswer,
     onSendAskAnswers,
 }: AssistantResponseProps) => {
+    const hasStages = stages.length > 0;
+    const hasReasoning = reasoning.trim().length > 0;
+    const hasAnswer = content.trim().length > 0;
+
     const planningTraces = toolTraces.filter(
         (trace) => trace.toolName === "planning_tool",
     );
@@ -86,133 +94,162 @@ export const AssistantResponse = ({
                 <div className="pointer-events-none absolute bottom-4 left-3.5 top-3 w-px bg-main-700/70" />
 
                 <div className="space-y-2">
-                    {stages.map((stage, index) => {
-                        if (stage.type === "reasoning") {
-                            return (
-                                <StageRow
-                                    key={stage.id}
-                                    icon="mdi:head-lightbulb-outline"
-                                >
+                    {!hasStages ? (
+                        <>
+                            {hasReasoning ? (
+                                <StageRow icon="mdi:head-lightbulb-outline">
                                     <ChatThinkingBubbleCard
-                                        content={stage.content}
+                                        content={reasoning}
                                         isLoading={isStreaming}
                                     />
                                 </StageRow>
-                            );
-                        }
+                            ) : null}
 
-                        if (stage.type === "answer") {
-                            return (
-                                <StageRow
-                                    key={stage.id}
-                                    icon="mdi:message-text-outline"
-                                >
+                            {hasAnswer || isStreaming || isError ? (
+                                <StageRow icon="mdi:message-text-outline">
                                     <ChatAssistantBubbleCard
-                                        content={stage.content}
-                                        timestamp={
-                                            index === lastAnswerStageIndex
-                                                ? timestamp
-                                                : undefined
-                                        }
+                                        content={content}
+                                        timestamp={timestamp}
                                         isStreaming={isStreaming}
                                         isError={isError}
                                     />
                                 </StageRow>
-                            );
-                        }
+                            ) : null}
+                        </>
+                    ) : (
+                        stages.map((stage, index) => {
+                            if (stage.type === "reasoning") {
+                                return (
+                                    <StageRow
+                                        key={stage.id}
+                                        icon="mdi:head-lightbulb-outline"
+                                    >
+                                        <ChatThinkingBubbleCard
+                                            content={stage.content}
+                                            isLoading={isStreaming}
+                                        />
+                                    </StageRow>
+                                );
+                            }
 
-                        const trace = tracesByCallId.get(stage.toolCallId);
+                            if (stage.type === "answer") {
+                                return (
+                                    <StageRow
+                                        key={stage.id}
+                                        icon="mdi:message-text-outline"
+                                    >
+                                        <ChatAssistantBubbleCard
+                                            content={stage.content}
+                                            timestamp={
+                                                index === lastAnswerStageIndex
+                                                    ? timestamp
+                                                    : undefined
+                                            }
+                                            isStreaming={isStreaming}
+                                            isError={isError}
+                                        />
+                                    </StageRow>
+                                );
+                            }
 
-                        if (!trace) {
-                            return null;
-                        }
+                            const trace = tracesByCallId.get(stage.toolCallId);
 
-                        if (trace.toolName === "planning_tool") {
-                            if (planningRendered) {
+                            if (!trace) {
                                 return null;
                             }
 
-                            planningRendered = true;
+                            if (trace.toolName === "planning_tool") {
+                                if (planningRendered) {
+                                    return null;
+                                }
 
-                            return (
-                                <StageRow
-                                    key={stage.id}
-                                    icon="mdi:clipboard-text-outline"
-                                >
-                                    <ToolPlanningBubbleCard
-                                        traces={planningTraces}
-                                        isLoading={isStreaming}
-                                    />
-                                </StageRow>
-                            );
-                        }
+                                planningRendered = true;
 
-                        if (trace.toolName === "ask_tool") {
-                            const answered =
-                                trace.status === "done" ||
-                                (trace.result &&
-                                    typeof trace.result === "object" &&
-                                    "answered" in trace.result &&
-                                    trace.result.answered === true);
+                                return (
+                                    <StageRow
+                                        key={stage.id}
+                                        icon="mdi:clipboard-text-outline"
+                                    >
+                                        <ToolPlanningBubbleCard
+                                            traces={planningTraces}
+                                            isLoading={isStreaming}
+                                        />
+                                    </StageRow>
+                                );
+                            }
 
-                            return (
-                                <StageRow
-                                    key={stage.id}
-                                    icon="mdi:help-circle-outline"
-                                >
-                                    <ToolQaBubbleCard
-                                        toolTrace={trace}
-                                        answered={Boolean(answered)}
-                                        onSelectQuestion={(questionIndex) => {
-                                            onSelectAskQuestion?.(
-                                                messageId,
-                                                trace.callId,
+                            if (trace.toolName === "ask_tool") {
+                                const answered =
+                                    trace.status === "done" ||
+                                    (trace.result &&
+                                        typeof trace.result === "object" &&
+                                        "answered" in trace.result &&
+                                        trace.result.answered === true);
+
+                                return (
+                                    <StageRow
+                                        key={stage.id}
+                                        icon="mdi:help-circle-outline"
+                                    >
+                                        <ToolQaBubbleCard
+                                            toolTrace={trace}
+                                            answered={Boolean(answered)}
+                                            onSelectQuestion={(
                                                 questionIndex,
-                                            );
-                                        }}
-                                        onSaveAnswer={(
-                                            questionIndex,
-                                            answer,
-                                        ) => {
-                                            onSaveAskAnswer?.(
-                                                messageId,
-                                                trace.callId,
+                                            ) => {
+                                                onSelectAskQuestion?.(
+                                                    messageId,
+                                                    trace.callId,
+                                                    questionIndex,
+                                                );
+                                            }}
+                                            onSaveAnswer={(
                                                 questionIndex,
                                                 answer,
-                                            );
-                                        }}
-                                        onSendAnswers={(qaState) => {
-                                            onSendAskAnswers?.(
-                                                messageId,
-                                                trace.callId,
-                                                qaState,
-                                            );
-                                        }}
-                                    />
-                                </StageRow>
-                            );
-                        }
+                                            ) => {
+                                                onSaveAskAnswer?.(
+                                                    messageId,
+                                                    trace.callId,
+                                                    questionIndex,
+                                                    answer,
+                                                );
+                                            }}
+                                            onSendAnswers={(qaState) => {
+                                                onSendAskAnswers?.(
+                                                    messageId,
+                                                    trace.callId,
+                                                    qaState,
+                                                );
+                                            }}
+                                        />
+                                    </StageRow>
+                                );
+                            }
 
-                        if (trace.toolName === "web_search") {
+                            if (trace.toolName === "web_search") {
+                                return (
+                                    <StageRow key={stage.id} icon="mdi:web">
+                                        <ToolWebSearchBubbleCard
+                                            toolTrace={trace}
+                                            isLoading={isStreaming}
+                                        />
+                                    </StageRow>
+                                );
+                            }
+
                             return (
-                                <StageRow key={stage.id} icon="mdi:web">
-                                    <ToolWebSearchBubbleCard
+                                <StageRow
+                                    key={stage.id}
+                                    icon="mdi:wrench-outline"
+                                >
+                                    <ToolBubbleCard
                                         toolTrace={trace}
                                         isLoading={isStreaming}
                                     />
                                 </StageRow>
                             );
-                        }
-
-                        return (
-                            <StageRow key={stage.id} icon="mdi:wrench-outline">
-                                <ToolBubbleCard
-                                    toolTrace={trace}
-                                    isLoading={isStreaming}
-                                />
-                            </StageRow>
-                        );
-                    })}
+                        })
+                    )}
                 </div>
             </div>
         </article>

@@ -21,7 +21,9 @@ export function ChatAssistantBubbleCard({
         <div className="rounded-2xl px-4 py-3 text-sm leading-relaxed text-main-100">
             <div className={isError ? "text-red-300" : "text-main-100"}>
                 {showStreamingPlaceholder ? (
-                    <p className="text-sm text-main-400">Модель печатает...</p>
+                    <p className="typing-gradient-text text-sm">
+                        Модель печатает...
+                    </p>
                 ) : (
                     <MarkdownStaticContent content={safeContent} />
                 )}

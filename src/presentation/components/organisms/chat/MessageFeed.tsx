@@ -162,6 +162,8 @@ export const MessageFeed = ({
                             <AssistantResponse
                                 messageId={message.id}
                                 timestamp={message.timestamp}
+                                content={message.content}
+                                reasoning={message.reasoning}
                                 isStreaming={isStreaming}
                                 isError={isError}
                                 stages={message.stages ?? []}

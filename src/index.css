@@ -98,6 +98,24 @@ body {
     }
 }
 
+@keyframes typing-text-glow {
+    0% {
+        background-position: 0% 50%;
+        opacity: 0.82;
+        transform: scale(1);
+    }
+    50% {
+        background-position: 100% 50%;
+        opacity: 1;
+        transform: scale(1.02);
+    }
+    100% {
+        background-position: 200% 50%;
+        opacity: 0.82;
+        transform: scale(1);
+    }
+}
+
 .animate-panel-slide-in {
     animation: panel-slide-in 320ms ease-out both;
 }
@@ -114,12 +132,40 @@ body {
     animation: soft-pulse-glow 1.2s ease-out 1;
 }
 
+.typing-gradient-text {
+    color: rgb(163 163 163);
+    display: inline-block;
+    background-image: repeating-linear-gradient(
+        90deg,
+        rgba(120, 120, 120, 0.2) 0%,
+        rgba(176, 176, 176, 0.82) 12%,
+        rgba(245, 245, 245, 1) 24%,
+        rgba(176, 176, 176, 0.82) 36%,
+        rgba(120, 120, 120, 0.2) 48%
+    );
+    background-position: 0% 50%;
+    background-repeat: repeat;
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    will-change: background-position, opacity, transform;
+    animation: typing-text-glow 1.8s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .animate-page-fade-in,
     .animate-panel-slide-in,
     .animate-card-rise-in,
     .animate-message-pop-in,
-    .animate-soft-pulse-glow {
+    .animate-soft-pulse-glow,
+    .typing-gradient-text {
         animation: none !important;
+    }
+
+    .typing-gradient-text {
+        background: none;
+        -webkit-text-fill-color: initial;
+        color: rgb(163 163 163);
     }
 }
