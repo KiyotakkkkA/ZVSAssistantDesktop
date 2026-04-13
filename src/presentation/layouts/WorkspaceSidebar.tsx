@@ -172,8 +172,6 @@ export const WorkspaceSidebar = observer(() => {
                     <Dropdown
                         options={createOptionsList}
                         menuPlacement="bottom"
-                        menuClassName="left-auto right-0"
-                        matchTriggerWidth={false}
                         renderTrigger={({
                             toggleOpen,
                             triggerRef,

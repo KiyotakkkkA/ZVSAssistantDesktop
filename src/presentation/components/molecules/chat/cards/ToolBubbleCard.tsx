@@ -45,59 +45,69 @@ export function ToolBubbleCard({
 
     return (
         <div className="text-xs leading-relaxed text-main-200 animate-card-rise-in">
-            <Accordeon
-                title={`Инструмент: ${toolTrace.toolName || "unknown"}`}
-                titleIcon={
-                    <span className="flex items-center gap-1.5">
-                        <Icon icon="mdi:tools" width={14} height={14} />
-                        {isLoading ? <Loader className="h-3 w-3" /> : null}
-                    </span>
-                }
-                subtitle="Аргументы и результат вызова инструмента"
-                className="max-w-172"
-            >
-                <div className="max-h-[52vh] space-y-3 overflow-y-auto pr-1">
-                    <p className="text-[11px] text-main-400">
-                        Статус:
-                        <span
-                            className={
-                                statuses[
-                                    toolTrace.status as keyof typeof statuses
-                                ]?.color || "text-main-400"
-                            }
-                        >
-                            {statuses[toolTrace.status as keyof typeof statuses]
-                                ?.label || toolTrace.status}
+            <Accordeon className="max-w-172">
+                <Accordeon.Summary>
+                    <div className="flex min-w-0 items-start gap-2">
+                        <span className="mt-0.5 flex items-center gap-1.5 text-main-200">
+                            <Icon icon="mdi:tools" width={14} height={14} />
+                            {isLoading ? <Loader className="h-3 w-3" /> : null}
                         </span>
-                    </p>
+                        <div className="min-w-0">
+                            <p className="truncate text-xs font-semibold text-main-100">
+                                Инструмент: {toolTrace.toolName || "unknown"}
+                            </p>
+                            <p className="text-[11px] text-main-400">
+                                Аргументы и результат вызова инструмента
+                            </p>
+                        </div>
+                    </div>
+                </Accordeon.Summary>
 
-                    <div>
-                        <p className="text-[11px] font-semibold text-main-300">
-                            ВЫЗОВ
+                <Accordeon.Content>
+                    <div className="max-h-[52vh] space-y-3 overflow-y-auto pr-1">
+                        <p className="text-[11px] text-main-400">
+                            Статус:
+                            <span
+                                className={
+                                    statuses[
+                                        toolTrace.status as keyof typeof statuses
+                                    ]?.color || "text-main-400"
+                                }
+                            >
+                                {statuses[
+                                    toolTrace.status as keyof typeof statuses
+                                ]?.label || toolTrace.status}
+                            </span>
                         </p>
-                        <div className="max-h-72 overflow-y-auto rounded-xl">
-                            <ShikiCodeBlock
-                                code={safeJson(toolTrace.args ?? {})}
-                                language="json"
-                            />
+
+                        <div>
+                            <p className="text-[11px] font-semibold text-main-300">
+                                ВЫЗОВ
+                            </p>
+                            <div className="max-h-72 overflow-y-auto rounded-xl">
+                                <ShikiCodeBlock
+                                    code={safeJson(toolTrace.args ?? {})}
+                                    language="json"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-[11px] font-semibold text-main-300">
+                                РЕЗУЛЬТАТ
+                            </p>
+                            <div className="max-h-72 overflow-y-auto rounded-xl">
+                                <ShikiCodeBlock
+                                    code={safeJson(
+                                        toolTrace.error
+                                            ? { error: toolTrace.error }
+                                            : (toolTrace.result ?? {}),
+                                    )}
+                                    language="json"
+                                />
+                            </div>
                         </div>
                     </div>
-                    <div>
-                        <p className="text-[11px] font-semibold text-main-300">
-                            РЕЗУЛЬТАТ
-                        </p>
-                        <div className="max-h-72 overflow-y-auto rounded-xl">
-                            <ShikiCodeBlock
-                                code={safeJson(
-                                    toolTrace.error
-                                        ? { error: toolTrace.error }
-                                        : (toolTrace.result ?? {}),
-                                )}
-                                language="json"
-                            />
-                        </div>
-                    </div>
-                </div>
+                </Accordeon.Content>
             </Accordeon>
         </div>
     );

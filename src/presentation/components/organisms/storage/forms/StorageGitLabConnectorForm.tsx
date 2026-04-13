@@ -88,7 +88,6 @@ export const StorageGitLabConnectorForm = () => {
                             onChange={setSelectedBranch}
                             options={branchOptions}
                             className="h-11 w-64 rounded-xl border border-main-700/70 bg-main-900/70"
-                            wrapperClassName="w-full max-w-60"
                         />
                     </div>
 

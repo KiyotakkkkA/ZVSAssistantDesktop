@@ -58,7 +58,7 @@ export const StorageConnectorsSelectPanel = () => {
                                 />
                             </div>
                             <div className="min-w-0">
-                                <p className="truncate text-base font-semibold text-main-100">
+                                <p className="truncate text-base text-main-100">
                                     {connector.name}
                                 </p>
                             </div>

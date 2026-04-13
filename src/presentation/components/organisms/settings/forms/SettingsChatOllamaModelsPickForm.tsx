@@ -27,25 +27,12 @@ type SettingsChatOllamaModelsPickFormProps = {
     onClose: () => void;
 };
 
-const ALL_VALUE = "__all__";
-
 const normalize = (value: string | null | undefined): string =>
     value?.trim().toLocaleLowerCase() || "";
 
 const nonEmptyValue = (value: string | null | undefined): string => {
     const trimmed = value?.trim();
     return trimmed ? trimmed : "—";
-};
-
-const buildOptions = (values: string[]) => {
-    const uniqueValues = Array.from(
-        new Set(values.map((value) => value.trim()).filter(Boolean)),
-    ).sort((a, b) => a.localeCompare(b));
-
-    return [
-        { value: ALL_VALUE, label: "Все" },
-        ...uniqueValues.map((value) => ({ value, label: value })),
-    ];
 };
 
 export function SettingsChatOllamaModelsPickForm({
@@ -59,10 +46,6 @@ export function SettingsChatOllamaModelsPickForm({
     const [error, setError] = useState("");
 
     const [query, setQuery] = useState("");
-    const [familyFilter, setFamilyFilter] = useState(ALL_VALUE);
-    const [formatFilter, setFormatFilter] = useState(ALL_VALUE);
-    const [paramsFilter, setParamsFilter] = useState(ALL_VALUE);
-    const [quantizationFilter, setQuantizationFilter] = useState(ALL_VALUE);
     const [sortKey, setSortKey] = useState<SortKey>("modified_desc");
 
     useEffect(() => {
@@ -108,27 +91,6 @@ export function SettingsChatOllamaModelsPickForm({
         };
     }, [baseUrl]);
 
-    const familyOptions = useMemo(
-        () => buildOptions(models.map((item) => item.details.family)),
-        [models],
-    );
-
-    const formatOptions = useMemo(
-        () => buildOptions(models.map((item) => item.details.format)),
-        [models],
-    );
-
-    const paramsOptions = useMemo(
-        () => buildOptions(models.map((item) => item.details.parameter_size)),
-        [models],
-    );
-
-    const quantizationOptions = useMemo(
-        () =>
-            buildOptions(models.map((item) => item.details.quantization_level)),
-        [models],
-    );
-
     const filteredModels = useMemo(() => {
         const normalizedQuery = normalize(query);
 
@@ -148,34 +110,6 @@ export function SettingsChatOllamaModelsPickForm({
                 if (!searchInput.includes(normalizedQuery)) {
                     return false;
                 }
-            }
-
-            if (
-                familyFilter !== ALL_VALUE &&
-                item.details.family.trim() !== familyFilter
-            ) {
-                return false;
-            }
-
-            if (
-                formatFilter !== ALL_VALUE &&
-                item.details.format.trim() !== formatFilter
-            ) {
-                return false;
-            }
-
-            if (
-                paramsFilter !== ALL_VALUE &&
-                item.details.parameter_size.trim() !== paramsFilter
-            ) {
-                return false;
-            }
-
-            if (
-                quantizationFilter !== ALL_VALUE &&
-                item.details.quantization_level.trim() !== quantizationFilter
-            ) {
-                return false;
             }
 
             return true;
@@ -204,20 +138,12 @@ export function SettingsChatOllamaModelsPickForm({
                     );
             }
         });
-    }, [
-        familyFilter,
-        formatFilter,
-        models,
-        paramsFilter,
-        quantizationFilter,
-        query,
-        sortKey,
-    ]);
+    }, [models, query, sortKey]);
 
     return (
         <div className="space-y-4">
             <div className="rounded-xl border border-main-700/80 bg-main-900/45 p-3">
-                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                <div className="flex items-center justify-between">
                     <InputSmall
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
@@ -236,40 +162,9 @@ export function SettingsChatOllamaModelsPickForm({
                             { value: "name_asc", label: "Имя A → Z" },
                             { value: "name_desc", label: "Имя Z → A" },
                         ]}
-                        className="h-10 w-full rounded-lg border border-main-700 bg-main-800"
-                        wrapperClassName="w-full"
-                    />
-
-                    <Select
-                        value={familyFilter}
-                        onChange={setFamilyFilter}
-                        options={familyOptions}
-                        className="h-10 w-full rounded-lg border border-main-700 bg-main-800"
-                        wrapperClassName="w-full"
-                    />
-
-                    <Select
-                        value={formatFilter}
-                        onChange={setFormatFilter}
-                        options={formatOptions}
-                        className="h-10 w-full rounded-lg border border-main-700 bg-main-800"
-                        wrapperClassName="w-full"
-                    />
-
-                    <Select
-                        value={paramsFilter}
-                        onChange={setParamsFilter}
-                        options={paramsOptions}
-                        className="h-10 w-full rounded-lg border border-main-700 bg-main-800"
-                        wrapperClassName="w-full"
-                    />
-
-                    <Select
-                        value={quantizationFilter}
-                        onChange={setQuantizationFilter}
-                        options={quantizationOptions}
-                        className="h-10 w-full rounded-lg border border-main-700 bg-main-800"
-                        wrapperClassName="w-full"
+                        classNames={{
+                            trigger: "bg-main-800 border-main-700/80",
+                        }}
                     />
                 </div>
 

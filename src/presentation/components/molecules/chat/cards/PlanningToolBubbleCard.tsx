@@ -150,159 +150,170 @@ export function PlanningToolBubbleCard({
 
     return (
         <div className="text-xs leading-relaxed text-main-200 animate-card-rise-in">
-            <Accordeon
-                title={`План: ${planTitle}`}
-                titleIcon={
-                    <span className="flex items-center gap-1.5">
-                        <Icon
-                            icon="mdi:clipboard-text-outline"
-                            width={14}
-                            height={14}
-                        />
-                        {isLoading ? <Loader className="h-3 w-3" /> : null}
-                    </span>
-                }
-                rightSlot={
-                    <span
-                        className={`rounded-md border px-1.5 py-0.5 text-[10px] leading-none ${
-                            isComplete
-                                ? "border-main-600/80 text-green-400"
-                                : "border-main-700/80 text-main-300"
-                        }`}
-                    >
-                        {isComplete ? "готово" : "в работе"}
-                    </span>
-                }
-                subtitle={`Шагов: ${totalStepsCount || "-"} • Прогресс: ${progress}`}
-                className="max-w-172"
-            >
-                <div className="space-y-3">
-                    <div className="rounded-xl border border-main-700/60 bg-main-900/40 p-3">
-                        <div className="flex items-center justify-between gap-2 text-[11px]">
-                            <span className="text-main-300">Статус</span>
-                            <span
-                                className={
-                                    isComplete
-                                        ? "text-green-400"
-                                        : "text-main-200"
-                                }
-                            >
-                                {isComplete ? "Готово" : "В работе"}
-                            </span>
-                        </div>
-
-                        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-main-800/90">
-                            <div
-                                className={`h-full rounded-full transition-all duration-500 ${
-                                    isComplete
-                                        ? "bg-emerald-400"
-                                        : "bg-main-400"
-                                }`}
-                                style={{
-                                    width: `${isComplete ? 100 : progressMeta.percent}%`,
-                                }}
+            <Accordeon className="max-w-172">
+                <Accordeon.Summary>
+                    <div className="flex min-w-0 items-start gap-2">
+                        <span className="mt-0.5 flex items-center gap-1.5 text-main-200">
+                            <Icon
+                                icon="mdi:clipboard-text-outline"
+                                width={14}
+                                height={14}
                             />
+                            {isLoading ? <Loader className="h-3 w-3" /> : null}
+                        </span>
+                        <div className="min-w-0">
+                            <p className="truncate text-xs font-semibold text-main-100">
+                                План: {planTitle}
+                            </p>
+                            <p className="text-[11px] text-main-400">
+                                Шагов: {totalStepsCount || "-"} • Прогресс:{" "}
+                                {progress}
+                            </p>
+                        </div>
+                        <span
+                            className={`ml-auto rounded-md border px-1.5 py-0.5 text-[10px] leading-none ${
+                                isComplete
+                                    ? "border-main-600/80 text-green-400"
+                                    : "border-main-700/80 text-main-300"
+                            }`}
+                        >
+                            {isComplete ? "готово" : "в работе"}
+                        </span>
+                    </div>
+                </Accordeon.Summary>
+
+                <Accordeon.Content>
+                    <div className="space-y-3">
+                        <div className="rounded-xl border border-main-700/60 bg-main-900/40 p-3">
+                            <div className="flex items-center justify-between gap-2 text-[11px]">
+                                <span className="text-main-300">Статус</span>
+                                <span
+                                    className={
+                                        isComplete
+                                            ? "text-green-400"
+                                            : "text-main-200"
+                                    }
+                                >
+                                    {isComplete ? "Готово" : "В работе"}
+                                </span>
+                            </div>
+
+                            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-main-800/90">
+                                <div
+                                    className={`h-full rounded-full transition-all duration-500 ${
+                                        isComplete
+                                            ? "bg-emerald-400"
+                                            : "bg-main-400"
+                                    }`}
+                                    style={{
+                                        width: `${isComplete ? 100 : progressMeta.percent}%`,
+                                    }}
+                                />
+                            </div>
+
+                            <p className="mt-2 text-[11px] text-main-400">
+                                Выполнено: {progressMeta.done}/
+                                {progressMeta.total}
+                                {progressMeta.total > 0
+                                    ? ` (${progressMeta.percent}%)`
+                                    : ""}
+                            </p>
+
+                            {nextStep && (
+                                <div className="mt-3 rounded-lg border border-main-700/70 bg-main-800/45 px-3 py-2">
+                                    <p className="text-[10px] uppercase tracking-wide text-main-400">
+                                        Следующий шаг
+                                    </p>
+                                    <p className="mt-1 text-[11px] text-main-200">
+                                        {nextStep.id}. {nextStep.description}
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
-                        <p className="mt-2 text-[11px] text-main-400">
-                            Выполнено: {progressMeta.done}/{progressMeta.total}
-                            {progressMeta.total > 0
-                                ? ` (${progressMeta.percent}%)`
-                                : ""}
-                        </p>
-
-                        {nextStep && (
-                            <div className="mt-3 rounded-lg border border-main-700/70 bg-main-800/45 px-3 py-2">
-                                <p className="text-[10px] uppercase tracking-wide text-main-400">
-                                    Следующий шаг
+                        <div className="grid gap-3 md:grid-cols-2">
+                            <div>
+                                <p className="mb-1 text-[11px] font-semibold text-main-300">
+                                    ОСТАЛОСЬ
                                 </p>
-                                <p className="mt-1 text-[11px] text-main-200">
-                                    {nextStep.id}. {nextStep.description}
-                                </p>
+                                <div className="space-y-1 text-[11px]">
+                                    {pendingSteps.length ? (
+                                        pendingSteps.map((step) => (
+                                            <p
+                                                key={`pending_${step.id}`}
+                                                className="rounded-md bg-main-900/45 px-2 py-1"
+                                            >
+                                                {step.id}. {step.description}
+                                            </p>
+                                        ))
+                                    ) : (
+                                        <p className="text-main-400">Нет</p>
+                                    )}
+                                </div>
                             </div>
-                        )}
-                    </div>
 
-                    <div className="grid gap-3 md:grid-cols-2">
+                            <div>
+                                <p className="mb-1 text-[11px] font-semibold text-main-300">
+                                    ВЫПОЛНЕНО
+                                </p>
+                                <div className="space-y-1 text-[11px]">
+                                    {completedSteps.length ? (
+                                        completedSteps.map((step) => (
+                                            <p
+                                                key={`done_${step.id}`}
+                                                className="rounded-md bg-emerald-500/10 px-2 py-1 text-main-200"
+                                            >
+                                                {step.id}. {step.description}
+                                            </p>
+                                        ))
+                                    ) : (
+                                        <p className="text-main-400">
+                                            Пока нет
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
                         <div>
                             <p className="mb-1 text-[11px] font-semibold text-main-300">
-                                ОСТАЛОСЬ
+                                ИСТОРИЯ ВЫЗОВОВ
                             </p>
-                            <div className="space-y-1 text-[11px]">
-                                {pendingSteps.length ? (
-                                    pendingSteps.map((step) => (
-                                        <p
-                                            key={`pending_${step.id}`}
-                                            className="rounded-md bg-main-900/45 px-2 py-1"
-                                        >
-                                            {step.id}. {step.description}
-                                        </p>
-                                    ))
-                                ) : (
-                                    <p className="text-main-400">Нет</p>
-                                )}
-                            </div>
-                        </div>
+                            <div className="space-y-1 text-[11px] text-main-300">
+                                {traces.map((trace, index) => {
+                                    const action = resolveTraceAction(trace);
+                                    const result = readPlanResult(trace.result);
+                                    const statusLabel =
+                                        trace.status === "done"
+                                            ? "ok"
+                                            : trace.status === "running"
+                                              ? "run"
+                                              : trace.status === "pending"
+                                                ? "wait"
+                                                : "err";
 
-                        <div>
-                            <p className="mb-1 text-[11px] font-semibold text-main-300">
-                                ВЫПОЛНЕНО
-                            </p>
-                            <div className="space-y-1 text-[11px]">
-                                {completedSteps.length ? (
-                                    completedSteps.map((step) => (
-                                        <p
-                                            key={`done_${step.id}`}
-                                            className="rounded-md bg-emerald-500/10 px-2 py-1 text-main-200"
+                                    return (
+                                        <div
+                                            key={trace.callId}
+                                            className="flex items-center justify-between gap-2 rounded-md bg-main-900/35 px-2 py-1"
                                         >
-                                            {step.id}. {step.description}
-                                        </p>
-                                    ))
-                                ) : (
-                                    <p className="text-main-400">Пока нет</p>
-                                )}
+                                            <p>
+                                                {index + 1}.{" "}
+                                                {actionTitle[action] || action}
+                                                {result?.progress
+                                                    ? ` • ${result.progress}`
+                                                    : ""}
+                                            </p>
+                                            <span className="text-[10px] uppercase text-main-400">
+                                                {statusLabel}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
-
-                    <div>
-                        <p className="mb-1 text-[11px] font-semibold text-main-300">
-                            ИСТОРИЯ ВЫЗОВОВ
-                        </p>
-                        <div className="space-y-1 text-[11px] text-main-300">
-                            {traces.map((trace, index) => {
-                                const action = resolveTraceAction(trace);
-                                const result = readPlanResult(trace.result);
-                                const statusLabel =
-                                    trace.status === "done"
-                                        ? "ok"
-                                        : trace.status === "running"
-                                          ? "run"
-                                          : trace.status === "pending"
-                                            ? "wait"
-                                            : "err";
-
-                                return (
-                                    <div
-                                        key={trace.callId}
-                                        className="flex items-center justify-between gap-2 rounded-md bg-main-900/35 px-2 py-1"
-                                    >
-                                        <p>
-                                            {index + 1}.{" "}
-                                            {actionTitle[action] || action}
-                                            {result?.progress
-                                                ? ` • ${result.progress}`
-                                                : ""}
-                                        </p>
-                                        <span className="text-[10px] uppercase text-main-400">
-                                            {statusLabel}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
+                </Accordeon.Content>
             </Accordeon>
         </div>
     );

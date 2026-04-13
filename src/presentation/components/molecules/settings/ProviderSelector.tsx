@@ -55,8 +55,9 @@ export function ProviderSelector({
             options={dropdownOptions}
             disabled={disabled}
             menuPlacement="bottom"
-            menuClassName="border border-main-700/80 bg-main-900 shadow-xl"
-            matchTriggerWidth={true}
+            classNames={{
+                menu: "border border-main-700/80 bg-main-900 shadow-xl",
+            }}
             renderTrigger={({
                 toggleOpen,
                 triggerRef,

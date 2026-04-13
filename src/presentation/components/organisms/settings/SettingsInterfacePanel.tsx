@@ -21,8 +21,7 @@ export const SettingsInterfacePanel = observer(() => {
                     }}
                     options={themeOptions}
                     placeholder="Выберите тему"
-                    className="rounded-xl bg-main-800/70 hover:bg-main-700/70 px-3 py-2 text-main-100"
-                    wrapperClassName="text-main-200"
+                    className="rounded-xl bg-main-800/70 hover:bg-main-700/70 text-main-100"
                 />
             </div>
             <SettingsColoredCheckboxRow

@@ -88,8 +88,9 @@ export const MessageComposer = ({
                                 <Dropdown
                                     options={attachOptions}
                                     menuPlacement="top"
-                                    menuClassName="w-66"
-                                    matchTriggerWidth={false}
+                                    classNames={{
+                                        menu: "w-66",
+                                    }}
                                     renderTrigger={({
                                         toggleOpen,
                                         triggerRef,
