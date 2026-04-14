@@ -17,16 +17,16 @@ interface RawUserData {
 }
 
 const normalizeGeneralData = (data: GeneralUserData): GeneralUserData => {
-    const enabledPromptTools = data.enabledPromptTools;
     const requiredPromptTools = data.requiredPromptTools.filter((toolName) =>
-        enabledPromptTools.includes(toolName),
+        data.enabledPromptTools.includes(toolName),
     );
 
     return {
         ...data,
+        selectedAssistantMode: data.selectedAssistantMode,
         webToolsProvider: data.webToolsProvider,
         embeddingsProvider: data.embeddingsProvider ?? "ollama",
-        enabledPromptTools,
+        enabledPromptTools: data.enabledPromptTools,
         requiredPromptTools,
         notifyOnJobCompleteToast: Boolean(data.notifyOnJobCompleteToast),
         notifyOnJobCompleteOsNotification: Boolean(

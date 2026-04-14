@@ -11,7 +11,10 @@ import type {
 } from "../../electron/models/chat";
 import type { DialogContextMessage } from "../../electron/models/dialog";
 import type { AskToolResult } from "../../electron/models/tool";
-import type { AllowedChatProviders } from "../../electron/models/user";
+import type {
+    AllowedChatProviders,
+    AssistantMode,
+} from "../../electron/models/user";
 import type { QaToolState } from "../utils/tools/qaTool";
 import { toolsStorage } from "../stores/toolsStorage";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
@@ -127,11 +130,15 @@ type StartGenerationOptions = {
     skipUserUiMessage?: boolean;
     contextOnlyUserMessage?: string;
     attachments?: ChatImageAttachment[];
+    mode?: AssistantMode;
 };
 
 type SendMessageOptions = {
     attachments?: ChatImageAttachment[];
+    mode?: AssistantMode;
 };
+
+const canUseToolsInMode = (mode: AssistantMode) => mode === "agent";
 
 export const useChat = () => {
     const toasts = useToasts();
@@ -320,6 +327,9 @@ export const useChat = () => {
 
             const normalizedPrompt = prompt.trim();
             const attachments = options?.attachments ?? [];
+            const mode =
+                options?.mode ??
+                profileStore.user?.generalData.selectedAssistantMode;
 
             if (!normalizedPrompt && attachments.length === 0) {
                 return false;
@@ -380,9 +390,12 @@ export const useChat = () => {
 
             try {
                 const modelMessages = buildModelMessages();
-                const enabledToolNames = toJS(
-                    profileStore.user?.generalData.enabledPromptTools ?? [],
-                );
+                const enabledToolNames = canUseToolsInMode(mode ?? "chat")
+                    ? toJS(
+                          profileStore.user?.generalData.enabledPromptTools ??
+                              [],
+                      )
+                    : [];
 
                 window.chat.streamResponseGeneration({
                     requestId,
@@ -517,6 +530,9 @@ export const useChat = () => {
 
             const prompt = input.trim();
             const attachments = options?.attachments ?? [];
+            const mode =
+                options?.mode ??
+                profileStore.user?.generalData.selectedAssistantMode;
 
             if (!prompt && attachments.length === 0) {
                 return false;
@@ -524,6 +540,7 @@ export const useChat = () => {
 
             const isStarted = await startGeneration(prompt, {
                 attachments,
+                mode,
             });
 
             if (isStarted) {

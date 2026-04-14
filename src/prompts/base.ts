@@ -1,7 +1,44 @@
-import { section, unique } from "../utils/prompting";
+import type { AssistantMode } from "../../electron/models/user";
+import { joinBlocks, section } from "../utils/prompting";
 
-export const getSystemPrompt = (assistantName: string) => {
-    return [
+export const getChatSystemPrompt = (assistantName: string) =>
+    joinBlocks([
+        section("SYSTEM_ROLE", [
+            `You are ${assistantName}, a polite and concise conversational assistant.`,
+            "Answer with respect, clarity, and practical value.",
+        ]),
+        section("CHAT_MODE_POLICY", [
+            "This is chat mode. Do not use tools and do not claim tool execution.",
+            "If the user asks for tool-based actions, politely explain that tools are unavailable in chat mode.",
+        ]),
+        section("STYLE", [
+            "Be friendly and professional.",
+            "Keep responses focused and easy to read.",
+        ]),
+    ]);
+
+export const getPlanningSystemPrompt = (assistantName: string) =>
+    joinBlocks([
+        section("SYSTEM_ROLE", [
+            `You are ${assistantName}, a polite planning assistant.`,
+            "Your main objective is to produce structured, actionable plans.",
+        ]),
+        section("PLANNING_POLICY", [
+            "This is planning mode. Do not use tools and do not claim tool execution.",
+            "If the user requests external actions or checks, politely explain that tools are unavailable in planning mode.",
+            "Clarify target outcome, constraints, and success criteria when missing.",
+            "Build plans as ordered steps from preparation to completion.",
+            "Each step should be short, concrete, and verifiable.",
+            "Include risks, dependencies, and fallback actions when relevant.",
+        ]),
+        section("STYLE", [
+            "Be calm, respectful, and specific.",
+            "Prioritize practical next actions over theory.",
+        ]),
+    ]);
+
+export const getAgentSystemPrompt = (assistantName: string) =>
+    joinBlocks([
         section("SYSTEM_ROLE", [
             `You are ${assistantName}, a precise, reliable, and practical assistant.`,
             "Your goal is to produce the most useful correct result for the user with minimal fluff.",
@@ -38,65 +75,19 @@ export const getSystemPrompt = (assistantName: string) => {
             "Do not be overly verbose, repetitive, apologetic, or theatrical.",
             "Prefer strong content over filler transitions.",
         ]),
-    ].join("\n\n");
-};
+    ]);
 
-export const getMustToolsUsagePolicy = (
-    enabledTools: string[] = [],
-    requiredTools: string[] = [],
+export const getModeSystemPrompt = (
+    mode: AssistantMode,
+    assistantName: string,
 ) => {
-    const enabled = unique(enabledTools).filter(Boolean);
-
-    if (enabled.length === 0) {
-        return "";
+    if (mode === "planning") {
+        return getPlanningSystemPrompt(assistantName);
     }
 
-    const required = unique(requiredTools)
-        .filter(Boolean)
-        .filter((toolName) => enabled.includes(toolName));
-
-    const lines = [
-        `Enabled tools: ${enabled.join(", ")}.`,
-        required.length > 0
-            ? `Mandatory tools: ${required.join(", ")}.`
-            : "Mandatory tools: none.",
-        required.length > 0
-            ? "When relevant and available, use each mandatory tool at least once before finalizing the answer."
-            : "If any enabled tool materially improves quality, use it proactively.",
-        "If a mandatory tool is unavailable or not applicable, briefly explain why and continue with the best alternative.",
-    ];
-
-    return section("MUST_TOOLS_USAGE_POLICY", lines);
-};
-
-export const getUserPrompt = (
-    userName: string,
-    userPrompt: string,
-    preferredLanguage: string = "Russian",
-    enabledPromptTools: string[] = [],
-    requiredPromptTools: string[] = [],
-) => {
-    const lines = [
-        `USER_NAME: ${userName || "Unknown user"}`,
-        `PREFERRED_LANGUAGE: ${preferredLanguage || "Russian"}`,
-    ];
-
-    if (userPrompt.trim()) {
-        lines.push(`USER_CUSTOM_INSTRUCTIONS: ${userPrompt.trim()}`);
+    if (mode === "agent") {
+        return getAgentSystemPrompt(assistantName);
     }
 
-    lines.push(
-        "FOLLOW_USER_PREFERENCES: Respect the user's custom instructions when they do not conflict with system rules.",
-    );
-
-    const toolsPolicy = getMustToolsUsagePolicy(
-        enabledPromptTools,
-        requiredPromptTools,
-    );
-
-    if (toolsPolicy) {
-        lines.push(toolsPolicy);
-    }
-
-    return lines.join("\n");
+    return getChatSystemPrompt(assistantName);
 };

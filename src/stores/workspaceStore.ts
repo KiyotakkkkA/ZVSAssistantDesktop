@@ -5,9 +5,11 @@ import type {
     DialogUiMessage,
     UpdateDialogStateDto,
 } from "../../electron/models/dialog";
+import type { AssistantMode } from "../../electron/models/user";
 import { globalStorage } from "./globalStorage";
 import type { PersistedDialog } from "../types/electron";
-import { getSystemPrompt, getUserPrompt } from "../prompts/base";
+import { getModeSystemPrompt } from "../prompts/base";
+import { getUserPrompt } from "../prompts/injectable";
 import { profileStore } from "./profileStore";
 import {
     createDialogId,
@@ -54,10 +56,22 @@ class WorkspaceStore {
                 renameProject: action.bound,
                 openProject: action.bound,
                 deleteProject: action.bound,
+                setSelectedAssistantMode: action.bound,
             },
             { autoBind: true },
         );
         void this.bootstrap();
+    }
+
+    setSelectedAssistantMode(mode: AssistantMode) {
+        for (const dialog of this.dialogs) {
+            const firstMessage = dialog.contextMessages[0];
+
+            if (firstMessage?.role === "system") {
+                firstMessage.content = this.getSystemPromptForMode(mode);
+                void this.persistDialogState(dialog.id);
+            }
+        }
     }
 
     async bootstrap() {
@@ -88,11 +102,12 @@ class WorkspaceStore {
             tokenUsage: null,
         };
 
-        this.dialogs.push(dialog);
-
-        if (window.workspace?.createDialog) {
-            await window.workspace.createDialog(createDialogDto);
+        const status = await window.workspace.createDialog(createDialogDto);
+        if (!status) {
+            return null;
         }
+
+        this.dialogs.push(dialog);
 
         runInAction(() => {
             this.openDialog(dialogId);
@@ -166,7 +181,7 @@ class WorkspaceStore {
 
         dialog.contextMessages.push({
             role: "user",
-            content: normalizedContent,
+            content: this.buildUserContextContent(normalizedContent),
         });
 
         if (persist) {
@@ -207,29 +222,28 @@ class WorkspaceStore {
             return;
         }
 
+        await window.workspace.renameDialog(
+            dialogId,
+            dialog.name || "Новый диалог",
+        );
         dialog.name = name.trim() || dialog.name;
 
-        if (window.workspace?.renameDialog) {
-            await window.workspace.renameDialog(
-                dialogId,
-                dialog.name || "Новый диалог",
-            );
-        }
+        return dialogId;
     }
 
     async deleteDialog(dialogId: DialogIdFormat) {
+        await window.workspace.deleteDialog(dialogId);
+
         this.dialogs = this.dialogs.filter((item) => item.id !== dialogId);
         this.projects = this.projects.filter(
             (project) => project.dialogId !== dialogId,
         );
 
-        if (window.workspace?.deleteDialog) {
-            await window.workspace.deleteDialog(dialogId);
-        }
-
         runInAction(() => {
             this.ensureActiveSelection();
         });
+
+        return dialogId;
     }
 
     async updateDialogState(dialogId: DialogIdFormat, tokenUsage?: unknown) {
@@ -406,7 +420,10 @@ class WorkspaceStore {
             )
             .map((message) => ({
                 role: message.role,
-                content: message.content,
+                content:
+                    message.role === "user"
+                        ? this.buildUserContextContent(message.content)
+                        : message.content,
                 attachments:
                     message.role === "user" ? (message.attachments ?? []) : [],
             }));
@@ -419,22 +436,10 @@ class WorkspaceStore {
             return modelMessages;
         }
 
-        const userGeneralData = profileStore.user?.generalData;
-
         return [
             {
                 role: "system" as const,
-                content: getSystemPrompt("Charlie"),
-            },
-            {
-                role: "system" as const,
-                content: getUserPrompt(
-                    userGeneralData?.name ?? "Пользователь",
-                    userGeneralData?.userPrompt ?? "",
-                    userGeneralData?.preferredLanguage ?? "",
-                    userGeneralData?.enabledPromptTools ?? [],
-                    userGeneralData?.requiredPromptTools ?? [],
-                ),
+                content: this.getSystemPromptForMode(),
             },
             ...modelMessages,
         ];
@@ -512,7 +517,7 @@ class WorkspaceStore {
 
                 dialog.contextMessages.push({
                     role: "user",
-                    content: message.content,
+                    content: this.buildUserContextContent(message.content),
                     attachments: message.attachments ?? [],
                 });
                 continue;
@@ -532,24 +537,43 @@ class WorkspaceStore {
     }
 
     private getSystemContextMessages(): DialogContextMessage[] {
-        const userGeneralData = profileStore.user?.generalData;
-
         return [
             {
                 role: "system",
-                content: getSystemPrompt("Charlie"),
-            },
-            {
-                role: "system",
-                content: getUserPrompt(
-                    userGeneralData?.name ?? "Пользователь",
-                    userGeneralData?.userPrompt ?? "",
-                    userGeneralData?.preferredLanguage ?? "",
-                    userGeneralData?.enabledPromptTools ?? [],
-                    userGeneralData?.requiredPromptTools ?? [],
-                ),
+                content: this.getSystemPromptForMode(),
             },
         ];
+    }
+
+    private buildUserContextContent(userMessage: string) {
+        const userGeneralData = profileStore.user?.generalData;
+
+        return getUserPrompt(
+            userMessage,
+            userGeneralData?.name ?? "Пользователь",
+            userGeneralData?.userPrompt ?? "",
+            this.getSelectedAssistantMode(),
+            userGeneralData?.preferredLanguage ?? "",
+            userGeneralData?.enabledPromptTools ?? [],
+            userGeneralData?.requiredPromptTools ?? [],
+        );
+    }
+
+    private getSelectedAssistantMode(): AssistantMode {
+        const mode = profileStore.user?.generalData?.selectedAssistantMode;
+
+        if (mode === "agent" || mode === "planning" || mode === "chat") {
+            return mode;
+        }
+
+        return "chat";
+    }
+
+    private getSystemPromptForMode(mode = this.getSelectedAssistantMode()) {
+        return getModeSystemPrompt(
+            mode,
+            profileStore.user?.generalData?.assistantName ?? "Чарли",
+        );
     }
 
     private async persistDialogState(dialogId: DialogIdFormat) {

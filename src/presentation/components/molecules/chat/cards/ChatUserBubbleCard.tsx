@@ -34,8 +34,8 @@ export function ChatUserBubbleCard({
 }: ChatUserBubbleCardProps) {
     return (
         <article className="flex flex-col w-fit group">
-            {attachments.length > 0 && !isEditing ? (
-                <div className="mb-2 flex max-w-[88%] flex-wrap justify-end gap-2 self-end">
+            {attachments.length > 0 && !isEditing && (
+                <div className="mb-2 flex max-w-[88%] justify-end gap-2 self-end">
                     {attachments.map((attachment) => (
                         <ChatUserAttachmentCard
                             key={attachment.id}
@@ -43,7 +43,7 @@ export function ChatUserBubbleCard({
                         />
                     ))}
                 </div>
-            ) : null}
+            )}
 
             <div className="max-w-[88%] self-end rounded-2xl bg-main-500/20 px-4 py-3 text-sm leading-relaxed text-main-100 ring-main-300/30">
                 {isEditing ? (

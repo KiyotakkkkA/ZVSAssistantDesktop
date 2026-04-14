@@ -5,6 +5,7 @@ export const defaultUser: CreateUserDto = {
     isCurrent: true,
     generalData: {
         // Настройким ассистента
+        selectedAssistantMode: "chat",
         assistantName: "Чарли",
         chatGenProvider: "ollama",
         webToolsProvider: "ollama",
