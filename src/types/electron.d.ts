@@ -3,6 +3,7 @@ import type {
     IpcCoreNamespace,
     IpcJobsNamespace,
     IpcProfileNamespace,
+    IpcStorageNamespace,
     IpcWorkspaceNamespace,
 } from "../../electron/namespaces";
 import type { DialogEntity } from "../../electron/models/dialog";
@@ -18,5 +19,6 @@ declare global {
         profile: IpcProfileNamespace;
         workspace: IpcWorkspaceNamespace;
         jobs: IpcJobsNamespace;
+        storage: IpcStorageNamespace;
     }
 }

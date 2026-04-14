@@ -5,6 +5,7 @@ export type ElectronPaths = {
     resourcesPath: string;
     themesPath: string;
     databasePath: string;
+    storagePath: string;
 };
 
 export const createElectronPaths = (basePath: string): ElectronPaths => {
@@ -13,6 +14,7 @@ export const createElectronPaths = (basePath: string): ElectronPaths => {
     return {
         basePath,
         resourcesPath,
+        storagePath: path.join(resourcesPath, "storage"),
         themesPath: path.join(resourcesPath, "themes"),
         databasePath: path.join(resourcesPath, "db.zvsdatabase"),
     };

@@ -35,8 +35,8 @@ export const StorageConnectorsSelectPanel = () => {
     };
 
     return (
-        <section className="flex h-full flex-col md:flex-row">
-            <aside className="w-full border-b border-main-600/55 p-4 md:w-1/4 md:border-b-0 md:border-r xl:w-1/5">
+        <section className="flex h-full">
+            <aside className="border-b border-main-600/55 p-4 w-1/5 border-r">
                 {connectors.map((connector) => (
                     <button
                         key={connector.id}

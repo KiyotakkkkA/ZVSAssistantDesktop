@@ -5,6 +5,7 @@ import type {
     IpcCoreNamespace,
     IpcJobsNamespace,
     IpcProfileNamespace,
+    IpcStorageNamespace,
     IpcWorkspaceNamespace,
 } from "./namespaces";
 
@@ -133,3 +134,40 @@ const jobsNamespace: IpcJobsNamespace = {
 };
 
 contextBridge.exposeInMainWorld("jobs", jobsNamespace);
+
+const storageNamespace: IpcStorageNamespace = {
+    getStorageFolders() {
+        return ipcRenderer.invoke("storage:get-folders");
+    },
+    getStorageFiles() {
+        return ipcRenderer.invoke("storage:get-files");
+    },
+    createStorageFolder(payload) {
+        return ipcRenderer.invoke("storage:create-folder", payload);
+    },
+    renameStorageFolder(id, name) {
+        return ipcRenderer.invoke("storage:rename-folder", id, name);
+    },
+    deleteStorageFolder(id) {
+        return ipcRenderer.invoke("storage:delete-folder", id);
+    },
+    addFilesToFolder(folderId, files) {
+        return ipcRenderer.invoke(
+            "storage:add-files-to-folder",
+            folderId,
+            files,
+        );
+    },
+    removeFilesFromFolder(folderId, fileIds) {
+        return ipcRenderer.invoke(
+            "storage:remove-files-from-folder",
+            folderId,
+            fileIds,
+        );
+    },
+    refreshFolderContent(folderId) {
+        return ipcRenderer.invoke("storage:refresh-folder-content", folderId);
+    },
+};
+
+contextBridge.exposeInMainWorld("storage", storageNamespace);

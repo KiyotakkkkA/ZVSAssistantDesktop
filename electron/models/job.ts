@@ -1,6 +1,17 @@
 export type JobEventTag = "info" | "success" | "warning" | "error";
 
-export type JobKind = "test-task";
+export type StorageRepositorySyncProvider = "github" | "gitlab";
+
+export type StorageRepositorySyncPayload = {
+    provider: StorageRepositorySyncProvider;
+    repoUrl: string;
+    branch: string;
+    token?: string;
+    ignorePatterns?: string[];
+    folderName?: string;
+};
+
+export type JobKind = "test-task" | "storage-repository-sync";
 
 export type JobRecord = {
     id: string;
@@ -31,6 +42,7 @@ export type CreateJobPayload = {
     kind?: JobKind;
     totalSteps?: number;
     stepDelayMs?: number;
+    storageRepositorySync?: StorageRepositorySyncPayload;
 };
 
 export type JobRealtimeEvent =

@@ -54,6 +54,14 @@ export const registerIpcCorePack = () => {
             async (path: string) => {
                 try {
                     const result = await shell.openPath(path);
+
+                    if (result) {
+                        return {
+                            success: false,
+                            error: result,
+                        };
+                    }
+
                     return {
                         success: true,
                         result,

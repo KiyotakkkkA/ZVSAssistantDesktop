@@ -3,8 +3,10 @@ import type {
     JobRealtimeEvent,
     JobRecord,
 } from "../../models/job";
+import type { AppStorageService } from "../AppStorageService";
 import { JobsStorage } from "./JobsStorage";
 import type { JobWorker } from "./workers/contracts";
+import { StorageRepositorySyncWorker } from "./workers/StorageRepositorySyncWorker";
 import { TestTaskWorker } from "./workers/TestTaskWorker";
 
 type JobRuntime = {
@@ -21,9 +23,18 @@ export class JobService {
     constructor(
         private readonly jobsStorage: JobsStorage,
         private readonly emitEvent: (event: JobRealtimeEvent) => void,
+        private readonly appStorageService: AppStorageService,
     ) {
         const testWorker = new TestTaskWorker();
         this.workersByKind.set(testWorker.kind, testWorker);
+
+        const storageRepositorySyncWorker = new StorageRepositorySyncWorker(
+            this.appStorageService,
+        );
+        this.workersByKind.set(
+            storageRepositorySyncWorker.kind,
+            storageRepositorySyncWorker,
+        );
 
         this.jobsStorage.markPendingJobsAsInterrupted();
     }

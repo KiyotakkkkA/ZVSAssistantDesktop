@@ -8,7 +8,7 @@ import {
     Separator,
 } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { observer } from "mobx-react-lite";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { ChatImageAttachment } from "../../../../../electron/models/chat";
 import type { AssistantMode } from "../../../../../electron/models/user";
 import { useUpload } from "../../../../hooks";
@@ -31,9 +31,6 @@ type MessageComposerProps = {
 export const MessageComposer = observer(
     ({ input, setInput, onSubmit, isGenerating }: MessageComposerProps) => {
         const areaRef = useRef<HTMLTextAreaElement>(null);
-        const [activeMode, setActiveMode] = useState<AssistantMode>(
-            profileStore.user?.generalData.selectedAssistantMode ?? "chat",
-        );
         const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
         const [toolsQuery, setToolsQuery] = useState("");
         const {
@@ -58,22 +55,13 @@ export const MessageComposer = observer(
         ];
 
         const canSubmit = input.trim().length > 0 || attachments.length > 0;
+        const activeMode =
+            profileStore.user?.generalData.selectedAssistantMode ?? "chat";
         const activeModeConfig =
             assistantModes.find((mode) => mode.key === activeMode) ??
             assistantModes[0];
 
-        useEffect(() => {
-            const selectedMode =
-                profileStore.user?.generalData.selectedAssistantMode ?? "chat";
-
-            if (selectedMode !== activeMode) {
-                setActiveMode(selectedMode);
-            }
-            workspaceStore.setSelectedAssistantMode(selectedMode);
-        }, [activeMode]);
-
         const handleModeChange = (mode: AssistantMode) => {
-            setActiveMode(mode);
             profileStore.updateGeneralData({ selectedAssistantMode: mode });
             workspaceStore.setSelectedAssistantMode(mode);
         };
@@ -198,30 +186,21 @@ export const MessageComposer = observer(
 
                             <div className="mt-2 flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2">
-                                    <Button
-                                        label="Tools"
-                                        className="h-9 w-9 p-0"
-                                        shape="rounded-l-full"
-                                        variant="primary"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setIsToolsModalOpen(true);
-                                        }}
-                                    >
-                                        <Icon icon="mdi:tools" />
-                                    </Button>
-
-                                    <Button
-                                        label="Tools"
-                                        className="h-9 w-9 p-0"
-                                        shape="rounded-sm"
-                                        variant="secondary"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                        }}
-                                    >
-                                        <Icon icon="mdi:script" />
-                                    </Button>
+                                    {profileStore.user?.generalData
+                                        .selectedAssistantMode === "agent" && (
+                                        <Button
+                                            label="Tools"
+                                            className="h-9 w-9 p-0"
+                                            shape="rounded-l-full"
+                                            variant="secondary"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsToolsModalOpen(true);
+                                            }}
+                                        >
+                                            <Icon icon="mdi:tools" />
+                                        </Button>
+                                    )}
 
                                     <Dropdown
                                         options={attachOptions}
@@ -237,9 +216,16 @@ export const MessageComposer = observer(
                                         }) => (
                                             <Button
                                                 label="Attach"
-                                                variant="primary"
+                                                variant="secondary"
                                                 className="h-9 w-9 p-0"
-                                                shape="rounded-r-full"
+                                                shape={
+                                                    profileStore.user
+                                                        ?.generalData
+                                                        .selectedAssistantMode ===
+                                                    "agent"
+                                                        ? "rounded-r-full"
+                                                        : "rounded-full"
+                                                }
                                                 ref={triggerRef}
                                                 disabled={disabled}
                                                 onClick={(e) => {
@@ -277,6 +263,7 @@ export const MessageComposer = observer(
                                                     return (
                                                         <Button
                                                             key={mode.key}
+                                                            type="button"
                                                             onMouseDown={(
                                                                 event,
                                                             ) => {
@@ -330,6 +317,7 @@ export const MessageComposer = observer(
                                                 })}
                                                 <Separator className="my-1 border-main-700/30" />
                                                 <Button
+                                                    type="button"
                                                     variant=""
                                                     className="border-transparent"
                                                 >

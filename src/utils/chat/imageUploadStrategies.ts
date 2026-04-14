@@ -1,4 +1,5 @@
 import type { ChatImageAttachment } from "../../../electron/models/chat";
+import { resolveFileExtension } from "../resolvers";
 
 export type ImageUploadStrategy = {
     extensions: readonly string[];
@@ -49,18 +50,8 @@ export const buildImageUploadAcceptValue = () => {
     return extensions.join(",");
 };
 
-const getFileExtension = (fileName: string) => {
-    const dotIndex = fileName.lastIndexOf(".");
-
-    if (dotIndex < 0 || dotIndex === fileName.length - 1) {
-        return "";
-    }
-
-    return fileName.slice(dotIndex + 1).toLowerCase();
-};
-
 export const resolveImageUploadStrategy = (file: File) => {
-    const extension = getFileExtension(file.name);
+    const extension = resolveFileExtension(file.name);
     const normalizedMimeType = file.type.toLowerCase();
 
     const byMimeType = IMAGE_UPLOAD_STRATEGIES.find((strategy) =>

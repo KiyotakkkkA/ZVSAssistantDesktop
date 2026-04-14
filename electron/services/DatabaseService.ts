@@ -60,6 +60,25 @@ export class DatabaseService {
                 FOREIGN KEY(job_id) REFERENCES jobs(id) ON DELETE CASCADE,
                 FOREIGN KEY(created_by) REFERENCES profiles(id) ON DELETE CASCADE
             );
+
+            CREATE TABLE IF NOT EXISTS storage_folders (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                path TEXT NOT NULL,
+                size REAL NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS storage_files (
+                id TEXT PRIMARY KEY,
+                folder_id TEXT NOT NULL REFERENCES storage_folders(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                path TEXT NOT NULL,
+                size REAL NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
         `);
     }
 }

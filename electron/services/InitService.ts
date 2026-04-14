@@ -7,16 +7,19 @@ export class InitService {
     private readonly resourcesPath: string;
     private readonly themesPath: string;
     private readonly databasePath: string;
+    private readonly storagePath: string;
 
     constructor(paths: ElectronPaths) {
         this.resourcesPath = paths.resourcesPath;
         this.themesPath = paths.themesPath;
         this.databasePath = paths.databasePath;
+        this.storagePath = paths.storagePath;
     }
 
     initialize(): void {
         this.ensureDirectory(this.resourcesPath);
         this.ensureDirectory(this.themesPath);
+        this.ensureDirectory(this.storagePath);
         this.ensureDatabase(this.databasePath);
         this.ensureThemes();
     }

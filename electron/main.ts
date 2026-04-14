@@ -7,10 +7,12 @@ import { InitService } from "./services/InitService";
 import { DatabaseService } from "./services/DatabaseService";
 import { ThemesService } from "./services/ThemesService";
 import { ToolsRuntimeService } from "./services/ToolsRuntimeService";
+import { AppStorageService } from "./services/AppStorageService";
 
 import {
     registerIpcChatPack,
     registerIpcProfilePack,
+    registerIpcStoragePack,
     registerIpcWorkspacePack,
     registerIpcCorePack,
     registerIpcJobsPack,
@@ -21,6 +23,7 @@ import { createElectronPaths } from "./paths";
 import { UserRepository } from "./repositories/UserRepository";
 import { DialogRepository } from "./repositories/DialogRepository";
 import { JobRepository } from "./repositories/JobRepository";
+import { StorageRepository } from "./repositories/StorageRepository";
 import { defaultUser } from "./static/data/baseProfile";
 import { JobsStorage } from "./services/jobs/JobsStorage";
 import { JobService } from "./services/jobs/JobService";
@@ -149,6 +152,10 @@ app.whenReady().then(() => {
     const userRepository = new UserRepository(databaseService);
     const dialogRepository = new DialogRepository(databaseService);
     const jobRepository = new JobRepository(databaseService);
+    const storageRepository = new StorageRepository(
+        databaseService,
+        appPaths.storagePath,
+    );
 
     // Инициализируем функциональные сервисы
     toolsRuntimeService = new ToolsRuntimeService();
@@ -158,7 +165,12 @@ app.whenReady().then(() => {
     });
 
     jobsStorage = new JobsStorage(jobRepository, userRepository);
-    jobService = new JobService(jobsStorage, broadcastJobsRealtimeEvent);
+    const appStorageService = new AppStorageService(storageRepository);
+    jobService = new JobService(
+        jobsStorage,
+        broadcastJobsRealtimeEvent,
+        appStorageService,
+    );
 
     themesService = new ThemesService(appPaths.themesPath);
 
@@ -177,6 +189,10 @@ app.whenReady().then(() => {
 
     registerIpcWorkspacePack({
         dialogRepository,
+    });
+
+    registerIpcStoragePack({
+        storageRepository,
     });
 
     registerIpcJobsPack({

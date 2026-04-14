@@ -4,6 +4,12 @@ import type {
     DialogEntity,
     UpdateDialogStateDto,
 } from "./models/dialog";
+import type {
+    AddStorageFileDto,
+    CreateStorageFolderDto,
+    StorageFileEntity,
+    StorageFolderEntity,
+} from "./models/storage";
 import type { ProfileBootPayload } from "./models/profile";
 import type { UpdateUserDto } from "./models/user";
 import type { ThemeData } from "./static/themes/types";
@@ -78,4 +84,23 @@ export interface IpcJobsNamespace {
     createJob(payload: CreateJobPayload): Promise<JobRecord>;
     cancelJob(jobId: string): Promise<boolean>;
     onRealtimeEvent(listener: (event: JobRealtimeEvent) => void): () => void;
+}
+
+export interface IpcStorageNamespace {
+    getStorageFolders(): Promise<StorageFolderEntity[]>;
+    getStorageFiles(): Promise<StorageFileEntity[]>;
+    createStorageFolder(
+        payload: CreateStorageFolderDto,
+    ): Promise<StorageFolderEntity>;
+    renameStorageFolder(
+        id: string,
+        name: string,
+    ): Promise<StorageFolderEntity | null>;
+    deleteStorageFolder(id: string): Promise<void>;
+    addFilesToFolder(
+        folderId: string,
+        files: AddStorageFileDto[],
+    ): Promise<StorageFileEntity[]>;
+    removeFilesFromFolder(folderId: string, fileIds: string[]): Promise<void>;
+    refreshFolderContent(folderId: string): Promise<StorageFileEntity[]>;
 }
