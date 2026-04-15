@@ -1,10 +1,12 @@
 import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 import { Icon } from "@iconify/react";
-import { SettingsInterfacePanel } from "./SettingsInterfacePanel";
-import { SettingsProfilePanel } from "./SettingsProfilePanel";
-import { SettingsAssistantPanel } from "./SettingsAssisstantPanel";
-import { SettingsNotificationPanel } from "./SettingsNotificationPanel";
-import { SettingsProvidersPanel } from "./SettingsProvidersPanel";
+import {
+    SettingsAssistantPanel,
+    SettingsInterfacePanel,
+    SettingsNotificationPanel,
+    SettingsProfilePanel,
+    SettingsProvidersPanel,
+} from ".";
 
 type SettingsRoute =
     | "interface"

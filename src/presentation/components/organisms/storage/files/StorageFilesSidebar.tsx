@@ -29,7 +29,7 @@ export const StorageFilesSidebar = ({
     onSelectFolder,
 }: StorageFilesSidebarProps) => {
     return (
-        <aside className="min-h-0 border-b border-main-600/55 w-1/5 border-r p-4">
+        <aside className="min-h-0 border-b border-main-600/55 w-1/5 border-r p-4 animate-card-rise-in">
             <InputSmall
                 placeholder="Поиск файлов по имени или пути..."
                 value={searchQuery}

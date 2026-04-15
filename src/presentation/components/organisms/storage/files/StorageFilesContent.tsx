@@ -30,7 +30,7 @@ export const StorageFilesContent = ({
     onOpenDeleteModal,
 }: StorageFilesContentProps) => {
     return (
-        <div className="flex-1 p-4">
+        <div className="flex-1 p-4 animate-card-rise-in">
             <div className="mb-3 flex items-center justify-between gap-2">
                 <div>
                     <h3 className="text-base text-main-100">Контент</h3>

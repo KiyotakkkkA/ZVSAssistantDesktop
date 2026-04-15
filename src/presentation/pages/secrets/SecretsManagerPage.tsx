@@ -1,9 +1,14 @@
+import { SecretsDataTable } from "../../components/organisms/secrets";
+
 export const SecretsManagerPage = () => {
     return (
-        <div className="flex h-full w-full items-center justify-center">
-            <h1 className="text-2xl font-bold text-main-100">
-                Здесь будет отображаться менеджер секретов
-            </h1>
+        <div className="flex-col h-full w-full rounded-3xl bg-main-800/70 animate-page-fade-in">
+            <div className="border-b border-main-600/55 w-full h-fit p-4">
+                <h1 className="text-xl mb-3">Менеджер секретов</h1>
+            </div>
+            <div className="p-4">
+                <SecretsDataTable />
+            </div>
         </div>
     );
 };
