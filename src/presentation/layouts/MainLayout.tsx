@@ -8,7 +8,7 @@ import { observer } from "mobx-react-lite";
 import { profileStore } from "../../stores/profileStore";
 
 type NavigationTab = {
-    id: "workspace" | "storage" | "extensions" | "agents" | "scenarios";
+    id: "workspace" | "storage" | "extensions" | "agents" | "secrets";
     label: string;
     to: string;
     icon: string;
@@ -38,6 +38,12 @@ const navigationTabs: NavigationTab[] = [
         label: "Агенты",
         to: "/agents",
         icon: "mdi:account-group-outline",
+    },
+    {
+        id: "secrets",
+        label: "Менеджер секретов",
+        to: "/secrets",
+        icon: "mdi:shield-key-outline",
     },
 ];
 

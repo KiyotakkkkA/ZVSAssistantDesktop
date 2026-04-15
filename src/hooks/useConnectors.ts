@@ -43,14 +43,8 @@ const parseGithubRepoPath = (repoUrl: string) => {
 
     const repo = rawRepo.replace(/\.git$/i, "");
 
-    const hostname = url.hostname.toLowerCase();
-    const apiBaseUrl =
-        hostname === "github.com" || hostname === "www.github.com"
-            ? "https://api.github.com"
-            : `${url.protocol}//${url.host}/api/v3`;
-
     return {
-        apiBaseUrl,
+        apiBaseUrl: "https://api.github.com",
         repoPath: `${owner}/${repo}`,
     };
 };

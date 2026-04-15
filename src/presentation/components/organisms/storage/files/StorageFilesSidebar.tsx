@@ -68,10 +68,10 @@ export const StorageFilesSidebar = ({
                                     onClick={() => {
                                         onSelectFolder(folder.id);
                                     }}
-                                    className={`w-full rounded-xl border px-3 py-2 text-left transition-colors cursor-pointer ${
+                                    className={`w-full rounded-xl px-3 py-2 text-left transition-colors cursor-pointer ${
                                         folder.id === selectedFolderId
-                                            ? "border-main-300/60 bg-main-700/70"
-                                            : "border-main-700/70 bg-main-900/45 hover:border-main-500/70"
+                                            ? "bg-main-600/70"
+                                            : "bg-main-900/45 hover:bg-main-700/70"
                                     }`}
                                 >
                                     <div className="flex items-center justify-between gap-2">

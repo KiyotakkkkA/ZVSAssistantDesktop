@@ -19,8 +19,8 @@ import {
     StorageFilesContent,
     StorageFilesSidebar,
     StorageRenameFolderModal,
-    fileToBase64,
 } from "./files";
+import { convertFileToBase64 } from "../../../../utils/converters";
 
 export const StorageFilesSelectPanel = () => {
     const [isLoading, setIsLoading] = useState(true);
@@ -169,7 +169,7 @@ export const StorageFilesSelectPanel = () => {
                     name: file.name,
                     path: (file as File & { path?: string }).path ?? "",
                     size: Number((file.size / (1024 * 1024)).toFixed(4)),
-                    contentBase64: await fileToBase64(file),
+                    contentBase64: await convertFileToBase64(file),
                 })),
             );
 

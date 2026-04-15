@@ -15,8 +15,8 @@ import { useUpload } from "../../../../hooks";
 import { assistantModes } from "../../../../prompts/modes";
 import { profileStore } from "../../../../stores/profileStore";
 import { workspaceStore } from "../../../../stores/workspaceStore";
-import { formatFileSize } from "../../../../utils/chat/imageUploadStrategies";
 import { RequiredToolsPickForm } from "./forms";
+import { convertBytesToSize } from "../../../../utils/converters";
 
 type MessageComposerProps = {
     input: string;
@@ -138,7 +138,7 @@ export const MessageComposer = observer(
                                                         "img"}
                                                 </p>
                                                 <p className="text-[11px] text-main-400">
-                                                    {formatFileSize(
+                                                    {convertBytesToSize(
                                                         attachment.size,
                                                     )}
                                                 </p>

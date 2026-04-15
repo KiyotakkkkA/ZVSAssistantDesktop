@@ -4,7 +4,7 @@ import type {
     StorageFileEntity,
     StorageFolderEntity,
 } from "../../../../../../electron/models/storage";
-import { formatFolderSize, formatStorageFileSize } from "./utils";
+import { convertBytesToSize } from "../../../../../utils/converters";
 
 type StorageFilesContentProps = {
     selectedFolder: StorageFolderEntity | null;
@@ -36,7 +36,7 @@ export const StorageFilesContent = ({
                     <h3 className="text-base text-main-100">Контент</h3>
                     <p className="text-xs text-main-400">
                         {selectedFolder
-                            ? `${selectedFolder.name} • ${formatFolderSize(selectedFolder.size)}`
+                            ? `${selectedFolder.name} • ${convertBytesToSize(selectedFolder.size, { inputUnit: "MB" })}`
                             : "Выберите папку слева"}
                     </p>
                 </div>
@@ -123,7 +123,9 @@ export const StorageFilesContent = ({
                                             {file.name}
                                         </span>
                                         <span className="shrink-0 text-main-400">
-                                            {formatStorageFileSize(file.size)}
+                                            {convertBytesToSize(file.size, {
+                                                inputUnit: "MB",
+                                            })}
                                         </span>
                                     </div>
                                 </TreeView.Element>

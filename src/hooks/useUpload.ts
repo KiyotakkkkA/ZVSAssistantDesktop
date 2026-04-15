@@ -5,10 +5,10 @@ import type { ChatImageAttachment } from "../../electron/models/chat";
 import {
     buildImageAttachmentFromFile,
     buildImageUploadAcceptValue,
-    formatFileSize,
     isSameImageAttachment,
     MAX_IMAGE_UPLOAD_SIZE_BYTES,
 } from "../utils/chat/imageUploadStrategies";
+import { convertBytesToSize } from "../utils/converters";
 
 const IMAGE_ACCEPT_VALUE = buildImageUploadAcceptValue();
 
@@ -68,7 +68,7 @@ export const useUpload = (): UseUploadResult => {
                         if (reason === "file-is-too-large") {
                             toasts.warning({
                                 title: "Файл слишком большой",
-                                description: `${file.name} превышает лимит ${formatFileSize(MAX_IMAGE_UPLOAD_SIZE_BYTES)}.`,
+                                description: `${file.name} превышает лимит ${convertBytesToSize(MAX_IMAGE_UPLOAD_SIZE_BYTES)}.`,
                             });
                             continue;
                         }
