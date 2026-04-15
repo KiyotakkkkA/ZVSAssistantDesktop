@@ -8,123 +8,49 @@ import type {
     StorageFolderEntity,
     StorageVecstoreEntity,
 } from "../models/storage";
-import type { DatabaseService } from "../services/DatabaseService";
 import {
-    StorageFileIdFormat,
-    StorageFolderIdFormat,
-    StorageVecstoreIdFormat,
     createStorageFileId,
     createStorageVecstoreId,
 } from "../../src/utils/creators";
-
-type RawStorageFolderData = {
-    id: StorageFolderIdFormat;
-    vecstore_id: StorageVecstoreIdFormat | null;
-    name: string;
-    path: string;
-    size: number;
-    created_at: string;
-    updated_at: string;
-};
-
-type RawStorageFileData = {
-    id: StorageFileIdFormat;
-    folder_id: string;
-    name: string;
-    path: string;
-    size: number;
-    created_at: string;
-    updated_at: string;
-};
-
-type RawStorageVecstoreData = {
-    id: StorageVecstoreIdFormat;
-    name: string;
-    folder_id: StorageFolderIdFormat;
-    description: string;
-    path: string;
-    size: number;
-    entities_count: number;
-    created_at: string;
-    updated_at: string;
-};
-
-const mapStorageFolder = (row: RawStorageFolderData): StorageFolderEntity => ({
-    id: row.id,
-    vecstore_id: row.vecstore_id ?? undefined,
-    name: row.name,
-    path: row.path,
-    size: row.size,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-});
-
-const mapStorageFile = (row: RawStorageFileData): StorageFileEntity => ({
-    id: row.id,
-    folder_id: row.folder_id,
-    name: row.name,
-    path: row.path,
-    size: row.size,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-});
-
-const mapStorageVecstore = (
-    row: RawStorageVecstoreData,
-): StorageVecstoreEntity => ({
-    id: row.id,
-    name: row.name,
-    folder_id: row.folder_id,
-    description: row.description,
-    path: row.path,
-    size: row.size,
-    entities_count: row.entities_count,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-});
+import type { StorageFoldersRepository } from "./storage/StorageFoldersRepository";
+import type {
+    StorageFileRecordPayload,
+    StorageFilesRepository,
+} from "./storage/StorageFilesRepository";
+import type { StorageVecstoresRepository } from "./storage/StorageVecstoresRepository";
 
 export class StorageRepository {
     constructor(
-        private readonly databaseService: DatabaseService,
         private readonly storageRootPath: string,
+        private readonly storageFoldersRepository: StorageFoldersRepository,
+        private readonly storageFilesRepository: StorageFilesRepository,
+        private readonly storageVecstoresRepository: StorageVecstoresRepository,
     ) {}
 
     findAll(): StorageFolderEntity[] {
-        const rows = this.databaseService
-            .getDatabase()
-            .prepare("SELECT * FROM storage_folders ORDER BY updated_at DESC")
-            .all() as RawStorageFolderData[];
-
-        return rows.map(mapStorageFolder);
+        return this.storageFoldersRepository.findAll();
     }
 
     findAllFiles(): StorageFileEntity[] {
-        const rows = this.databaseService
-            .getDatabase()
-            .prepare("SELECT * FROM storage_files ORDER BY updated_at DESC")
-            .all() as RawStorageFileData[];
-
-        return rows.map(mapStorageFile);
+        return this.storageFilesRepository.findAll();
     }
 
     findAllVecstores(): StorageVecstoreEntity[] {
-        const rows = this.databaseService
-            .getDatabase()
-            .prepare("SELECT * FROM storage_vecstores ORDER BY updated_at DESC")
-            .all() as RawStorageVecstoreData[];
-
-        return rows.map(mapStorageVecstore);
+        return this.storageVecstoresRepository.findAll();
     }
 
     findFilesByFolderId(folderId: string): StorageFileEntity[] {
-        const rows = this.databaseService
-            .getDatabase()
-            .prepare(
-                "SELECT * FROM storage_files WHERE folder_id = ? ORDER BY updated_at DESC",
-            )
-            .all(folderId) as RawStorageFileData[];
+        return this.storageFilesRepository.findByFolderId(folderId);
+    }
 
-        return rows.map(mapStorageFile);
+    findVectorizedFilesByFolderId(folderId: string): StorageFileEntity[] {
+        return this.storageFilesRepository.findVectorizedByFolderId(folderId);
+    }
+
+    findNonVectorizedFilesByFolderId(folderId: string): StorageFileEntity[] {
+        return this.storageFilesRepository.findNonVectorizedByFolderId(
+            folderId,
+        );
     }
 
     findFolderByName(name: string): StorageFolderEntity | null {
@@ -134,24 +60,7 @@ export class StorageRepository {
             return null;
         }
 
-        const row = this.databaseService
-            .getDatabase()
-            .prepare(
-                `
-                SELECT *
-                FROM storage_folders
-                WHERE LOWER(name) = LOWER(?)
-                ORDER BY updated_at DESC
-                LIMIT 1
-                `,
-            )
-            .get(normalizedName) as RawStorageFolderData | undefined;
-
-        if (!row) {
-            return null;
-        }
-
-        return mapStorageFolder(row);
+        return this.storageFoldersRepository.findByName(normalizedName);
     }
 
     createStorageFolder(payload: CreateStorageFolderDto): StorageFolderEntity {
@@ -164,22 +73,14 @@ export class StorageRepository {
             fs.mkdirSync(normalizedPath, { recursive: true });
         }
 
-        this.databaseService
-            .getDatabase()
-            .prepare(
-                `
-                INSERT INTO storage_folders (id, name, path, size, created_at, updated_at)
-                VALUES (@id, @name, @path, @size, @created_at, @updated_at)
-                `,
-            )
-            .run({
-                id: payload.id,
-                name: payload.name.trim(),
-                path: normalizedPath,
-                size: this.calculateFolderSizeMb(normalizedPath),
-                created_at: now,
-                updated_at: now,
-            });
+        this.storageFoldersRepository.create({
+            id: payload.id,
+            name: payload.name.trim(),
+            path: normalizedPath,
+            size: this.calculateFolderSizeMb(normalizedPath),
+            created_at: now,
+            updated_at: now,
+        });
 
         const created = this.findById(payload.id);
 
@@ -193,20 +94,7 @@ export class StorageRepository {
     renameStorageFolder(id: string, name: string): StorageFolderEntity | null {
         const now = new Date().toISOString();
 
-        this.databaseService
-            .getDatabase()
-            .prepare(
-                `
-                UPDATE storage_folders
-                SET name = @name, updated_at = @updated_at
-                WHERE id = @id
-                `,
-            )
-            .run({
-                id,
-                name: name.trim(),
-                updated_at: now,
-            });
+        this.storageFoldersRepository.rename(id, name.trim(), now);
 
         return this.findById(id);
     }
@@ -226,14 +114,9 @@ export class StorageRepository {
         }
 
         const now = new Date().toISOString();
-        const statement = this.databaseService.getDatabase().prepare(
-            `
-                INSERT INTO storage_files (id, folder_id, name, path, size, created_at, updated_at)
-                VALUES (@id, @folder_id, @name, @path, @size, @created_at, @updated_at)
-                `,
-        );
 
         const createdIds: string[] = [];
+        const records: StorageFileRecordPayload[] = [];
 
         for (const file of files) {
             const sourcePath = file.path.trim();
@@ -265,9 +148,10 @@ export class StorageRepository {
 
             const targetStats = fs.statSync(targetPath);
 
-            statement.run({
+            records.push({
                 id: file.id,
                 folder_id: folderId,
+                vecstore_id: null,
                 name: path.relative(folder.path, targetPath) || sourceName,
                 path: targetPath,
                 size: this.bytesToMb(targetStats.size),
@@ -278,24 +162,15 @@ export class StorageRepository {
             createdIds.push(file.id);
         }
 
+        this.storageFilesRepository.insertMany(records);
+
         this.recalculateFolderSize(folderId);
 
         if (createdIds.length === 0) {
             return [];
         }
 
-        const rows = this.databaseService
-            .getDatabase()
-            .prepare(
-                `
-                SELECT * FROM storage_files
-                WHERE id IN (${createdIds.map(() => "?").join(",")})
-                ORDER BY updated_at DESC
-                `,
-            )
-            .all(...createdIds) as RawStorageFileData[];
-
-        return rows.map(mapStorageFile);
+        return this.storageFilesRepository.findByIds(createdIds);
     }
 
     createStorageVecstore(
@@ -321,40 +196,23 @@ export class StorageRepository {
             fs.mkdirSync(vecstorePath, { recursive: true });
         }
 
-        this.databaseService
-            .getDatabase()
-            .prepare(
-                `
-                INSERT INTO storage_vecstores (id, name, folder_id, description, path, size, entities_count, created_at, updated_at)
-                VALUES (@id, @name, @folder_id, @description, @path, @size, @entities_count, @created_at, @updated_at)
-                `,
-            )
-            .run({
-                id: vecstoreId,
-                name: payload.name.trim(),
-                folder_id: folder.id,
-                description: payload.description?.trim() ?? "",
-                path: vecstorePath,
-                size: 0,
-                entities_count: 0,
-                created_at: now,
-                updated_at: now,
-            });
+        this.storageVecstoresRepository.create({
+            id: vecstoreId,
+            name: payload.name.trim(),
+            folder_id: folder.id,
+            description: payload.description?.trim() ?? "",
+            path: vecstorePath,
+            size: 0,
+            entities_count: 0,
+            created_at: now,
+            updated_at: now,
+        });
 
-        this.databaseService
-            .getDatabase()
-            .prepare(
-                `
-                UPDATE storage_folders
-                SET vecstore_id = @vecstore_id, updated_at = @updated_at
-                WHERE id = @id
-                `,
-            )
-            .run({
-                id: folder.id,
-                vecstore_id: vecstoreId,
-                updated_at: now,
-            });
+        this.storageFoldersRepository.updateLinkedVecstore(
+            folder.id,
+            vecstoreId,
+            now,
+        );
 
         const created = this.findVecstoreById(vecstoreId);
 
@@ -371,20 +229,7 @@ export class StorageRepository {
     ): StorageVecstoreEntity | null {
         const now = new Date().toISOString();
 
-        this.databaseService
-            .getDatabase()
-            .prepare(
-                `
-                UPDATE storage_vecstores
-                SET name = @name, updated_at = @updated_at
-                WHERE id = @id
-                `,
-            )
-            .run({
-                id,
-                name: name.trim(),
-                updated_at: now,
-            });
+        this.storageVecstoresRepository.rename(id, name.trim(), now);
 
         return this.findVecstoreById(id);
     }
@@ -417,24 +262,9 @@ export class StorageRepository {
 
         const now = new Date().toISOString();
 
-        this.databaseService
-            .getDatabase()
-            .prepare(
-                `
-                UPDATE storage_folders
-                SET vecstore_id = NULL, updated_at = @updated_at
-                WHERE vecstore_id = @vecstore_id
-                `,
-            )
-            .run({
-                vecstore_id: id,
-                updated_at: now,
-            });
-
-        this.databaseService
-            .getDatabase()
-            .prepare("DELETE FROM storage_vecstores WHERE id = ?")
-            .run(id);
+        this.storageFoldersRepository.clearLinkedVecstoreByVecstoreId(id, now);
+        this.storageFilesRepository.clearVecstoreByVecstoreId(id);
+        this.storageVecstoresRepository.deleteById(id);
     }
 
     refreshFolderContent(folderId: string): StorageFileEntity[] {
@@ -450,36 +280,50 @@ export class StorageRepository {
 
         const files = this.collectFolderFiles(folder.path);
         const now = new Date().toISOString();
-        const database = this.databaseService.getDatabase();
-        const deleteStmt = database.prepare(
-            "DELETE FROM storage_files WHERE folder_id = ?",
-        );
-        const insertStmt = database.prepare(
-            `
-            INSERT INTO storage_files (id, folder_id, name, path, size, created_at, updated_at)
-            VALUES (@id, @folder_id, @name, @path, @size, @created_at, @updated_at)
-            `,
-        );
-        const writeTx = database.transaction(() => {
-            deleteStmt.run(folderId);
+        const records: StorageFileRecordPayload[] = files.map((file) => ({
+            id: file.id,
+            folder_id: folderId,
+            vecstore_id: null,
+            name: file.name,
+            path: file.path,
+            size: file.size,
+            created_at: now,
+            updated_at: now,
+        }));
 
-            for (const file of files) {
-                insertStmt.run({
-                    id: file.id,
-                    folder_id: folderId,
-                    name: file.name,
-                    path: file.path,
-                    size: file.size,
-                    created_at: now,
-                    updated_at: now,
-                });
-            }
-        });
-
-        writeTx();
+        this.storageFilesRepository.replaceFolderFiles(folderId, records);
         this.recalculateFolderSize(folderId);
 
         return this.findFilesByFolderId(folderId);
+    }
+
+    refreshVecstoreById(id: string): StorageVecstoreEntity | null {
+        const vecstore = this.findVecstoreById(id);
+
+        if (!vecstore) {
+            return null;
+        }
+
+        const metrics = this.storageFilesRepository.getVecstoreMetrics(id);
+
+        this.storageVecstoresRepository.updateMetrics(
+            id,
+            metrics.total_size,
+            metrics.entities_count,
+            new Date().toISOString(),
+        );
+
+        return this.findVecstoreById(id);
+    }
+
+    refreshAllVecstores(): StorageVecstoreEntity[] {
+        const vecstoreIds = this.storageVecstoresRepository.findIds();
+
+        for (const vecstoreId of vecstoreIds) {
+            this.refreshVecstoreById(vecstoreId);
+        }
+
+        return this.findAllVecstores();
     }
 
     removeFilesFromFolder(folderId: string, fileIds: string[]): void {
@@ -487,15 +331,7 @@ export class StorageRepository {
             return;
         }
 
-        this.databaseService
-            .getDatabase()
-            .prepare(
-                `
-                DELETE FROM storage_files
-                WHERE folder_id = ? AND id IN (${fileIds.map(() => "?").join(",")})
-                `,
-            )
-            .run(folderId, ...fileIds);
+        this.storageFilesRepository.deleteByFolderAndIds(folderId, fileIds);
 
         this.recalculateFolderSize(folderId);
     }
@@ -503,10 +339,8 @@ export class StorageRepository {
     deleteStorageFolder(id: string): void {
         const folder = this.findById(id);
 
-        const linkedVecstores = this.databaseService
-            .getDatabase()
-            .prepare("SELECT path FROM storage_vecstores WHERE folder_id = ?")
-            .all(id) as Array<{ path: string }>;
+        const linkedVecstores =
+            this.storageVecstoresRepository.findByFolderId(id);
 
         for (const vecstore of linkedVecstores) {
             const resolvedRootPath = path.resolve(this.storageRootPath);
@@ -552,60 +386,26 @@ export class StorageRepository {
             }
         }
 
-        this.databaseService
-            .getDatabase()
-            .prepare("DELETE FROM storage_folders WHERE id = ?")
-            .run(id);
+        this.storageFoldersRepository.deleteById(id);
     }
 
     private findById(id: string): StorageFolderEntity | null {
-        const row = this.databaseService
-            .getDatabase()
-            .prepare("SELECT * FROM storage_folders WHERE id = ? LIMIT 1")
-            .get(id) as RawStorageFolderData | undefined;
-
-        if (!row) {
-            return null;
-        }
-
-        return mapStorageFolder(row);
+        return this.storageFoldersRepository.findById(id);
     }
 
     private findVecstoreById(id: string): StorageVecstoreEntity | null {
-        const row = this.databaseService
-            .getDatabase()
-            .prepare("SELECT * FROM storage_vecstores WHERE id = ? LIMIT 1")
-            .get(id) as RawStorageVecstoreData | undefined;
-
-        if (!row) {
-            return null;
-        }
-
-        return mapStorageVecstore(row);
+        return this.storageVecstoresRepository.findById(id);
     }
 
     private recalculateFolderSize(folderId: string): void {
-        const totalSize = this.databaseService
-            .getDatabase()
-            .prepare(
-                "SELECT COALESCE(SUM(size), 0) AS total_size FROM storage_files WHERE folder_id = ?",
-            )
-            .get(folderId) as { total_size: number };
+        const totalSize =
+            this.storageFilesRepository.sumSizeByFolderId(folderId);
 
-        this.databaseService
-            .getDatabase()
-            .prepare(
-                `
-                UPDATE storage_folders
-                SET size = @size, updated_at = @updated_at
-                WHERE id = @id
-                `,
-            )
-            .run({
-                id: folderId,
-                size: Number((totalSize.total_size ?? 0).toFixed(4)),
-                updated_at: new Date().toISOString(),
-            });
+        this.storageFoldersRepository.updateSize(
+            folderId,
+            totalSize,
+            new Date().toISOString(),
+        );
     }
 
     private resolveUniqueTargetPath(

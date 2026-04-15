@@ -29,6 +29,9 @@ import { SecretsRepository } from "./repositories/SecretsRepository";
 import { defaultUser } from "./static/data/baseProfile";
 import { JobsStorage } from "./services/jobs/JobsStorage";
 import { JobService } from "./services/jobs/JobService";
+import { StorageVecstoresRepository } from "./repositories/storage/StorageVecstoresRepository";
+import { StorageFilesRepository } from "./repositories/storage/StorageFilesRepository";
+import { StorageFoldersRepository } from "./repositories/storage/StorageFoldersRepository";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -155,8 +158,10 @@ app.whenReady().then(() => {
     const dialogRepository = new DialogRepository(databaseService);
     const jobRepository = new JobRepository(databaseService);
     const storageRepository = new StorageRepository(
-        databaseService,
         appPaths.storagePath,
+        new StorageFoldersRepository(databaseService),
+        new StorageFilesRepository(databaseService),
+        new StorageVecstoresRepository(databaseService),
     );
     const secretsRepository = new SecretsRepository(databaseService);
 

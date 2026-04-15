@@ -16,7 +16,25 @@ export const registerIpcStoragePack = ({
     handleManyIpc([
         ["storage:get-folders", () => storageRepository.findAll()],
         ["storage:get-files", () => storageRepository.findAllFiles()],
+        [
+            "storage:get-vectorized-files-by-folder",
+            (folderId: string) =>
+                storageRepository.findVectorizedFilesByFolderId(folderId),
+        ],
+        [
+            "storage:get-non-vectorized-files-by-folder",
+            (folderId: string) =>
+                storageRepository.findNonVectorizedFilesByFolderId(folderId),
+        ],
         ["storage:get-vecstores", () => storageRepository.findAllVecstores()],
+        [
+            "storage:refresh-vecstores",
+            () => storageRepository.refreshAllVecstores(),
+        ],
+        [
+            "storage:refresh-vecstore-by-id",
+            (id: string) => storageRepository.refreshVecstoreById(id),
+        ],
         [
             "storage:create-folder",
             (payload: CreateStorageFolderDto) =>

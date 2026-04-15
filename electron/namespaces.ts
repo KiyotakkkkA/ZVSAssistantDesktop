@@ -92,7 +92,15 @@ export interface IpcJobsNamespace {
 export interface IpcStorageNamespace {
     getStorageFolders(): Promise<StorageFolderEntity[]>;
     getStorageFiles(): Promise<StorageFileEntity[]>;
+    getVectorizedFilesByFolder(folderId: string): Promise<StorageFileEntity[]>;
+    getNonVectorizedFilesByFolder(
+        folderId: string,
+    ): Promise<StorageFileEntity[]>;
     getStorageVecstores(): Promise<StorageVecstoreEntity[]>;
+    refreshStorageVecstores(): Promise<StorageVecstoreEntity[]>;
+    refreshStorageVecstoreById(
+        id: string,
+    ): Promise<StorageVecstoreEntity | null>;
     createStorageFolder(
         payload: CreateStorageFolderDto,
     ): Promise<StorageFolderEntity>;

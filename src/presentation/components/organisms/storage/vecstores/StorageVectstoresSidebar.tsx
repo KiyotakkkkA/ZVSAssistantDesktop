@@ -4,16 +4,22 @@ import { useState } from "react";
 import type { StorageVecstoreEntity } from "../../../../../../electron/models/storage";
 
 type StorageVecstoresSidebarProps = {
+    isLoading: boolean;
+    isSubmitting: boolean;
     vecstores: StorageVecstoreEntity[];
     selectedVecstoreId: string | null;
     onCreateVecstore: () => void;
+    onFullRefresh: () => void;
     onSelectVecstore: (vecstoreId: string) => void;
 };
 
 export const StorageVecstoresSidebar = ({
+    isLoading,
+    isSubmitting,
     vecstores,
     selectedVecstoreId,
     onCreateVecstore,
+    onFullRefresh,
     onSelectVecstore,
 }: StorageVecstoresSidebarProps) => {
     const [searchQuery, setSearchQuery] = useState("");
@@ -29,15 +35,32 @@ export const StorageVecstoresSidebar = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <Button
-                variant="primary"
-                className="mt-4 w-full p-1 gap-2 animate-card-rise-in"
-                shape="rounded-lg"
-                onClick={onCreateVecstore}
-            >
-                <Icon icon="mdi:plus-circle-outline " width={22} height={22} />
-                Создать векторное хранилище
-            </Button>
+            <div className="mt-4 flex items-center gap-2 animate-card-rise-in">
+                <Button
+                    variant="primary"
+                    className="w-full p-1 gap-2 flex-1"
+                    shape="rounded-lg"
+                    disabled={isSubmitting}
+                    onClick={onCreateVecstore}
+                >
+                    <Icon
+                        icon="mdi:plus-circle-outline "
+                        width={22}
+                        height={22}
+                    />
+                    Создать векторное хранилище
+                </Button>
+                <Button
+                    variant="secondary"
+                    shape="rounded-lg"
+                    className="h-10 w-10 p-0"
+                    disabled={isLoading || isSubmitting}
+                    label="Полный рефреш"
+                    onClick={onFullRefresh}
+                >
+                    <Icon icon="mdi:refresh" width={18} height={18} />
+                </Button>
+            </div>
             <PrettyBR
                 icon="mdi:database"
                 label="Векторные хранилища "

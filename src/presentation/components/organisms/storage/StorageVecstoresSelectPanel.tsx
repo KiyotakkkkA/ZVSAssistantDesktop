@@ -31,6 +31,11 @@ export const StorageVecstoresSelectPanel = observer(() => {
               (folder) => folder.id === selectedVecstore.folder_id,
           ) ?? null)
         : null;
+    const selectedVecstoreFolderFiles = selectedVecstore
+        ? storageStore.getNonVectorizedFilesByFolderId(
+              selectedVecstore.folder_id,
+          )
+        : [];
 
     const handleCreateVecstore = async (payload: {
         name: string;
@@ -53,6 +58,14 @@ export const StorageVecstoresSelectPanel = observer(() => {
         }
 
         await window.core.openPath(selectedVecstore.path);
+    };
+
+    const handleRefreshVecstore = async () => {
+        if (!selectedVecstore) {
+            return;
+        }
+
+        await storageStore.refreshVecstoreById(selectedVecstore.id);
     };
 
     const handleOpenRenameModal = () => {
@@ -94,17 +107,26 @@ export const StorageVecstoresSelectPanel = observer(() => {
         <>
             <section className="flex h-full">
                 <StorageVecstoresSidebar
+                    isLoading={storageStore.isLoading}
+                    isSubmitting={storageStore.isSubmitting}
                     vecstores={storageStore.linkedVecstores}
                     selectedVecstoreId={selectedVecstore?.id ?? null}
                     onCreateVecstore={() => setIsCreateModalOpen(true)}
+                    onFullRefresh={() => {
+                        void storageStore.refreshVecstores();
+                    }}
                     onSelectVecstore={setSelectedVecstoreId}
                 />
                 <StorageVectstoresContent
                     selectedVecstore={selectedVecstore}
                     selectedFolder={selectedVecstoreFolder}
+                    selectedFolderFiles={selectedVecstoreFolderFiles}
                     isSubmitting={storageStore.isSubmitting}
                     onOpenFolderPath={() => {
                         void handleOpenFolderPath();
+                    }}
+                    onRefreshVecstore={() => {
+                        void handleRefreshVecstore();
                     }}
                     onOpenRenameModal={handleOpenRenameModal}
                     onOpenDeleteModal={() => setIsDeleteModalOpen(true)}

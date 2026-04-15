@@ -15,10 +15,34 @@ export const getStorageFiles = async (): Promise<StorageFileEntity[]> => {
     return window.storage.getStorageFiles();
 };
 
+export const getVectorizedFilesByFolder = async (
+    folderId: string,
+): Promise<StorageFileEntity[]> => {
+    return window.storage.getVectorizedFilesByFolder(folderId);
+};
+
+export const getNonVectorizedFilesByFolder = async (
+    folderId: string,
+): Promise<StorageFileEntity[]> => {
+    return window.storage.getNonVectorizedFilesByFolder(folderId);
+};
+
 export const getStorageVecstores = async (): Promise<
     StorageVecstoreEntity[]
 > => {
     return window.storage.getStorageVecstores();
+};
+
+export const refreshStorageVecstores = async (): Promise<
+    StorageVecstoreEntity[]
+> => {
+    return window.storage.refreshStorageVecstores();
+};
+
+export const refreshStorageVecstoreById = async (
+    id: string,
+): Promise<StorageVecstoreEntity | null> => {
+    return window.storage.refreshStorageVecstoreById(id);
 };
 
 export const createStorageFolder = async (

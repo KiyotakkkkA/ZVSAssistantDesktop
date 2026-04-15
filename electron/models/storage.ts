@@ -21,6 +21,7 @@ export type CreateStorageFolderDto = {
 export interface StorageFileEntity {
     id: StorageFileIdFormat;
     folder_id: string;
+    vecstore_id?: string;
     name: string;
     path: string;
     size: number;

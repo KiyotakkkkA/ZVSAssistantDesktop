@@ -74,12 +74,16 @@ export class DatabaseService {
             CREATE TABLE IF NOT EXISTS storage_files (
                 id TEXT PRIMARY KEY,
                 folder_id TEXT NOT NULL REFERENCES storage_folders(id) ON DELETE CASCADE,
+                vecstore_id TEXT REFERENCES storage_vecstores(id) ON DELETE SET NULL,
                 name TEXT NOT NULL,
                 path TEXT NOT NULL,
                 size REAL NOT NULL,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
+
+            CREATE INDEX IF NOT EXISTS idx_storage_files_folder_vecstore
+            ON storage_files(folder_id, vecstore_id);
 
             CREATE TABLE IF NOT EXISTS storage_vecstores (
                 id TEXT PRIMARY KEY,

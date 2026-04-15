@@ -15,6 +15,8 @@ import {
     getStorageFiles,
     getStorageFolders,
     getStorageVecstores,
+    refreshStorageVecstores,
+    refreshStorageVecstoreById,
     refreshFolderContent,
     removeFilesFromFolder,
     renameStorageVecstore,
@@ -49,6 +51,10 @@ class StorageStore {
                 addFilesToSelectedFolder: action.bound,
                 removeFilesFromSelectedFolder: action.bound,
                 refreshSelectedFolder: action.bound,
+                getVectorizedFilesByFolderId: action.bound,
+                getNonVectorizedFilesByFolderId: action.bound,
+                refreshVecstores: action.bound,
+                refreshVecstoreById: action.bound,
             },
             { autoBind: true },
         );
@@ -103,12 +109,72 @@ class StorageStore {
         );
     }
 
+    getVectorizedFilesByFolderId(folderId: string): StorageFileEntity[] {
+        return this.files.filter(
+            (file) => file.folder_id === folderId && Boolean(file.vecstore_id),
+        );
+    }
+
+    getNonVectorizedFilesByFolderId(folderId: string): StorageFileEntity[] {
+        return this.files.filter(
+            (file) => file.folder_id === folderId && !file.vecstore_id,
+        );
+    }
+
     get linkedVecstores(): StorageVecstoreEntity[] {
         const linkedIds = new Set(
             this.folders.map((folder) => folder.vecstore_id).filter(Boolean),
         );
 
         return this.vecstores.filter((vecstore) => linkedIds.has(vecstore.id));
+    }
+
+    async refreshVecstores() {
+        runInAction(() => {
+            this.isSubmitting = true;
+        });
+
+        try {
+            const refreshedVecstores = await refreshStorageVecstores();
+
+            runInAction(() => {
+                this.vecstores = refreshedVecstores;
+            });
+        } finally {
+            runInAction(() => {
+                this.isSubmitting = false;
+            });
+        }
+    }
+
+    async refreshVecstoreById(id: string) {
+        if (!id.trim()) {
+            return null;
+        }
+
+        runInAction(() => {
+            this.isSubmitting = true;
+        });
+
+        try {
+            const refreshed = await refreshStorageVecstoreById(id);
+
+            if (!refreshed) {
+                return null;
+            }
+
+            runInAction(() => {
+                this.vecstores = this.vecstores.map((vecstore) =>
+                    vecstore.id === refreshed.id ? refreshed : vecstore,
+                );
+            });
+
+            return refreshed;
+        } finally {
+            runInAction(() => {
+                this.isSubmitting = false;
+            });
+        }
     }
 
     async bootstrap() {

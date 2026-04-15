@@ -66,27 +66,24 @@ export const StorageConnectorsSelectPanel = () => {
                     </button>
                 ))}
             </aside>
-            <div className="w-full flex-1 p-4">
-                <div className="rounded-2xl border border-main-700/70 bg-main-900/45 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] animate-panel-slide-in">
-                    <div className="mb-2 flex items-center gap-2 text-main-100">
-                        <Icon
-                            icon={selectedConnector.icon}
-                            width={18}
-                            height={18}
-                            className={selectedConnector.color}
-                        />
-                        <h3 className="text-lg font-semibold">
-                            {selectedConnector.name}
-                        </h3>
-                    </div>
-                    <p className="text-sm text-main-300">
-                        Выберите действие для подключения и синхронизации
-                        данных.
-                    </p>
+            <div className="w-full flex-1 p-4 animate-panel-slide-in">
+                <div className="mb-2 flex items-center gap-2 text-main-100">
+                    <Icon
+                        icon={selectedConnector.icon}
+                        width={18}
+                        height={18}
+                        className={selectedConnector.color}
+                    />
+                    <h3 className="text-lg font-semibold">
+                        {selectedConnector.name}
+                    </h3>
+                </div>
+                <p className="text-sm text-main-300">
+                    Выберите действие для подключения и синхронизации данных.
+                </p>
 
-                    <div className="mt-5 border-t border-main-700/70 pt-5">
-                        {renderConnectorForm()}
-                    </div>
+                <div className="mt-5 border-t border-main-700/70 pt-5">
+                    {renderConnectorForm()}
                 </div>
             </div>
         </section>
