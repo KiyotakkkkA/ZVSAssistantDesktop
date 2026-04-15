@@ -36,6 +36,14 @@ export const registerIpcStoragePack = ({
             (id: string) => storageRepository.refreshVecstoreById(id),
         ],
         [
+            "storage:remove-files-from-vecstore",
+            (vecstoreId: string, fileIds: string[]) =>
+                storageRepository.removeIndexedFilesFromVecstore(
+                    vecstoreId,
+                    fileIds,
+                ),
+        ],
+        [
             "storage:create-folder",
             (payload: CreateStorageFolderDto) =>
                 storageRepository.createStorageFolder(payload),

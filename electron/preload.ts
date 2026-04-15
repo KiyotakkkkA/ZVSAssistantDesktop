@@ -164,6 +164,13 @@ const storageNamespace: IpcStorageNamespace = {
     refreshStorageVecstoreById(id) {
         return ipcRenderer.invoke("storage:refresh-vecstore-by-id", id);
     },
+    removeFilesFromVecstore(vecstoreId, fileIds) {
+        return ipcRenderer.invoke(
+            "storage:remove-files-from-vecstore",
+            vecstoreId,
+            fileIds,
+        );
+    },
     createStorageFolder(payload) {
         return ipcRenderer.invoke("storage:create-folder", payload);
     },

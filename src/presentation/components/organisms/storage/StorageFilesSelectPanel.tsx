@@ -80,13 +80,18 @@ export const StorageFilesSelectPanel = observer(() => {
 
         try {
             const payload = await Promise.all(
-                Array.from(selectedFiles).map(async (file) => ({
-                    id: createStorageFileId(file.name),
-                    name: file.name,
-                    path: (file as File & { path?: string }).path ?? "",
-                    size: Number((file.size / (1024 * 1024)).toFixed(4)),
-                    contentBase64: await convertFileToBase64(file),
-                })),
+                Array.from(selectedFiles).map(async (file) => {
+                    const nativePath =
+                        (file as File & { path?: string }).path ?? "";
+
+                    return {
+                        id: createStorageFileId(nativePath || file.name),
+                        name: file.name,
+                        path: nativePath,
+                        size: Number((file.size / (1024 * 1024)).toFixed(4)),
+                        contentBase64: await convertFileToBase64(file),
+                    };
+                }),
             );
 
             await storageStore.addFilesToSelectedFolder(payload);

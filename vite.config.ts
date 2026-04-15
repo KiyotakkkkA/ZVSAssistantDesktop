@@ -16,7 +16,10 @@ export default defineConfig({
                         rollupOptions: {
                             external: [
                                 "better-sqlite3",
+                                "@lancedb/lancedb",
+                                "apache-arrow",
                                 "../native/core/index.cjs",
+                                /^@lancedb\/lancedb-.+$/,
                             ],
                         },
                     },

@@ -45,6 +45,13 @@ export const refreshStorageVecstoreById = async (
     return window.storage.refreshStorageVecstoreById(id);
 };
 
+export const removeFilesFromVecstore = async (
+    vecstoreId: string,
+    fileIds: string[],
+): Promise<{ requested: number; removed: number }> => {
+    return window.storage.removeFilesFromVecstore(vecstoreId, fileIds);
+};
+
 export const createStorageFolder = async (
     payload: CreateStorageFolderDto,
 ): Promise<StorageFolderEntity> => {

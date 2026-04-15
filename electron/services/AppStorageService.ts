@@ -1,6 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { JobEventTag, StorageRepositorySyncPayload } from "../models/job";
+import type {
+    JobEventTag,
+    StorageRepositorySyncPayload,
+    StorageVecstoreIndexingPayload,
+} from "../models/job";
 import type { StorageRepository } from "../repositories/StorageRepository";
 import { createStorageFolderId } from "../../src/utils/creators";
 
@@ -10,6 +14,11 @@ type RemoteRepositoryFile = {
 };
 
 type SyncRepositoryCallbacks = {
+    signal: AbortSignal;
+    onStage: (message: string, tag?: JobEventTag) => void;
+};
+
+type IndexVecstoreCallbacks = {
     signal: AbortSignal;
     onStage: (message: string, tag?: JobEventTag) => void;
 };
@@ -29,6 +38,13 @@ type SyncRepositoryResult = {
     folderName: string;
     downloadedCount: number;
     skippedCount: number;
+};
+
+type IndexVecstoreResult = {
+    requestedCount: number;
+    indexedCount: number;
+    skippedCount: number;
+    failedCount: number;
 };
 
 export class AppStorageService {
@@ -176,6 +192,61 @@ export class AppStorageService {
             folderName: folder.name,
             downloadedCount,
             skippedCount,
+        };
+    }
+
+    async indexVecstore(
+        payload: StorageVecstoreIndexingPayload,
+        callbacks: IndexVecstoreCallbacks,
+    ): Promise<IndexVecstoreResult> {
+        const vecstoreId = payload.vecstoreId.trim();
+
+        if (!vecstoreId) {
+            throw new Error("Не указан ID векторного хранилища");
+        }
+
+        callbacks.onStage("Подготовка индексации", "info");
+
+        const result =
+            await this.storageRepository.indexNonVectorizedFilesToVecstore(
+                vecstoreId,
+                payload.fileIds ?? [],
+                {
+                    onFileProgress: ({
+                        processed,
+                        total,
+                        fileName,
+                        status,
+                    }) => {
+                        this.throwIfAborted(callbacks.signal);
+
+                        const progress =
+                            total > 0
+                                ? Math.round((processed / total) * 100)
+                                : 100;
+
+                        const prefix =
+                            status === "indexed"
+                                ? "Индексирован"
+                                : status === "failed"
+                                  ? "Ошибка"
+                                  : "Пропущен";
+
+                        callbacks.onStage(
+                            `${prefix}: ${fileName} (${processed}/${total}, ${progress}%)`,
+                            status === "failed" ? "warning" : "info",
+                        );
+                    },
+                },
+            );
+
+        callbacks.onStage("Индексация завершена", "success");
+
+        return {
+            requestedCount: result.requested,
+            indexedCount: result.indexed,
+            skippedCount: result.skipped,
+            failedCount: result.failed,
         };
     }
 

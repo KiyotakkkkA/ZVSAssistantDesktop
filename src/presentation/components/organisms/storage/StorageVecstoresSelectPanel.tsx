@@ -1,8 +1,12 @@
 import { Button, Modal } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { observer } from "mobx-react-lite";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useJobs } from "../../../../hooks";
 import { storageStore } from "../../../../stores/storageStore";
-import { StorageVecstoreCreateForm } from "./forms";
+import {
+    StorageIndexingProgressForm,
+    StorageVecstoreCreateForm,
+} from "./forms";
 import {
     StorageDeleteVecstoreModal,
     StorageRenameVecstoreModal,
@@ -11,13 +15,27 @@ import {
 } from "./vecstores";
 
 export const StorageVecstoresSelectPanel = observer(() => {
+    const {
+        createJob,
+        cancelJobById,
+        getJobById,
+        selectedJobEvents,
+        selectedJobId,
+        selectJob,
+    } = useJobs();
+
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isIndexingModalOpen, setIsIndexingModalOpen] = useState(false);
     const [renameVecstoreName, setRenameVecstoreName] = useState("");
     const [selectedVecstoreId, setSelectedVecstoreId] = useState<string | null>(
         null,
     );
+    const [indexingJobId, setIndexingJobId] = useState<string | null>(null);
+    const [syncedCompletedJobIds, setSyncedCompletedJobIds] = useState<
+        string[]
+    >([]);
     const createVecstoreFormId = "storage-vecstores-create-form";
 
     const selectedVecstore =
@@ -31,11 +49,41 @@ export const StorageVecstoresSelectPanel = observer(() => {
               (folder) => folder.id === selectedVecstore.folder_id,
           ) ?? null)
         : null;
-    const selectedVecstoreFolderFiles = selectedVecstore
+    const selectedVecstoreNonVectorizedFiles = selectedVecstore
         ? storageStore.getNonVectorizedFilesByFolderId(
               selectedVecstore.folder_id,
           )
         : [];
+    const selectedVecstoreVectorizedFiles = selectedVecstore
+        ? storageStore.getVectorizedFilesByFolderId(selectedVecstore.folder_id)
+        : [];
+
+    const indexingJob = indexingJobId ? getJobById(indexingJobId) : null;
+    const indexingEvents =
+        indexingJobId && selectedJobId === indexingJobId
+            ? selectedJobEvents
+            : [];
+
+    useEffect(() => {
+        if (!indexingJobId) {
+            return;
+        }
+
+        selectJob(indexingJobId);
+    }, [indexingJobId, selectJob]);
+
+    useEffect(() => {
+        if (!indexingJobId || !indexingJob || indexingJob.isPending) {
+            return;
+        }
+
+        if (syncedCompletedJobIds.includes(indexingJobId)) {
+            return;
+        }
+
+        setSyncedCompletedJobIds((prev) => [...prev, indexingJobId]);
+        void storageStore.refreshStorageState();
+    }, [indexingJob, indexingJobId, syncedCompletedJobIds]);
 
     const handleCreateVecstore = async (payload: {
         name: string;
@@ -103,6 +151,40 @@ export const StorageVecstoresSelectPanel = observer(() => {
         setIsDeleteModalOpen(false);
     };
 
+    const handleAddToIndex = async (fileIds: string[]) => {
+        if (!selectedVecstore) {
+            return;
+        }
+
+        const created = await createJob({
+            name: `index_${selectedVecstore.name}`,
+            description: `Индексация файлов в векторное хранилище ${selectedVecstore.name}`,
+            kind: "storage-vecstore-indexing",
+            storageVecstoreIndexing: {
+                vecstoreId: selectedVecstore.id,
+                fileIds,
+            },
+        });
+
+        if (!created) {
+            return;
+        }
+
+        setIndexingJobId(created.job.id);
+        setIsIndexingModalOpen(true);
+    };
+
+    const handleRemoveFromIndex = async (fileIds: string[]) => {
+        if (!selectedVecstore) {
+            return;
+        }
+
+        await storageStore.removeIndexedFilesFromVecstore(
+            selectedVecstore.id,
+            fileIds,
+        );
+    };
+
     return (
         <>
             <section className="flex h-full">
@@ -120,7 +202,10 @@ export const StorageVecstoresSelectPanel = observer(() => {
                 <StorageVectstoresContent
                     selectedVecstore={selectedVecstore}
                     selectedFolder={selectedVecstoreFolder}
-                    selectedFolderFiles={selectedVecstoreFolderFiles}
+                    selectedNonVectorizedFiles={
+                        selectedVecstoreNonVectorizedFiles
+                    }
+                    selectedVectorizedFiles={selectedVecstoreVectorizedFiles}
                     isSubmitting={storageStore.isSubmitting}
                     onOpenFolderPath={() => {
                         void handleOpenFolderPath();
@@ -130,6 +215,12 @@ export const StorageVecstoresSelectPanel = observer(() => {
                     }}
                     onOpenRenameModal={handleOpenRenameModal}
                     onOpenDeleteModal={() => setIsDeleteModalOpen(true)}
+                    onAddToIndex={(fileIds) => {
+                        void handleAddToIndex(fileIds);
+                    }}
+                    onRemoveFromIndex={(fileIds) => {
+                        void handleRemoveFromIndex(fileIds);
+                    }}
                 />
             </section>
 
@@ -192,6 +283,46 @@ export const StorageVecstoresSelectPanel = observer(() => {
                     void handleDeleteVecstore();
                 }}
             />
+
+            <Modal
+                open={isIndexingModalOpen}
+                onClose={() => setIsIndexingModalOpen(false)}
+                title="Индексация файлов"
+                className="max-w-2xl"
+                footer={
+                    <>
+                        <Button
+                            variant="secondary"
+                            shape="rounded-lg"
+                            className="h-9 px-4"
+                            onClick={() => setIsIndexingModalOpen(false)}
+                        >
+                            Закрыть
+                        </Button>
+                        <Button
+                            variant="danger"
+                            shape="rounded-lg"
+                            className="h-9 px-4"
+                            disabled={!indexingJob?.isPending || !indexingJobId}
+                            onClick={() => {
+                                if (!indexingJobId) {
+                                    return;
+                                }
+
+                                void cancelJobById(indexingJobId);
+                            }}
+                        >
+                            Остановить
+                        </Button>
+                    </>
+                }
+            >
+                <StorageIndexingProgressForm
+                    open={isIndexingModalOpen}
+                    job={indexingJob}
+                    events={indexingEvents}
+                />
+            </Modal>
         </>
     );
 });

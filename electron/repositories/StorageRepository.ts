@@ -18,6 +18,7 @@ import type {
     StorageFilesRepository,
 } from "./storage/StorageFilesRepository";
 import type { StorageVecstoresRepository } from "./storage/StorageVecstoresRepository";
+import type { LanceStoreService } from "../services/LanceStoreService";
 
 export class StorageRepository {
     constructor(
@@ -25,6 +26,7 @@ export class StorageRepository {
         private readonly storageFoldersRepository: StorageFoldersRepository,
         private readonly storageFilesRepository: StorageFilesRepository,
         private readonly storageVecstoresRepository: StorageVecstoresRepository,
+        private readonly LanceStoreService: LanceStoreService,
     ) {}
 
     findAll(): StorageFolderEntity[] {
@@ -173,9 +175,9 @@ export class StorageRepository {
         return this.storageFilesRepository.findByIds(createdIds);
     }
 
-    createStorageVecstore(
+    async createStorageVecstore(
         payload: CreateStorageVecstoreDto,
-    ): StorageVecstoreEntity {
+    ): Promise<StorageVecstoreEntity> {
         const folder = this.findById(payload.folder_id);
 
         if (!folder) {
@@ -220,7 +222,171 @@ export class StorageRepository {
             throw new Error("Failed to create storage vecstore");
         }
 
+        try {
+            const folderFiles = this.storageFilesRepository.findByFolderId(
+                folder.id,
+            );
+
+            const indexingResult =
+                await this.LanceStoreService.initializeVecstore(
+                    created,
+                    folderFiles,
+                );
+
+            if (indexingResult.indexedFileIds.length > 0) {
+                this.storageFilesRepository.linkFilesToVecstore(
+                    indexingResult.indexedFileIds,
+                    vecstoreId,
+                    now,
+                );
+            }
+
+            this.refreshVecstoreById(vecstoreId);
+
+            const refreshed = this.findVecstoreById(vecstoreId);
+
+            if (refreshed) {
+                return refreshed;
+            }
+        } catch (error) {
+            this.rollbackVecstoreCreation(vecstoreId, created.path);
+
+            const normalizedError =
+                error instanceof Error
+                    ? error
+                    : new Error("Failed to initialize Lance store");
+
+            throw normalizedError;
+        }
+
         return created;
+    }
+
+    async indexNonVectorizedFilesToVecstore(
+        vecstoreId: string,
+        fileIds: string[] = [],
+        options?: {
+            onFileProgress?: (payload: {
+                processed: number;
+                total: number;
+                fileId: string;
+                fileName: string;
+                status: "indexed" | "skipped" | "failed";
+                reason?: string;
+            }) => void;
+        },
+    ): Promise<{
+        requested: number;
+        indexed: number;
+        skipped: number;
+        failed: number;
+    }> {
+        const vecstore = this.findVecstoreById(vecstoreId);
+
+        if (!vecstore) {
+            throw new Error("Storage vecstore is not found");
+        }
+
+        const nonVectorizedFiles =
+            this.storageFilesRepository.findNonVectorizedByFolderId(
+                vecstore.folder_id,
+            );
+
+        const normalizedIds = fileIds.map((id) => id.trim()).filter(Boolean);
+        const requestedFiles =
+            normalizedIds.length > 0
+                ? nonVectorizedFiles.filter((file) =>
+                      normalizedIds.includes(file.id),
+                  )
+                : nonVectorizedFiles;
+
+        if (requestedFiles.length === 0) {
+            return {
+                requested: 0,
+                indexed: 0,
+                skipped: 0,
+                failed: 0,
+            };
+        }
+
+        const result = await this.LanceStoreService.appendFilesToVecstore(
+            vecstore,
+            requestedFiles,
+            {
+                onFileProgress: options?.onFileProgress,
+            },
+        );
+
+        if (result.indexedFileIds.length > 0) {
+            this.storageFilesRepository.linkFilesToVecstore(
+                result.indexedFileIds,
+                vecstore.id,
+                new Date().toISOString(),
+            );
+
+            this.refreshVecstoreById(vecstore.id);
+        }
+
+        return {
+            requested: requestedFiles.length,
+            indexed: result.indexedFileIds.length,
+            skipped: result.skippedFileIds.length,
+            failed: result.failedFileIds.length,
+        };
+    }
+
+    async removeIndexedFilesFromVecstore(
+        vecstoreId: string,
+        fileIds: string[] = [],
+    ): Promise<{
+        requested: number;
+        removed: number;
+    }> {
+        const vecstore = this.findVecstoreById(vecstoreId);
+
+        if (!vecstore) {
+            throw new Error("Storage vecstore is not found");
+        }
+
+        const indexedFiles = this.storageFilesRepository
+            .findVectorizedByFolderId(vecstore.folder_id)
+            .filter((file) => file.vecstore_id === vecstore.id);
+
+        const normalizedIds = fileIds.map((id) => id.trim()).filter(Boolean);
+        const requestedFiles =
+            normalizedIds.length > 0
+                ? indexedFiles.filter((file) => normalizedIds.includes(file.id))
+                : indexedFiles;
+
+        if (requestedFiles.length === 0) {
+            return {
+                requested: 0,
+                removed: 0,
+            };
+        }
+
+        const requestedIds = requestedFiles.map((file) => file.id);
+        const requestedIdSet = new Set(requestedIds);
+        const remainingIndexedFiles = indexedFiles.filter(
+            (file) => !requestedIdSet.has(file.id),
+        );
+
+        await this.LanceStoreService.initializeVecstore(
+            vecstore,
+            remainingIndexedFiles,
+        );
+
+        this.storageFilesRepository.clearFilesVecstore(
+            requestedIds,
+            new Date().toISOString(),
+            vecstore.id,
+        );
+        this.refreshVecstoreById(vecstore.id);
+
+        return {
+            requested: requestedFiles.length,
+            removed: requestedFiles.length,
+        };
     }
 
     renameStorageVecstore(
@@ -305,10 +471,11 @@ export class StorageRepository {
         }
 
         const metrics = this.storageFilesRepository.getVecstoreMetrics(id);
+        const actualVecstoreSize = this.calculateFolderSizeMb(vecstore.path);
 
         this.storageVecstoresRepository.updateMetrics(
             id,
-            metrics.total_size,
+            actualVecstoreSize,
             metrics.entities_count,
             new Date().toISOString(),
         );
@@ -408,6 +575,27 @@ export class StorageRepository {
         );
     }
 
+    private rollbackVecstoreCreation(
+        vecstoreId: string,
+        vecstorePath: string,
+    ): void {
+        const now = new Date().toISOString();
+
+        this.storageFoldersRepository.clearLinkedVecstoreByVecstoreId(
+            vecstoreId,
+            now,
+        );
+        this.storageFilesRepository.clearVecstoreByVecstoreId(vecstoreId);
+        this.storageVecstoresRepository.deleteById(vecstoreId);
+
+        if (fs.existsSync(vecstorePath)) {
+            fs.rmSync(vecstorePath, {
+                recursive: true,
+                force: true,
+            });
+        }
+    }
+
     private resolveUniqueTargetPath(
         folderPath: string,
         fileName: string,
@@ -431,6 +619,7 @@ export class StorageRepository {
 
     private collectFolderFiles(rootPath: string): AddStorageFileDto[] {
         const result: AddStorageFileDto[] = [];
+        const generatedIds = new Set<string>();
         const walk = (currentPath: string) => {
             const entries = fs.readdirSync(currentPath, {
                 withFileTypes: true,
@@ -454,8 +643,20 @@ export class StorageRepository {
                     .split(path.sep)
                     .join("/");
 
+                let candidateId = createStorageFileId(relativeName);
+                let collisionIndex = 1;
+
+                while (generatedIds.has(candidateId)) {
+                    candidateId = createStorageFileId(
+                        `${relativeName}#${collisionIndex}`,
+                    );
+                    collisionIndex += 1;
+                }
+
+                generatedIds.add(candidateId);
+
                 result.push({
-                    id: createStorageFileId(relativeName),
+                    id: candidateId,
                     name: relativeName,
                     path: path.normalize(absolutePath),
                     size: this.bytesToMb(stats.size),

@@ -17,6 +17,7 @@ import {
     getStorageVecstores,
     refreshStorageVecstores,
     refreshStorageVecstoreById,
+    removeFilesFromVecstore,
     refreshFolderContent,
     removeFilesFromFolder,
     renameStorageVecstore,
@@ -55,6 +56,7 @@ class StorageStore {
                 getNonVectorizedFilesByFolderId: action.bound,
                 refreshVecstores: action.bound,
                 refreshVecstoreById: action.bound,
+                removeIndexedFilesFromVecstore: action.bound,
             },
             { autoBind: true },
         );
@@ -170,6 +172,29 @@ class StorageStore {
             });
 
             return refreshed;
+        } finally {
+            runInAction(() => {
+                this.isSubmitting = false;
+            });
+        }
+    }
+
+    async removeIndexedFilesFromVecstore(
+        vecstoreId: string,
+        fileIds: string[],
+    ) {
+        if (!vecstoreId.trim()) {
+            return null;
+        }
+
+        runInAction(() => {
+            this.isSubmitting = true;
+        });
+
+        try {
+            const result = await removeFilesFromVecstore(vecstoreId, fileIds);
+            await this.refreshStorageState();
+            return result;
         } finally {
             runInAction(() => {
                 this.isSubmitting = false;

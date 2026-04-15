@@ -8,6 +8,7 @@ import { DatabaseService } from "./services/DatabaseService";
 import { ThemesService } from "./services/ThemesService";
 import { ToolsRuntimeService } from "./services/ToolsRuntimeService";
 import { AppStorageService } from "./services/AppStorageService";
+import { LanceStoreService } from "./services/LanceStoreService";
 
 import {
     registerIpcChatPack,
@@ -157,13 +158,6 @@ app.whenReady().then(() => {
     const userRepository = new UserRepository(databaseService);
     const dialogRepository = new DialogRepository(databaseService);
     const jobRepository = new JobRepository(databaseService);
-    const storageRepository = new StorageRepository(
-        appPaths.storagePath,
-        new StorageFoldersRepository(databaseService),
-        new StorageFilesRepository(databaseService),
-        new StorageVecstoresRepository(databaseService),
-    );
-    const secretsRepository = new SecretsRepository(databaseService);
 
     // Инициализируем функциональные сервисы
     toolsRuntimeService = new ToolsRuntimeService();
@@ -171,6 +165,15 @@ app.whenReady().then(() => {
         userRepository,
         toolsRuntimeService,
     });
+
+    const storageRepository = new StorageRepository(
+        appPaths.storagePath,
+        new StorageFoldersRepository(databaseService),
+        new StorageFilesRepository(databaseService),
+        new StorageVecstoresRepository(databaseService),
+        new LanceStoreService(chatGenService),
+    );
+    const secretsRepository = new SecretsRepository(databaseService);
 
     jobsStorage = new JobsStorage(jobRepository, userRepository);
     const appStorageService = new AppStorageService(storageRepository);

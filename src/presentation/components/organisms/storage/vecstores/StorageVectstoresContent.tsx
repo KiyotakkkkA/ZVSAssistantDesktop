@@ -5,7 +5,13 @@ import {
     Separator,
     TreeView,
 } from "@kiyotakkkka/zvs-uikit-lib/ui";
-import { useEffect, useMemo, useState } from "react";
+import {
+    useEffect,
+    useMemo,
+    useState,
+    type Dispatch,
+    type SetStateAction,
+} from "react";
 import type { StorageFileEntity } from "../../../../../../electron/models/storage";
 import type { StorageFolderEntity } from "../../../../../../electron/models/storage";
 import type { StorageVecstoreEntity } from "../../../../../../electron/models/storage";
@@ -14,12 +20,15 @@ import { convertBytesToSize } from "../../../../../utils/converters";
 type StorageVectstoresContentProps = {
     selectedVecstore: StorageVecstoreEntity | null;
     selectedFolder: StorageFolderEntity | null;
-    selectedFolderFiles: StorageFileEntity[];
+    selectedNonVectorizedFiles: StorageFileEntity[];
+    selectedVectorizedFiles: StorageFileEntity[];
     isSubmitting: boolean;
     onOpenFolderPath: () => void;
     onRefreshVecstore: () => void;
     onOpenRenameModal: () => void;
     onOpenDeleteModal: () => void;
+    onAddToIndex: (fileIds: StorageFileEntity["id"][]) => void;
+    onRemoveFromIndex: (fileIds: StorageFileEntity["id"][]) => void;
 };
 
 type SquareCheckboxProps = {
@@ -37,6 +46,7 @@ const SquareCheckbox = ({ checked, disabled = false }: SquareCheckboxProps) => {
             <input
                 type="checkbox"
                 checked={checked}
+                readOnly
                 disabled={disabled}
                 className="sr-only"
             />
@@ -56,46 +66,85 @@ const SquareCheckbox = ({ checked, disabled = false }: SquareCheckboxProps) => {
 export const StorageVectstoresContent = ({
     selectedVecstore,
     selectedFolder,
-    selectedFolderFiles,
+    selectedNonVectorizedFiles,
+    selectedVectorizedFiles,
     isSubmitting,
     onOpenFolderPath,
     onRefreshVecstore,
     onOpenRenameModal,
     onOpenDeleteModal,
+    onAddToIndex,
+    onRemoveFromIndex,
 }: StorageVectstoresContentProps) => {
-    const [searchQuery, setSearchQuery] = useState("");
-    const [selectedFileIds, setSelectedFileIds] = useState<
+    const [nonIndexedSearchQuery, setNonIndexedSearchQuery] = useState("");
+    const [indexedSearchQuery, setIndexedSearchQuery] = useState("");
+    const [selectedNonIndexedFileIds, setSelectedNonIndexedFileIds] = useState<
+        StorageFileEntity["id"][]
+    >([]);
+    const [selectedIndexedFileIds, setSelectedIndexedFileIds] = useState<
         StorageFileEntity["id"][]
     >([]);
 
     useEffect(() => {
-        setSearchQuery("");
-        setSelectedFileIds([]);
+        setNonIndexedSearchQuery("");
+        setIndexedSearchQuery("");
+        setSelectedNonIndexedFileIds([]);
+        setSelectedIndexedFileIds([]);
     }, [selectedVecstore?.id]);
 
-    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const normalizedNonIndexedQuery = nonIndexedSearchQuery
+        .trim()
+        .toLowerCase();
+    const normalizedIndexedQuery = indexedSearchQuery.trim().toLowerCase();
 
-    const filteredFiles = useMemo(() => {
-        if (!normalizedQuery) {
-            return selectedFolderFiles;
+    const filteredNonIndexedFiles = useMemo(() => {
+        if (!normalizedNonIndexedQuery) {
+            return selectedNonVectorizedFiles;
         }
 
-        return selectedFolderFiles.filter((file) =>
-            file.name.toLowerCase().includes(normalizedQuery),
+        return selectedNonVectorizedFiles.filter((file) =>
+            file.name.toLowerCase().includes(normalizedNonIndexedQuery),
         );
-    }, [normalizedQuery, selectedFolderFiles]);
+    }, [normalizedNonIndexedQuery, selectedNonVectorizedFiles]);
 
-    const checkedFileIds = useMemo(() => {
-        const ids = new Set(selectedFolderFiles.map((file) => file.id));
-        return selectedFileIds.filter((id) => ids.has(id));
-    }, [selectedFileIds, selectedFolderFiles]);
+    const filteredIndexedFiles = useMemo(() => {
+        if (!normalizedIndexedQuery) {
+            return selectedVectorizedFiles;
+        }
 
-    const allVisibleSelected =
-        filteredFiles.length > 0 &&
-        filteredFiles.every((file) => checkedFileIds.includes(file.id));
+        return selectedVectorizedFiles.filter((file) =>
+            file.name.toLowerCase().includes(normalizedIndexedQuery),
+        );
+    }, [normalizedIndexedQuery, selectedVectorizedFiles]);
 
-    const toggleFile = (fileId: StorageFileEntity["id"], checked: boolean) => {
-        setSelectedFileIds((prev) => {
+    const checkedNonIndexedFileIds = useMemo(() => {
+        const ids = new Set(selectedNonVectorizedFiles.map((file) => file.id));
+        return selectedNonIndexedFileIds.filter((id) => ids.has(id));
+    }, [selectedNonIndexedFileIds, selectedNonVectorizedFiles]);
+
+    const checkedIndexedFileIds = useMemo(() => {
+        const ids = new Set(selectedVectorizedFiles.map((file) => file.id));
+        return selectedIndexedFileIds.filter((id) => ids.has(id));
+    }, [selectedIndexedFileIds, selectedVectorizedFiles]);
+
+    const allVisibleNonIndexedSelected =
+        filteredNonIndexedFiles.length > 0 &&
+        filteredNonIndexedFiles.every((file) =>
+            checkedNonIndexedFileIds.includes(file.id),
+        );
+
+    const allVisibleIndexedSelected =
+        filteredIndexedFiles.length > 0 &&
+        filteredIndexedFiles.every((file) =>
+            checkedIndexedFileIds.includes(file.id),
+        );
+
+    const toggleFile = (
+        fileId: StorageFileEntity["id"],
+        checked: boolean,
+        setter: Dispatch<SetStateAction<StorageFileEntity["id"][]>>,
+    ) => {
+        setter((prev) => {
             if (checked) {
                 if (prev.includes(fileId)) {
                     return prev;
@@ -108,11 +157,15 @@ export const StorageVectstoresContent = ({
         });
     };
 
-    const toggleAllVisible = (checked: boolean) => {
+    const toggleAllVisible = (
+        checked: boolean,
+        files: StorageFileEntity[],
+        setter: Dispatch<SetStateAction<StorageFileEntity["id"][]>>,
+    ) => {
         if (checked) {
-            setSelectedFileIds((prev) => {
+            setter((prev) => {
                 const next = new Set(prev);
-                for (const file of filteredFiles) {
+                for (const file of files) {
                     next.add(file.id);
                 }
 
@@ -121,8 +174,8 @@ export const StorageVectstoresContent = ({
             return;
         }
 
-        const visibleIds = new Set(filteredFiles.map((file) => file.id));
-        setSelectedFileIds((prev) => prev.filter((id) => !visibleIds.has(id)));
+        const visibleIds = new Set(files.map((file) => file.id));
+        setter((prev) => prev.filter((id) => !visibleIds.has(id)));
     };
 
     if (!selectedVecstore) {
@@ -280,98 +333,230 @@ export const StorageVectstoresContent = ({
                 className="my-6 bg-main-700/70"
             />
 
-            <section className="flex items-start gap-4">
-                <div className="w-full max-w-180">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                        <h4 className="text-base font-semibold text-main-100">
-                            Неиндексированные документы
-                        </h4>
-                        <Button
-                            variant="secondary"
-                            shape="rounded-md"
-                            className="h-8 gap-2 px-3 text-xs"
-                            disabled={checkedFileIds.length === 0}
-                        >
-                            <Icon icon="mdi:database-export" />
-                            Добавить в индекс
-                        </Button>
-                    </div>
-
-                    <div className="mb-3 flex items-center gap-3">
-                        <InputSmall
-                            value={searchQuery}
-                            onChange={(event) =>
-                                setSearchQuery(event.target.value)
-                            }
-                            placeholder="Поиск документа"
-                        />
-                        <div
-                            className="flex items-center gap-2 text-xs text-main-300"
-                            onClick={() =>
-                                toggleAllVisible(!allVisibleSelected)
-                            }
-                        >
-                            <SquareCheckbox checked={allVisibleSelected} />
-                            Выбрать все
-                        </div>
-                    </div>
-
-                    {filteredFiles.length > 0 ? (
-                        <TreeView>
-                            <TreeView.Catalog
-                                title={`${filteredFiles.length} файлов`}
-                                virtualized
-                                defaultOpen
+            <section className="w-full">
+                <div className="flex w-full justify-between">
+                    <div className="flex-1">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <h4 className="text-base font-semibold text-main-100">
+                                Неиндексированные документы
+                            </h4>
+                            <Button
+                                variant="secondary"
+                                shape="rounded-md"
+                                className="h-8 gap-2 px-3 text-xs"
+                                disabled={
+                                    selectedNonVectorizedFiles.length === 0 ||
+                                    isSubmitting
+                                }
+                                onClick={() =>
+                                    onAddToIndex(checkedNonIndexedFileIds)
+                                }
                             >
-                                {filteredFiles.map((file) => (
-                                    <TreeView.Element
-                                        key={file.id}
-                                        onClick={() =>
-                                            toggleFile(
-                                                file.id,
-                                                !checkedFileIds.includes(
-                                                    file.id,
-                                                ),
-                                            )
-                                        }
-                                    >
-                                        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-1 py-0.5 text-xs text-main-200">
-                                            <SquareCheckbox
-                                                checked={checkedFileIds.includes(
-                                                    file.id,
-                                                )}
-                                            />
-                                            <span className="truncate">
-                                                <Icon
-                                                    icon="mdi:file-document-outline"
-                                                    width={14}
-                                                    height={14}
-                                                    className="mr-1 inline-flex"
-                                                />
-                                                {file.name}
-                                            </span>
-                                            <span className="text-main-400">
-                                                {convertBytesToSize(file.size, {
-                                                    inputUnit: "MB",
-                                                })}
-                                            </span>
-                                        </div>
-                                    </TreeView.Element>
-                                ))}
-                            </TreeView.Catalog>
-                        </TreeView>
-                    ) : (
-                        <div className="flex h-32 items-center justify-center text-sm text-main-400">
-                            Документы не найдены
+                                <Icon icon="mdi:database-export" />
+                                Добавить в индекс
+                            </Button>
                         </div>
-                    )}
 
-                    <p className="mt-3 text-xs text-main-300">
-                        Выбрано файлов: {checkedFileIds.length}
-                    </p>
+                        <div className="mb-3 flex items-center gap-3">
+                            <InputSmall
+                                value={nonIndexedSearchQuery}
+                                onChange={(event) =>
+                                    setNonIndexedSearchQuery(event.target.value)
+                                }
+                                placeholder="Поиск документа"
+                            />
+                            <div
+                                className="flex items-center gap-2 text-xs text-main-300"
+                                onClick={() =>
+                                    toggleAllVisible(
+                                        !allVisibleNonIndexedSelected,
+                                        filteredNonIndexedFiles,
+                                        setSelectedNonIndexedFileIds,
+                                    )
+                                }
+                            >
+                                <SquareCheckbox
+                                    checked={allVisibleNonIndexedSelected}
+                                />
+                                Выбрать все
+                            </div>
+                        </div>
+
+                        {filteredNonIndexedFiles.length > 0 ? (
+                            <TreeView>
+                                <TreeView.Catalog
+                                    title={`${filteredNonIndexedFiles.length} файлов`}
+                                    virtualized
+                                    defaultOpen
+                                >
+                                    {filteredNonIndexedFiles.map((file) => (
+                                        <TreeView.Element
+                                            key={file.id}
+                                            onClick={() =>
+                                                toggleFile(
+                                                    file.id,
+                                                    !checkedNonIndexedFileIds.includes(
+                                                        file.id,
+                                                    ),
+                                                    setSelectedNonIndexedFileIds,
+                                                )
+                                            }
+                                        >
+                                            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-1 py-0.5 text-xs text-main-200">
+                                                <SquareCheckbox
+                                                    checked={checkedNonIndexedFileIds.includes(
+                                                        file.id,
+                                                    )}
+                                                />
+                                                <span className="truncate">
+                                                    <Icon
+                                                        icon="mdi:file-document-outline"
+                                                        width={14}
+                                                        height={14}
+                                                        className="mr-1 inline-flex"
+                                                    />
+                                                    {file.name}
+                                                </span>
+                                                <span className="text-main-400">
+                                                    {convertBytesToSize(
+                                                        file.size,
+                                                        {
+                                                            inputUnit: "MB",
+                                                        },
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </TreeView.Element>
+                                    ))}
+                                </TreeView.Catalog>
+                            </TreeView>
+                        ) : (
+                            <div className="flex h-32 items-center justify-center text-sm text-main-400">
+                                Документы не найдены
+                            </div>
+                        )}
+
+                        <p className="mt-3 text-xs text-main-300">
+                            Выбрано файлов: {checkedNonIndexedFileIds.length}
+                        </p>
+                    </div>
+
+                    <div className="flex-1">
+                        <div className="relative flex h-full items-center justify-center">
+                            <Icon
+                                icon="mdi:swap-horizontal"
+                                width={50}
+                                height={50}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex-1">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <h4 className="text-base font-semibold text-main-100">
+                                Индексированные документы
+                            </h4>
+                            <Button
+                                variant="danger"
+                                shape="rounded-md"
+                                className="h-8 gap-2 px-3 text-xs"
+                                disabled={
+                                    selectedVectorizedFiles.length === 0 ||
+                                    isSubmitting
+                                }
+                                onClick={() =>
+                                    onRemoveFromIndex(checkedIndexedFileIds)
+                                }
+                            >
+                                <Icon icon="mdi:database-remove" />
+                                Убрать из индекса
+                            </Button>
+                        </div>
+
+                        <div className="mb-3 flex items-center gap-3">
+                            <InputSmall
+                                value={indexedSearchQuery}
+                                onChange={(event) =>
+                                    setIndexedSearchQuery(event.target.value)
+                                }
+                                placeholder="Поиск документа"
+                            />
+                            <div
+                                className="flex items-center gap-2 text-xs text-main-300"
+                                onClick={() =>
+                                    toggleAllVisible(
+                                        !allVisibleIndexedSelected,
+                                        filteredIndexedFiles,
+                                        setSelectedIndexedFileIds,
+                                    )
+                                }
+                            >
+                                <SquareCheckbox
+                                    checked={allVisibleIndexedSelected}
+                                />
+                                Выбрать все
+                            </div>
+                        </div>
+
+                        {filteredIndexedFiles.length > 0 ? (
+                            <TreeView>
+                                <TreeView.Catalog
+                                    title={`${filteredIndexedFiles.length} файлов`}
+                                    virtualized
+                                    defaultOpen
+                                >
+                                    {filteredIndexedFiles.map((file) => (
+                                        <TreeView.Element
+                                            key={file.id}
+                                            onClick={() =>
+                                                toggleFile(
+                                                    file.id,
+                                                    !checkedIndexedFileIds.includes(
+                                                        file.id,
+                                                    ),
+                                                    setSelectedIndexedFileIds,
+                                                )
+                                            }
+                                        >
+                                            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-1 py-0.5 text-xs text-main-200">
+                                                <SquareCheckbox
+                                                    checked={checkedIndexedFileIds.includes(
+                                                        file.id,
+                                                    )}
+                                                />
+                                                <span className="truncate">
+                                                    <Icon
+                                                        icon="mdi:file-document-outline"
+                                                        width={14}
+                                                        height={14}
+                                                        className="mr-1 inline-flex"
+                                                    />
+                                                    {file.name}
+                                                </span>
+                                                <span className="text-main-400">
+                                                    {convertBytesToSize(
+                                                        file.size,
+                                                        {
+                                                            inputUnit: "MB",
+                                                        },
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </TreeView.Element>
+                                    ))}
+                                </TreeView.Catalog>
+                            </TreeView>
+                        ) : (
+                            <div className="flex h-32 items-center justify-center text-sm text-main-400">
+                                Документы не найдены
+                            </div>
+                        )}
+
+                        <p className="mt-3 text-xs text-main-300">
+                            Выбрано файлов: {checkedIndexedFileIds.length}
+                        </p>
+                    </div>
                 </div>
-
-                <div className="flex-1" />
             </section>
         </div>
     );

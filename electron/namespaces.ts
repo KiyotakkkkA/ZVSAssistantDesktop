@@ -101,6 +101,10 @@ export interface IpcStorageNamespace {
     refreshStorageVecstoreById(
         id: string,
     ): Promise<StorageVecstoreEntity | null>;
+    removeFilesFromVecstore(
+        vecstoreId: string,
+        fileIds: string[],
+    ): Promise<{ requested: number; removed: number }>;
     createStorageFolder(
         payload: CreateStorageFolderDto,
     ): Promise<StorageFolderEntity>;

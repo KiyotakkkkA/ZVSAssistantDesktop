@@ -45,7 +45,7 @@ export const StorageFilesContent = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {selectedFolder?.vecstore_id && (
+                    {!selectedFolder?.vecstore_id && (
                         <>
                             <Button
                                 label="Создать векторное хранилище"

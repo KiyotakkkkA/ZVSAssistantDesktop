@@ -189,6 +189,86 @@ export class StorageFilesRepository {
             .run(vecstoreId);
     }
 
+    clearFilesVecstore(
+        fileIds: string[],
+        updatedAt: string,
+        vecstoreId?: string,
+    ): void {
+        if (fileIds.length === 0) {
+            return;
+        }
+
+        const idPlaceholders = fileIds.map(() => "?").join(",");
+
+        if (vecstoreId) {
+            this.databaseService
+                .getDatabase()
+                .prepare(
+                    `
+					UPDATE storage_files
+					SET vecstore_id = NULL, updated_at = ?
+					WHERE vecstore_id = ? AND id IN (${idPlaceholders})
+					`,
+                )
+                .run(updatedAt, vecstoreId, ...fileIds);
+
+            return;
+        }
+
+        this.databaseService
+            .getDatabase()
+            .prepare(
+                `
+				UPDATE storage_files
+				SET vecstore_id = NULL, updated_at = ?
+				WHERE id IN (${idPlaceholders})
+				`,
+            )
+            .run(updatedAt, ...fileIds);
+    }
+
+    linkFolderFilesToVecstore(
+        folderId: string,
+        vecstoreId: string,
+        updatedAt: string,
+    ): void {
+        this.databaseService
+            .getDatabase()
+            .prepare(
+                `
+				UPDATE storage_files
+				SET vecstore_id = @vecstore_id, updated_at = @updated_at
+				WHERE folder_id = @folder_id
+				`,
+            )
+            .run({
+                folder_id: folderId,
+                vecstore_id: vecstoreId,
+                updated_at: updatedAt,
+            });
+    }
+
+    linkFilesToVecstore(
+        fileIds: string[],
+        vecstoreId: string,
+        updatedAt: string,
+    ): void {
+        if (fileIds.length === 0) {
+            return;
+        }
+
+        this.databaseService
+            .getDatabase()
+            .prepare(
+                `
+				UPDATE storage_files
+				SET vecstore_id = ?, updated_at = ?
+				WHERE id IN (${fileIds.map(() => "?").join(",")})
+				`,
+            )
+            .run(vecstoreId, updatedAt, ...fileIds);
+    }
+
     sumSizeByFolderId(folderId: string): number {
         const row = this.databaseService
             .getDatabase()

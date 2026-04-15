@@ -11,7 +11,15 @@ export type StorageRepositorySyncPayload = {
     folderName?: string;
 };
 
-export type JobKind = "test-task" | "storage-repository-sync";
+export type StorageVecstoreIndexingPayload = {
+    vecstoreId: string;
+    fileIds?: string[];
+};
+
+export type JobKind =
+    | "test-task"
+    | "storage-repository-sync"
+    | "storage-vecstore-indexing";
 
 export type JobRecord = {
     id: string;
@@ -43,6 +51,7 @@ export type CreateJobPayload = {
     totalSteps?: number;
     stepDelayMs?: number;
     storageRepositorySync?: StorageRepositorySyncPayload;
+    storageVecstoreIndexing?: StorageVecstoreIndexingPayload;
 };
 
 export type JobRealtimeEvent =

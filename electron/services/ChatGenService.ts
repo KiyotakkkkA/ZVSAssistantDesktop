@@ -1,5 +1,5 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { streamText, generateText, stepCountIs } from "ai";
+import { streamText, generateText, stepCountIs, embedMany } from "ai";
 import type { OpenAICompatibleProvider } from "@ai-sdk/openai-compatible";
 import type {
     AsyncIterableStream,
@@ -14,6 +14,7 @@ import type {
     ResponseGenParams,
 } from "../models/chat";
 import type {
+    AllowedEmbeddingsProviders,
     AllowedChatProviders,
     AllowedWebToolsProviders,
     ProviderConfig,
@@ -160,6 +161,65 @@ export class ChatGenService {
             providerName,
             providerConfig,
         };
+    }
+
+    private getSelectedEmbeddingsProviderConfig(currentUser: User): {
+        providerName: AllowedEmbeddingsProviders;
+        providerConfig: ProviderConfig;
+    } {
+        const providerName = (currentUser.generalData.embeddingsProvider ??
+            "ollama") as AllowedEmbeddingsProviders;
+        const providerConfig =
+            currentUser.secureData.embeddingsProviders?.[providerName];
+
+        if (!providerConfig?.baseUrl || !providerConfig?.modelName) {
+            throw new Error("Embeddings provider is not configured");
+        }
+
+        return {
+            providerName,
+            providerConfig,
+        };
+    }
+
+    public async createEmbedding(value: string): Promise<number[]> {
+        const normalized = value.trim();
+
+        if (!normalized) {
+            return [];
+        }
+
+        const [embedding] = await this.createEmbeddings([normalized]);
+
+        return embedding ?? [];
+    }
+
+    public async createEmbeddings(values: string[]): Promise<number[][]> {
+        const normalizedValues = values
+            .map((value) => value.trim())
+            .filter(Boolean);
+
+        if (normalizedValues.length === 0) {
+            return [];
+        }
+
+        const currentUser = this.getCurrentUserOrThrow();
+        const { providerName, providerConfig } =
+            this.getSelectedEmbeddingsProviderConfig(currentUser);
+        const provider = createOpenAICompatible({
+            name: providerName,
+            baseURL: `${providerConfig.baseUrl}/v1`,
+            apiKey: providerConfig.apiKey,
+        });
+
+        const { embeddings } = await embedMany({
+            model: (provider as OpenAICompatibleProvider).embeddingModel(
+                providerConfig.modelName ?? "",
+            ),
+            values: normalizedValues,
+        });
+
+        return embeddings;
     }
 
     public streamResponseGeneration(params: ResponseGenParams): {

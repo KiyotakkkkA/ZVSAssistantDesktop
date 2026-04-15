@@ -7,6 +7,7 @@ import type { AppStorageService } from "../AppStorageService";
 import { JobsStorage } from "./JobsStorage";
 import type { JobWorker } from "./workers/contracts";
 import { StorageRepositorySyncWorker } from "./workers/StorageRepositorySyncWorker";
+import { StorageVecstoreIndexingWorker } from "./workers/StorageVecstoreIndexingWorker";
 import { TestTaskWorker } from "./workers/TestTaskWorker";
 
 type JobRuntime = {
@@ -34,6 +35,14 @@ export class JobService {
         this.workersByKind.set(
             storageRepositorySyncWorker.kind,
             storageRepositorySyncWorker,
+        );
+
+        const storageVecstoreIndexingWorker = new StorageVecstoreIndexingWorker(
+            this.appStorageService,
+        );
+        this.workersByKind.set(
+            storageVecstoreIndexingWorker.kind,
+            storageVecstoreIndexingWorker,
         );
 
         this.jobsStorage.markPendingJobsAsInterrupted();
