@@ -305,7 +305,7 @@ export const JobManageForm = () => {
                                 type="button"
                                 className={`w-full cursor-pointer rounded-xl px-3 py-3 text-left transition-all duration-200 animate-card-rise-in ${
                                     job.id === selectedJobId
-                                        ? "bg-main-800/90 shadow-[0_0_0_1px_rgba(245,245,245,0.04)]"
+                                        ? "bg-main-800/90"
                                         : "bg-main-900/48 hover:bg-main-800/62"
                                 }`}
                                 style={{

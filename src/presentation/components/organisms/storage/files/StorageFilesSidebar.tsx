@@ -7,6 +7,7 @@ import type {
 
 type StorageFilesSidebarProps = {
     isLoading: boolean;
+    isSubmitting: boolean;
     searchQuery: string;
     hasSelectedFolder: boolean;
     folders: StorageFolderEntity[];
@@ -14,11 +15,13 @@ type StorageFilesSidebarProps = {
     selectedFolderId: string | null;
     onSearchQueryChange: (value: string) => void;
     onCreateFolder: () => void;
+    onFullRefresh: () => void;
     onSelectFolder: (folderId: string) => void;
 };
 
 export const StorageFilesSidebar = ({
     isLoading,
+    isSubmitting,
     searchQuery,
     hasSelectedFolder,
     folders,
@@ -26,30 +29,50 @@ export const StorageFilesSidebar = ({
     selectedFolderId,
     onSearchQueryChange,
     onCreateFolder,
+    onFullRefresh,
     onSelectFolder,
 }: StorageFilesSidebarProps) => {
     return (
-        <aside className="min-h-0 border-b border-main-600/55 w-1/5 border-r p-4 animate-card-rise-in">
+        <aside className="min-h-0 border-b border-main-600/55 w-1/5 border-r p-4">
             <InputSmall
                 placeholder="Поиск файлов по имени или пути..."
                 value={searchQuery}
                 disabled={!hasSelectedFolder}
                 onChange={(event) => onSearchQueryChange(event.target.value)}
             />
-            <Button
-                variant="primary"
-                className="mt-4 w-full p-1 gap-2"
-                shape="rounded-lg"
-                onClick={onCreateFolder}
-            >
-                <Icon icon="mdi:plus-circle-outline" width={22} height={22} />
-                Создать папку
-            </Button>
-            <div className="mt-1">
-                <PrettyBR icon="mdi:folder" label="Хранимые папки" />
+            <div className="mt-4 flex items-center gap-2 animate-card-rise-in">
+                <Button
+                    variant="primary"
+                    className="w-full p-1 gap-2 flex-1"
+                    shape="rounded-lg"
+                    disabled={isSubmitting}
+                    onClick={onCreateFolder}
+                >
+                    <Icon
+                        icon="mdi:plus-circle-outline "
+                        width={22}
+                        height={22}
+                    />
+                    Создать папку
+                </Button>
+                <Button
+                    variant="secondary"
+                    shape="rounded-lg"
+                    className="h-10 w-10 p-0"
+                    disabled={isLoading || isSubmitting}
+                    label="Полный рефреш"
+                    onClick={onFullRefresh}
+                >
+                    <Icon icon="mdi:refresh" width={18} height={18} />
+                </Button>
             </div>
+            <PrettyBR
+                icon="mdi:folder"
+                label="Хранимые папки"
+                className="mt-5 animate-card-rise-in"
+            />
 
-            <div className="max-h-[calc(100%-16rem)] flex-1 rounded-2xl p-2 overflow-y-auto">
+            <div className="max-h-[calc(100%-16rem)] flex-1 rounded-2xl p-2 overflow-y-auto animate-card-rise-in">
                 {isLoading ? (
                     <div className="flex h-full items-center justify-center text-sm text-main-300">
                         Загрузка папок...

@@ -2,6 +2,7 @@ import { createPortal } from "react-dom";
 import {
     type PointerEventHandler,
     type WheelEventHandler,
+    useCallback,
     useEffect,
     useRef,
     useState,
@@ -80,13 +81,16 @@ export function ImagePreviewBlock({
 
     const isExpanded = expanded ?? internalExpanded;
 
-    const setExpanded = (nextValue: boolean) => {
-        if (expanded === undefined) {
-            setInternalExpanded(nextValue);
-        }
+    const setExpanded = useCallback(
+        (nextValue: boolean) => {
+            if (expanded === undefined) {
+                setInternalExpanded(nextValue);
+            }
 
-        onExpandedChange?.(nextValue);
-    };
+            onExpandedChange?.(nextValue);
+        },
+        [expanded, onExpandedChange],
+    );
 
     const resetView = () => {
         setScale(1);
@@ -94,10 +98,10 @@ export function ImagePreviewBlock({
         setOffsetY(0);
     };
 
-    const closeExpanded = () => {
+    const closeExpanded = useCallback(() => {
         setExpanded(false);
         setIsDragging(false);
-    };
+    }, [setExpanded]);
 
     const zoomIn = () => {
         setScale((current) => clampScale(current * ZOOM_FACTOR));
@@ -192,7 +196,7 @@ export function ImagePreviewBlock({
         }
 
         return undefined;
-    }, [isExpanded]);
+    }, [closeExpanded, isExpanded]);
 
     useEffect(() => {
         return () => {
@@ -313,7 +317,7 @@ export function ImagePreviewBlock({
                       onClick={closeExpanded}
                   >
                       <div
-                          className="mx-auto flex h-full w-full max-w-420 flex-col overflow-hidden rounded-2xl border border-main-400/20 bg-main-900/90 shadow-[0_30px_120px_rgba(0,0,0,0.45)]"
+                          className="mx-auto flex h-full w-full max-w-420 flex-col overflow-hidden rounded-2xl border border-main-400/20 bg-main-900/90"
                           onClick={(event) => event.stopPropagation()}
                       >
                           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-main-400/20 bg-main-800/70 p-2">

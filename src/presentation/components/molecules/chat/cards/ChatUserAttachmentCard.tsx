@@ -14,7 +14,7 @@ export function ChatUserAttachmentCard({
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
     return (
-        <div className="group/attachment relative h-28 w-28 overflow-hidden rounded-2xl border border-main-300/20 bg-main-100/90 p-1 shadow-[0_10px_30px_rgba(0,0,0,0.22)]">
+        <div className="group/attachment relative h-28 w-28 overflow-hidden rounded-2xl border border-main-300/20 bg-main-100/90 p-1">
             <img
                 src={attachment.dataUrl}
                 alt={attachment.fileName}

@@ -1,5 +1,6 @@
 import type {
     AddStorageFileDto,
+    CreateStorageVecstoreDto,
     CreateStorageFolderDto,
 } from "../models/storage";
 import type { StorageRepository } from "../repositories/StorageRepository";
@@ -15,10 +16,28 @@ export const registerIpcStoragePack = ({
     handleManyIpc([
         ["storage:get-folders", () => storageRepository.findAll()],
         ["storage:get-files", () => storageRepository.findAllFiles()],
+        ["storage:get-vecstores", () => storageRepository.findAllVecstores()],
         [
             "storage:create-folder",
             (payload: CreateStorageFolderDto) =>
                 storageRepository.createStorageFolder(payload),
+        ],
+        [
+            "storage:create-vecstore",
+            (payload: CreateStorageVecstoreDto) =>
+                storageRepository.createStorageVecstore(payload),
+        ],
+        [
+            "storage:rename-vecstore",
+            (id: string, name: string) => {
+                return storageRepository.renameStorageVecstore(id, name);
+            },
+        ],
+        [
+            "storage:delete-vecstore",
+            (id: string) => {
+                storageRepository.deleteStorageVecstore(id);
+            },
         ],
         [
             "storage:rename-folder",

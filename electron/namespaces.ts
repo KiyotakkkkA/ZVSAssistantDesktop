@@ -6,9 +6,11 @@ import type {
 } from "./models/dialog";
 import type {
     AddStorageFileDto,
+    CreateStorageVecstoreDto,
     CreateStorageFolderDto,
     StorageFileEntity,
     StorageFolderEntity,
+    StorageVecstoreEntity,
 } from "./models/storage";
 import type { CreateSecretDto, SecretEntity } from "./models/secret";
 import type { ProfileBootPayload } from "./models/profile";
@@ -90,9 +92,18 @@ export interface IpcJobsNamespace {
 export interface IpcStorageNamespace {
     getStorageFolders(): Promise<StorageFolderEntity[]>;
     getStorageFiles(): Promise<StorageFileEntity[]>;
+    getStorageVecstores(): Promise<StorageVecstoreEntity[]>;
     createStorageFolder(
         payload: CreateStorageFolderDto,
     ): Promise<StorageFolderEntity>;
+    createStorageVecstore(
+        payload: CreateStorageVecstoreDto,
+    ): Promise<StorageVecstoreEntity>;
+    renameStorageVecstore(
+        id: string,
+        name: string,
+    ): Promise<StorageVecstoreEntity | null>;
+    deleteStorageVecstore(id: string): Promise<void>;
     renameStorageFolder(
         id: string,
         name: string,

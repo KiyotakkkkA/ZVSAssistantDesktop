@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { JobEventTag, StorageRepositorySyncPayload } from "../models/job";
 import type { StorageRepository } from "../repositories/StorageRepository";
+import { createStorageFolderId } from "../../src/utils/creators";
 
 type RemoteRepositoryFile = {
     path: string;
@@ -190,7 +191,10 @@ export class AppStorageService {
             return existingFolder;
         }
 
-        return this.storageRepository.createStorageFolder({ name: folderName });
+        return this.storageRepository.createStorageFolder({
+            id: createStorageFolderId(),
+            name: folderName,
+        });
     }
 
     private resolveFolderName(

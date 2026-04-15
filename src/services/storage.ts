@@ -1,8 +1,10 @@
 import type {
     AddStorageFileDto,
+    CreateStorageVecstoreDto,
     CreateStorageFolderDto,
     StorageFileEntity,
     StorageFolderEntity,
+    StorageVecstoreEntity,
 } from "../../electron/models/storage";
 
 export const getStorageFolders = async (): Promise<StorageFolderEntity[]> => {
@@ -13,10 +15,33 @@ export const getStorageFiles = async (): Promise<StorageFileEntity[]> => {
     return window.storage.getStorageFiles();
 };
 
+export const getStorageVecstores = async (): Promise<
+    StorageVecstoreEntity[]
+> => {
+    return window.storage.getStorageVecstores();
+};
+
 export const createStorageFolder = async (
     payload: CreateStorageFolderDto,
 ): Promise<StorageFolderEntity> => {
     return window.storage.createStorageFolder(payload);
+};
+
+export const createStorageVecstore = async (
+    payload: CreateStorageVecstoreDto,
+): Promise<StorageVecstoreEntity> => {
+    return window.storage.createStorageVecstore(payload);
+};
+
+export const renameStorageVecstore = async (
+    id: string,
+    name: string,
+): Promise<StorageVecstoreEntity | null> => {
+    return window.storage.renameStorageVecstore(id, name);
+};
+
+export const deleteStorageVecstore = async (id: string): Promise<void> => {
+    return window.storage.deleteStorageVecstore(id);
 };
 
 export const renameStorageFolder = async (

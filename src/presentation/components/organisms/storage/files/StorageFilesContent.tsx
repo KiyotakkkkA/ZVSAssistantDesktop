@@ -5,6 +5,7 @@ import type {
     StorageFolderEntity,
 } from "../../../../../../electron/models/storage";
 import { convertBytesToSize } from "../../../../../utils/converters";
+import { StorageFolderIdFormat } from "../../../../../utils/creators";
 
 type StorageFilesContentProps = {
     selectedFolder: StorageFolderEntity | null;
@@ -16,6 +17,7 @@ type StorageFilesContentProps = {
     onRefreshFolder: () => void;
     onOpenRenameModal: () => void;
     onOpenDeleteModal: () => void;
+    onCreateVecstoreOnFolder: (folderId: StorageFolderIdFormat) => void;
 };
 
 export const StorageFilesContent = ({
@@ -28,6 +30,7 @@ export const StorageFilesContent = ({
     onRefreshFolder,
     onOpenRenameModal,
     onOpenDeleteModal,
+    onCreateVecstoreOnFolder,
 }: StorageFilesContentProps) => {
     return (
         <div className="flex-1 p-4 animate-card-rise-in">
@@ -42,6 +45,26 @@ export const StorageFilesContent = ({
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {selectedFolder?.vecstore_id && (
+                        <>
+                            <Button
+                                label="Создать векторное хранилище"
+                                variant="success"
+                                shape="rounded-lg"
+                                className="p-1 gap-2 text-main-900"
+                                onClick={() =>
+                                    onCreateVecstoreOnFolder(selectedFolder!.id)
+                                }
+                            >
+                                <Icon icon="mdi:database-plus-outline" />
+                                Создать хранилище
+                            </Button>
+                            <Separator
+                                orientation="vertical"
+                                className="h-5 bg-main-400"
+                            />
+                        </>
+                    )}
                     <Button
                         label="Добавить файл"
                         variant="primary"
@@ -103,11 +126,12 @@ export const StorageFilesContent = ({
                 </div>
             </div>
 
-            <div className="flex-1 rounded-2xl">
+            <div className="rounded-2xl">
                 {selectedFolder && filteredFiles.length > 0 ? (
-                    <TreeView virtualized>
+                    <TreeView>
                         <TreeView.Catalog
                             title={`Данные (${filteredFiles.length})`}
+                            virtualized
                             defaultOpen
                         >
                             {filteredFiles.map((file) => (

@@ -143,8 +143,20 @@ const storageNamespace: IpcStorageNamespace = {
     getStorageFiles() {
         return ipcRenderer.invoke("storage:get-files");
     },
+    getStorageVecstores() {
+        return ipcRenderer.invoke("storage:get-vecstores");
+    },
     createStorageFolder(payload) {
         return ipcRenderer.invoke("storage:create-folder", payload);
+    },
+    createStorageVecstore(payload) {
+        return ipcRenderer.invoke("storage:create-vecstore", payload);
+    },
+    renameStorageVecstore(id, name) {
+        return ipcRenderer.invoke("storage:rename-vecstore", id, name);
+    },
+    deleteStorageVecstore(id) {
+        return ipcRenderer.invoke("storage:delete-vecstore", id);
     },
     renameStorageFolder(id, name) {
         return ipcRenderer.invoke("storage:rename-folder", id, name);

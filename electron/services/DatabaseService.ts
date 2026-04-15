@@ -63,6 +63,7 @@ export class DatabaseService {
 
             CREATE TABLE IF NOT EXISTS storage_folders (
                 id TEXT PRIMARY KEY,
+                vecstore_id TEXT REFERENCES storage_vecstores(id) ON DELETE SET NULL,
                 name TEXT NOT NULL,
                 path TEXT NOT NULL,
                 size REAL NOT NULL,
@@ -80,6 +81,19 @@ export class DatabaseService {
                 updated_at TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS storage_vecstores (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                folder_id TEXT NOT NULL REFERENCES storage_folders(id) ON DELETE CASCADE,
+                description TEXT NOT NULL DEFAULT '',
+                path TEXT NOT NULL,
+                size REAL NOT NULL,
+                entities_count INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            
             CREATE TABLE IF NOT EXISTS secrets (
                 id TEXT PRIMARY KEY,
                 type TEXT NOT NULL,
