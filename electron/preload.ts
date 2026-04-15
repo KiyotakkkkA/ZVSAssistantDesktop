@@ -5,6 +5,7 @@ import type {
     IpcCoreNamespace,
     IpcJobsNamespace,
     IpcProfileNamespace,
+    IpcSecretsNamespace,
     IpcStorageNamespace,
     IpcWorkspaceNamespace,
 } from "./namespaces";
@@ -171,3 +172,20 @@ const storageNamespace: IpcStorageNamespace = {
 };
 
 contextBridge.exposeInMainWorld("storage", storageNamespace);
+
+const secretsNamespace: IpcSecretsNamespace = {
+    getSecrets() {
+        return ipcRenderer.invoke("secrets:get");
+    },
+    getSecretsByType(type) {
+        return ipcRenderer.invoke("secrets:get-by-type", type);
+    },
+    createSecret(payload) {
+        return ipcRenderer.invoke("secrets:create", payload);
+    },
+    deleteSecret(id) {
+        return ipcRenderer.invoke("secrets:delete", id);
+    },
+};
+
+contextBridge.exposeInMainWorld("secrets", secretsNamespace);

@@ -3,6 +3,7 @@ import type {
     IpcCoreNamespace,
     IpcJobsNamespace,
     IpcProfileNamespace,
+    IpcSecretsNamespace,
     IpcStorageNamespace,
     IpcWorkspaceNamespace,
 } from "../../electron/namespaces";
@@ -20,5 +21,6 @@ declare global {
         workspace: IpcWorkspaceNamespace;
         jobs: IpcJobsNamespace;
         storage: IpcStorageNamespace;
+        secrets: IpcSecretsNamespace;
     }
 }

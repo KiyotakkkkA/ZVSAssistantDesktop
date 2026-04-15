@@ -12,6 +12,7 @@ import { AppStorageService } from "./services/AppStorageService";
 import {
     registerIpcChatPack,
     registerIpcProfilePack,
+    registerIpcSecretsPack,
     registerIpcStoragePack,
     registerIpcWorkspacePack,
     registerIpcCorePack,
@@ -24,6 +25,7 @@ import { UserRepository } from "./repositories/UserRepository";
 import { DialogRepository } from "./repositories/DialogRepository";
 import { JobRepository } from "./repositories/JobRepository";
 import { StorageRepository } from "./repositories/StorageRepository";
+import { SecretsRepository } from "./repositories/SecretsRepository";
 import { defaultUser } from "./static/data/baseProfile";
 import { JobsStorage } from "./services/jobs/JobsStorage";
 import { JobService } from "./services/jobs/JobService";
@@ -156,6 +158,7 @@ app.whenReady().then(() => {
         databaseService,
         appPaths.storagePath,
     );
+    const secretsRepository = new SecretsRepository(databaseService);
 
     // Инициализируем функциональные сервисы
     toolsRuntimeService = new ToolsRuntimeService();
@@ -193,6 +196,10 @@ app.whenReady().then(() => {
 
     registerIpcStoragePack({
         storageRepository,
+    });
+
+    registerIpcSecretsPack({
+        secretsRepository,
     });
 
     registerIpcJobsPack({

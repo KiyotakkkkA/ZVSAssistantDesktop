@@ -5,3 +5,4 @@ export * from "./profile";
 export * from "./tool";
 export * from "./job";
 export * from "./storage";
+export * from "./secret";

@@ -1,151 +1,208 @@
-import { Table, type TableSchemaItem } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import { Icon } from "@iconify/react";
+import {
+    Button,
+    Modal,
+    Table,
+    type TableSchemaItem,
+} from "@kiyotakkkka/zvs-uikit-lib/ui";
+import { observer } from "mobx-react-lite";
+import { useState } from "react";
+import type { SecretEntity } from "../../../../stores/secretsStore";
+import { secretsStore } from "../../../../stores/secretsStore";
 
-type Secret = {
-    id: string;
-    type: string;
-    name: string;
-    secret: string;
-};
-
-type SecretRow = Secret & {
+type SecretRow = SecretEntity & {
     row_index: number;
-    actions?: React.ReactNode;
+    actions?: string;
+    [key: string]: string | number | undefined;
 };
 
 const schema: TableSchemaItem<SecretRow>[] = [
     {
         key: "row_index",
         label: "№",
-        align: "center",
-        width: 56,
     },
-    { key: "type", label: "Тип", width: 160 },
+    { key: "type", label: "Тип" },
     { key: "name", label: "Название" },
-    { key: "secret", label: "Секрет", width: 220 },
-    { key: "actions", label: "Действия", width: 180 },
+    { key: "secret", label: "Секрет" },
+    { key: "actions", label: "", align: "right" },
 ];
 
-const data: Secret[] = [
-    {
-        id: "1",
-        type: "API Key",
-        name: "OpenAI API Key",
-        secret: "sk-***************",
-    },
-    {
-        id: "2",
-        type: "Password",
-        name: "Database Password",
-        secret: "********",
-    },
-];
+const compareColumn = (
+    left: SecretRow,
+    right: SecretRow,
+    key: Extract<keyof SecretRow, string>,
+) => {
+    if (key === "actions") {
+        return 0;
+    }
 
-const rows: SecretRow[] = data.map((item, index) => ({
-    ...item,
-    row_index: index + 1,
-}));
+    if (key === "row_index") {
+        return Number(left[key]) - Number(right[key]);
+    }
 
-export const SecretsDataTable = () => {
-    const compareColumn = (
-        left: SecretRow,
-        right: SecretRow,
-        key: Extract<keyof SecretRow, string>,
-    ) => {
-        if (key === "row_index") {
-            return Number(left[key]) - Number(right[key]);
+    return String(left[key]).localeCompare(String(right[key]), "ru");
+};
+
+const maskSecret = (value: string) => {
+    if (value.length <= 8) {
+        return "*".repeat(Math.max(value.length, 8));
+    }
+
+    return `${value.slice(0, 3)}${"*".repeat(Math.max(value.length - 5, 6))}${value.slice(-2)}`;
+};
+
+export const SecretsDataTable = observer(() => {
+    const [deleteTarget, setDeleteTarget] = useState<{
+        id: string;
+        name: string;
+    } | null>(null);
+
+    const rows: SecretRow[] = secretsStore.secrets.map((item, index) => ({
+        ...item,
+        row_index: index + 1,
+    }));
+
+    const closeDeleteModal = () => {
+        setDeleteTarget(null);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteTarget) {
+            return;
         }
 
-        return String(left[key]).localeCompare(String(right[key]), "ru");
+        await secretsStore.removeSecret(deleteTarget.id);
+        closeDeleteModal();
     };
 
     return (
-        <Table
-            data={rows}
-            schema={schema}
-            rowKey={(row) => row.id}
-            className="overflow-hidden rounded-2xl border border-main-700/70 bg-main-900/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] animate-panel-slide-in"
-            classNames={{
-                table: "w-full text-sm",
-                header: "text-main-300",
-                body: "text-main-100",
-                row: "border-b border-main-700/55 last:border-b-0",
-                cell: "px-3 py-2.5 align-middle",
-                sortButton: "transition-colors hover:text-main-100",
-            }}
-            striped
-            hoverable
-        >
-            <Table.Header<SecretRow>
-                defaultSortColumn="row_index"
-                defaultSortMode="asc"
-                classNames={{
-                    root: "bg-main-800/70",
-                    row: "border-b border-main-700/70",
-                    cell: "px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] text-main-300",
-                    sortButton:
-                        "inline-flex items-center gap-1 transition-colors hover:text-main-100",
-                }}
-                sortModes={{
-                    asc: {
-                        sortIcon: "↑",
-                        sortFn: (a, b, key) => compareColumn(a, b, key),
-                    },
-                    desc: {
-                        sortIcon: "↓",
-                        sortFn: (a, b, key) => compareColumn(b, a, key),
-                    },
-                }}
-            />
-
-            <Table.Body
-                classNames={{
-                    root: "bg-main-900/35",
-                    row: "transition-colors hover:bg-main-800/65",
-                    empty: "py-8 text-center text-sm text-main-400",
-                }}
-                emptyState="Секреты пока не добавлены"
+        <>
+            <Table
+                data={rows}
+                schema={schema}
+                rowKey={(row) => String(row.id)}
+                className="animate-panel-slide-in"
+                hoverable
             >
-                <Table.Row<SecretRow> className="animate-card-rise-in">
-                    <Table.Column<SecretRow> field="row_index">
-                        {(context) => context.row?.row_index}
-                    </Table.Column>
-                    <Table.Column<SecretRow> field="type">
-                        {(context) => (
-                            <span className="inline-flex rounded-md border border-main-600/70 bg-main-800/80 px-2 py-0.5 text-[11px] text-main-200">
-                                {context.row?.type}
-                            </span>
-                        )}
-                    </Table.Column>
-                    <Table.Column<SecretRow> field="name">
-                        {(context) => (
-                            <div className="min-w-0">
-                                <p className="truncate text-sm text-main-100">
-                                    {context.row?.name}
-                                </p>
-                            </div>
-                        )}
-                    </Table.Column>
-                    <Table.Column<SecretRow> field="secret">
-                        {(context) => (
-                            <code className="rounded-md bg-main-800/90 px-2 py-1 text-xs text-main-200">
-                                {context.row?.secret}
-                            </code>
-                        )}
-                    </Table.Column>
-                    <Table.Column>
-                        {(_) => (
-                            <div className="flex gap-4">
-                                <span className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-main-600/70 bg-main-800/80 px-2 py-0.5 text-[11px] text-main-200 hover:bg-main-700/90">
-                                    Редактировать
+                <Table.Header<SecretRow>
+                    defaultSortColumn="row_index"
+                    defaultSortMode="asc"
+                    classNames={{
+                        sortButton: "text-sm",
+                    }}
+                    sortModes={{
+                        asc: {
+                            sortIcon: "↑",
+                            sortFn: (a, b, key) => compareColumn(a, b, key),
+                        },
+                        desc: {
+                            sortIcon: "↓",
+                            sortFn: (a, b, key) => compareColumn(b, a, key),
+                        },
+                    }}
+                />
+
+                <Table.Body
+                    classNames={{
+                        empty: "py-8 text-center text-sm text-main-400",
+                    }}
+                    emptyState="Секреты пока не добавлены"
+                >
+                    <Table.Row<SecretRow> className="animate-card-rise-in">
+                        <Table.Column<SecretRow> field="row_index">
+                            {(context) => context.row?.row_index}
+                        </Table.Column>
+                        <Table.Column<SecretRow> field="type">
+                            {(context) => (
+                                <span className="inline-flex rounded-md border border-main-600/70 bg-main-800/80 px-2 py-0.5 text-[11px] text-main-200">
+                                    {context.row?.type}
                                 </span>
-                                <span className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-red-600/70 bg-red-800/80 px-2 py-0.5 text-[11px] text-red-200 hover:bg-red-700/90">
-                                    Удалить
-                                </span>
-                            </div>
-                        )}
-                    </Table.Column>
-                </Table.Row>
-            </Table.Body>
-        </Table>
+                            )}
+                        </Table.Column>
+                        <Table.Column<SecretRow> field="name">
+                            {(context) => (
+                                <div className="min-w-0">
+                                    <p className="truncate text-sm text-main-100">
+                                        {context.row?.name}
+                                    </p>
+                                </div>
+                            )}
+                        </Table.Column>
+                        <Table.Column<SecretRow> field="secret">
+                            {(context) => (
+                                <code className="rounded-md bg-main-800/90 px-2 py-1 text-xs text-main-200">
+                                    {maskSecret(context.row?.secret ?? "")}
+                                </code>
+                            )}
+                        </Table.Column>
+                        <Table.Column<SecretRow> field="actions" align="right">
+                            {(context) => (
+                                <div>
+                                    <Button
+                                        variant="danger"
+                                        shape="rounded-lg"
+                                        className="p-2"
+                                        onClick={() => {
+                                            const secretId = context.row?.id;
+
+                                            if (!secretId) {
+                                                return;
+                                            }
+
+                                            setDeleteTarget({
+                                                id: secretId,
+                                                name:
+                                                    context.row?.name ??
+                                                    "секрет",
+                                            });
+                                        }}
+                                    >
+                                        <Icon icon="mdi:delete" />
+                                    </Button>
+                                </div>
+                            )}
+                        </Table.Column>
+                    </Table.Row>
+                </Table.Body>
+            </Table>
+
+            <Modal
+                open={Boolean(deleteTarget)}
+                onClose={closeDeleteModal}
+                title="Удалить секрет"
+                className="max-w-md"
+                footer={
+                    <>
+                        <Button
+                            variant="secondary"
+                            shape="rounded-lg"
+                            className="h-9 px-4"
+                            onClick={closeDeleteModal}
+                        >
+                            Отмена
+                        </Button>
+                        <Button
+                            variant="danger"
+                            shape="rounded-lg"
+                            className="h-9 px-4"
+                            onClick={() => {
+                                void confirmDelete();
+                            }}
+                        >
+                            Удалить
+                        </Button>
+                    </>
+                }
+            >
+                <div className="text-sm text-main-300">
+                    <span>Вы действительно хотите удалить секрет</span>
+                    <br />
+                    <span className="font-semibold text-main-100">
+                        {deleteTarget?.name}
+                        {"?"}
+                    </span>
+                </div>
+            </Modal>
+        </>
     );
-};
+});

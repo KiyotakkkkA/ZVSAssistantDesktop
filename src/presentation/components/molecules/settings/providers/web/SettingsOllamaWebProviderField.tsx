@@ -1,8 +1,9 @@
-import type { MouseEvent } from "react";
-import { InputSmall } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import { useState, type MouseEvent } from "react";
+import { Button, InputSmall } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { Icon } from "@iconify/react";
 import type { ProviderConfig } from "../../../../../../../electron/models/user";
 import { Config } from "../../../../../../../electron/config";
+import { SecretsSelectFilling } from "../../../../organisms/secrets/forms";
 
 type SettingsOllamaWebProviderFieldProps = {
     providerConfig: ProviderConfig;
@@ -15,6 +16,8 @@ export function SettingsOllamaWebProviderField({
 }: SettingsOllamaWebProviderFieldProps) {
     const baseUrl = providerConfig.baseUrl?.trim() || Config.OLLAMA_BASE_URL;
     const keysPageUrl = `${baseUrl}/settings/keys`;
+
+    const [isSecretsModalOpen, setIsSecretsModalOpen] = useState(false);
 
     const handleOpenExternal = (event: MouseEvent<HTMLAnchorElement>) => {
         event.preventDefault();
@@ -39,6 +42,15 @@ export function SettingsOllamaWebProviderField({
                         type="password"
                     />
                 </div>
+                <Button
+                    className="p-2 gap-2 text-xs"
+                    variant="primary"
+                    shape="rounded-lg"
+                    onClick={() => setIsSecretsModalOpen(true)}
+                >
+                    <Icon icon={"mdi:key"} />
+                    Менеджер секретов
+                </Button>
                 <a
                     href={keysPageUrl}
                     onClick={handleOpenExternal}
@@ -49,6 +61,23 @@ export function SettingsOllamaWebProviderField({
                     Получить ключ
                 </a>
             </div>
+
+            <SecretsSelectFilling
+                open={isSecretsModalOpen}
+                onClose={() => setIsSecretsModalOpen(false)}
+                title="Заполнить токен Ollama"
+                secretType="ollama"
+                fieldLabel="Токен Ollama"
+                fieldIcon="mdi:key-chain-variant"
+                onSubmit={(value) => {
+                    onChange({
+                        ...providerConfig,
+                        apiKey: value,
+                    });
+
+                    setIsSecretsModalOpen(false);
+                }}
+            />
         </div>
     );
 }

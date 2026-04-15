@@ -1,7 +1,9 @@
 import type { MouseEvent } from "react";
-import { InputSmall } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import { useState } from "react";
+import { Button, InputSmall } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { Icon } from "@iconify/react";
 import type { ProviderConfig } from "../../../../../../../electron/models/user";
+import { SecretsSelectFilling } from "../../../../organisms/secrets/forms";
 
 type SettingsSearchapiWebProviderFieldProps = {
     providerConfig: ProviderConfig;
@@ -12,6 +14,8 @@ export function SettingsSearchapiWebProviderField({
     providerConfig,
     onChange,
 }: SettingsSearchapiWebProviderFieldProps) {
+    const [isSecretsModalOpen, setIsSecretsModalOpen] = useState(false);
+
     const handleOpenExternal = (event: MouseEvent<HTMLAnchorElement>) => {
         event.preventDefault();
         void window.core.openExternal(event.currentTarget.href);
@@ -34,6 +38,15 @@ export function SettingsSearchapiWebProviderField({
                         type="password"
                     />
                 </div>
+                <Button
+                    className="p-2 gap-2 text-xs"
+                    variant="primary"
+                    shape="rounded-lg"
+                    onClick={() => setIsSecretsModalOpen(true)}
+                >
+                    <Icon icon={"mdi:key"} />
+                    Менеджер секретов
+                </Button>
                 <a
                     href="https://www.searchapi.io/api_tokens"
                     onClick={handleOpenExternal}
@@ -44,6 +57,23 @@ export function SettingsSearchapiWebProviderField({
                     Получить ключ
                 </a>
             </div>
+
+            <SecretsSelectFilling
+                open={isSecretsModalOpen}
+                onClose={() => setIsSecretsModalOpen(false)}
+                title="Заполнить токен SearchAPI"
+                secretType="searchapi"
+                fieldLabel="Токен SearchAPI"
+                fieldIcon="mdi:key-chain-variant"
+                onSubmit={(value) => {
+                    onChange({
+                        ...providerConfig,
+                        apiKey: value,
+                    });
+
+                    setIsSecretsModalOpen(false);
+                }}
+            />
         </div>
     );
 }

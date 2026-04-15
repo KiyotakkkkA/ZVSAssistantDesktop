@@ -10,6 +10,7 @@ import type {
     StorageFileEntity,
     StorageFolderEntity,
 } from "./models/storage";
+import type { CreateSecretDto, SecretEntity } from "./models/secret";
 import type { ProfileBootPayload } from "./models/profile";
 import type { UpdateUserDto } from "./models/user";
 import type { ThemeData } from "./static/themes/types";
@@ -103,4 +104,11 @@ export interface IpcStorageNamespace {
     ): Promise<StorageFileEntity[]>;
     removeFilesFromFolder(folderId: string, fileIds: string[]): Promise<void>;
     refreshFolderContent(folderId: string): Promise<StorageFileEntity[]>;
+}
+
+export interface IpcSecretsNamespace {
+    getSecrets(): Promise<SecretEntity[]>;
+    getSecretsByType(type: string): Promise<SecretEntity[]>;
+    createSecret(payload: CreateSecretDto): Promise<SecretEntity>;
+    deleteSecret(id: string): Promise<void>;
 }

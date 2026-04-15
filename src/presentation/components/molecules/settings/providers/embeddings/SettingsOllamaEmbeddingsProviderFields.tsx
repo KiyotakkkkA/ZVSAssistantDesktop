@@ -4,6 +4,7 @@ import { Icon } from "@iconify/react";
 import { SettingsChatOllamaModelsPickForm } from "../../../../organisms/settings/forms/SettingsChatOllamaModelsPickForm";
 import type { ProviderConfig } from "../../../../../../../electron/models/user";
 import { Config } from "../../../../../../../electron/config";
+import { SecretsSelectFilling } from "../../../../organisms/secrets/forms";
 
 type SettingsOllamaEmbeddingsProviderFieldsProps = {
     providerConfig: ProviderConfig;
@@ -15,6 +16,7 @@ export function SettingsOllamaEmbeddingsProviderFields({
     onChange,
 }: SettingsOllamaEmbeddingsProviderFieldsProps) {
     const [isModelsPickOpen, setIsModelsPickOpen] = useState(false);
+    const [isSecretsModalOpen, setIsSecretsModalOpen] = useState(false);
 
     const baseUrl = providerConfig.baseUrl ?? "";
     const modelName = providerConfig.modelName ?? "";
@@ -109,6 +111,15 @@ export function SettingsOllamaEmbeddingsProviderFields({
                             type="password"
                         />
                     </div>
+                    <Button
+                        className="p-2 gap-2 text-xs"
+                        variant="primary"
+                        shape="rounded-lg"
+                        onClick={() => setIsSecretsModalOpen(true)}
+                    >
+                        <Icon icon={"mdi:key"} />
+                        Менеджер секретов
+                    </Button>
                     <a
                         href={canUseLinks ? keysPageUrl : "#"}
                         onClick={handleOpenExternal}
@@ -143,6 +154,23 @@ export function SettingsOllamaEmbeddingsProviderFields({
                     onClose={() => setIsModelsPickOpen(false)}
                 />
             </Modal>
+
+            <SecretsSelectFilling
+                open={isSecretsModalOpen}
+                onClose={() => setIsSecretsModalOpen(false)}
+                title="Заполнить токен Ollama"
+                secretType="ollama"
+                fieldLabel="Токен Ollama"
+                fieldIcon="mdi:key-chain-variant"
+                onSubmit={(value) => {
+                    onChange({
+                        ...providerConfig,
+                        apiKey: value,
+                    });
+
+                    setIsSecretsModalOpen(false);
+                }}
+            />
         </>
     );
 }

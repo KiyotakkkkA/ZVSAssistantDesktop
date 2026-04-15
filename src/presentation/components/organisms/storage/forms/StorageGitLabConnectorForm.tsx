@@ -1,11 +1,18 @@
-import { Button, InputSmall, Select } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import {
+    Button,
+    InputSmall,
+    Modal,
+    Select,
+} from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useEffect, useMemo, useState } from "react";
 import { useConnectors, useJobs } from "../../../../../hooks";
 import {
     parseIgnorePatterns,
     resolveDefaultFolderName,
-    StorageRepositorySyncProgressModalForm,
+    StorageRepositorySyncProgressForm,
 } from ".";
+import { Icon } from "@iconify/react";
+import { SecretsSelectFilling } from "../../secrets/forms";
 
 export const StorageGitLabConnectorForm = () => {
     const { data, isLoading, isSuccess, gitlabRepoParse } = useConnectors();
@@ -23,6 +30,7 @@ export const StorageGitLabConnectorForm = () => {
     const [selectedBranch, setSelectedBranch] = useState("");
     const [ignoreFiles, setIgnoreFiles] = useState("");
     const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
+    const [isSecretsModalOpen, setIsSecretsModalOpen] = useState(false);
     const [progressJobId, setProgressJobId] = useState<string | null>(null);
 
     const parsedData =
@@ -110,12 +118,28 @@ export const StorageGitLabConnectorForm = () => {
                     <p className="text-sm text-main-300">
                         Персональный токен доступа для приватных репозиториев.
                     </p>
-                    <InputSmall
-                        type="password"
-                        value={token}
-                        onChange={(event) => setToken(event.target.value)}
-                        placeholder="secret..."
-                    />
+                    <div className="flex items-center gap-2 w-full">
+                        <div className="flex-1">
+                            <InputSmall
+                                value={token}
+                                onChange={(event) =>
+                                    setToken(event.target.value)
+                                }
+                                placeholder="secret..."
+                                type="password"
+                            />
+                        </div>
+                        <Button
+                            type="button"
+                            className="p-2 gap-2 text-sm"
+                            variant="primary"
+                            shape="rounded-lg"
+                            onClick={() => setIsSecretsModalOpen(true)}
+                        >
+                            <Icon icon={"mdi:key"} />
+                            Менеджер секретов
+                        </Button>
+                    </div>
                 </div>
 
                 {!isParsed ? (
@@ -161,7 +185,6 @@ export const StorageGitLabConnectorForm = () => {
                                 после каждой записи.
                             </p>
                             <InputSmall
-                                type="text"
                                 placeholder="build/**"
                                 className="h-11 w-full"
                                 value={ignoreFiles}
@@ -186,17 +209,57 @@ export const StorageGitLabConnectorForm = () => {
                 )}
             </form>
 
-            <StorageRepositorySyncProgressModalForm
+            <Modal
                 open={isProgressModalOpen}
-                job={progressJob}
-                events={progressEvents}
                 onClose={() => setIsProgressModalOpen(false)}
-                onCancel={() => {
-                    if (!progressJobId) {
-                        return;
-                    }
+                title="Синхронизация репозитория"
+                className="max-w-2xl"
+                footer={
+                    <>
+                        <Button
+                            variant="secondary"
+                            shape="rounded-lg"
+                            className="h-9 px-4"
+                            onClick={() => setIsProgressModalOpen(false)}
+                        >
+                            Закрыть
+                        </Button>
+                        <Button
+                            variant="danger"
+                            shape="rounded-lg"
+                            className="h-9 px-4"
+                            disabled={!progressJob?.isPending}
+                            onClick={() => {
+                                if (!progressJobId) {
+                                    return;
+                                }
 
-                    void cancelJobById(progressJobId);
+                                void cancelJobById(progressJobId);
+                            }}
+                        >
+                            Остановить
+                        </Button>
+                    </>
+                }
+            >
+                <StorageRepositorySyncProgressForm
+                    open={isProgressModalOpen}
+                    job={progressJob}
+                    events={progressEvents}
+                />
+            </Modal>
+
+            <SecretsSelectFilling
+                open={isSecretsModalOpen}
+                onClose={() => setIsSecretsModalOpen(false)}
+                title="Заполнить поля GitLab"
+                secretType="gitlab"
+                fieldLabel="Токен доступа"
+                fieldIcon="mdi:key-chain-variant"
+                onSubmit={(value) => {
+                    setToken(value);
+
+                    setIsSecretsModalOpen(false);
                 }}
             />
         </>
