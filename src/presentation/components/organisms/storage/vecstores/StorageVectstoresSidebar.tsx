@@ -106,7 +106,7 @@ export const StorageVecstoresSidebar = ({
                             className="text-main-500"
                         />
                         <p className="text-sm text-main-300">
-                            Хранилищ пока нет
+                            Хранилища не найдены
                         </p>
                     </div>
                 )}

@@ -181,9 +181,16 @@ export const StorageVectstoresContent = ({
     if (!selectedVecstore) {
         return (
             <div className="flex-1 p-4 animate-card-rise-in">
-                <div className="flex-1 flex-col items-center justify-center gap-4 text-sm text-main-300">
-                    <Icon icon="mdi:database-off" width={48} height={48} />
-                    <p>Пока что здесь ничего нет...</p>
+                <div className="flex flex-col items-center justify-center gap-3">
+                    <Icon
+                        icon="mdi:database-off"
+                        width={48}
+                        height={48}
+                        className="text-main-500"
+                    />
+                    <p className="text-sm text-main-300">
+                        Хранилище не выбрано
+                    </p>
                 </div>
             </div>
         );
