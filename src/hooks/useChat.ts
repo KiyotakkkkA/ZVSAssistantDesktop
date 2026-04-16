@@ -3,11 +3,14 @@ import { toJS } from "mobx";
 import { resolveText } from "../utils/resolvers";
 import { workspaceStore } from "../stores/workspaceStore";
 import { profileStore } from "../stores/profileStore";
+import { storageStore } from "../stores/storageStore";
+import { getVecstoreSourcesInjectablePrompt } from "../prompts/injectable";
 import { DialogUiMessage } from "../../electron/models";
 import type {
     ChatImageAttachment,
     ChatRequestContentPart,
     ChatRequestMessage,
+    VecstoreSearchResult,
 } from "../../electron/models/chat";
 import type { DialogContextMessage } from "../../electron/models/dialog";
 import type { AskToolResult } from "../../electron/models/tool";
@@ -139,6 +142,93 @@ type SendMessageOptions = {
 };
 
 const canUseToolsInMode = (mode: AssistantMode) => mode === "agent";
+
+const DEFAULT_VECSTORE_MAX_RESULTS = 5;
+const DEFAULT_VECSTORE_CONFIDENCE_PERCENTAGE = 80;
+
+const normalizeVecstoreMaxResults = (value: number | undefined) => {
+    if (!Number.isFinite(value)) {
+        return DEFAULT_VECSTORE_MAX_RESULTS;
+    }
+
+    return Math.min(Math.max(Math.floor(value ?? 0), 1), 50);
+};
+
+const normalizeVecstoreConfidencePercentage = (value: number | undefined) => {
+    if (!Number.isFinite(value)) {
+        return DEFAULT_VECSTORE_CONFIDENCE_PERCENTAGE;
+    }
+
+    const threshold = value ?? DEFAULT_VECSTORE_CONFIDENCE_PERCENTAGE;
+    const percentage = threshold <= 1 ? threshold * 100 : threshold;
+
+    return Math.min(Math.max(percentage, 0), 100);
+};
+
+const getVecstoreSearchParams = () => {
+    const generalData = profileStore.user?.generalData;
+
+    return {
+        maxResults: normalizeVecstoreMaxResults(
+            generalData?.maxEmbeddedSources,
+        ),
+        confidencePercentage: normalizeVecstoreConfidencePercentage(
+            generalData?.confidenceThreshold,
+        ),
+    };
+};
+
+const injectPromptIntoLastUserModelMessage = (
+    messages: ChatRequestMessage[],
+    injectablePrompt: string,
+) => {
+    const normalizedInjectablePrompt = injectablePrompt.trim();
+
+    if (!normalizedInjectablePrompt) {
+        return messages;
+    }
+
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+        const message = messages[index];
+
+        if (message.role !== "user") {
+            continue;
+        }
+
+        const nextContent = [...message.content];
+        const textPartIndex = nextContent.findIndex(
+            (part) => part.type === "text",
+        );
+
+        if (textPartIndex < 0) {
+            nextContent.unshift({
+                type: "text",
+                text: normalizedInjectablePrompt,
+            });
+        } else {
+            const textPart = nextContent[textPartIndex];
+
+            if (textPart.type === "text") {
+                nextContent[textPartIndex] = {
+                    type: "text",
+                    text: [textPart.text.trim(), normalizedInjectablePrompt]
+                        .filter(Boolean)
+                        .join("\n\n"),
+                };
+            }
+        }
+
+        const nextMessages = [...messages];
+        nextMessages[index] = {
+            ...message,
+            content: nextContent,
+        };
+
+        return nextMessages;
+    }
+
+    return messages;
+};
 
 export const useChat = () => {
     const toasts = useToasts();
@@ -389,7 +479,52 @@ export const useChat = () => {
             setIsGenerating(true);
 
             try {
-                const modelMessages = buildModelMessages();
+                let modelMessages = buildModelMessages();
+                const activeDialogVecstoreId =
+                    workspaceStore.activeDialogVecstoreId;
+                const selectedDialogVecstore = activeDialogVecstoreId
+                    ? (storageStore.vecstores.find(
+                          (vecstore) => vecstore.id === activeDialogVecstoreId,
+                      ) ?? null)
+                    : null;
+                let selectedVecstoreResults: VecstoreSearchResult[] = [];
+
+                if (activeDialogVecstoreId && normalizedPrompt.length > 0) {
+                    const vecstoreSearchParams = getVecstoreSearchParams();
+                    const vecstoreResults = await window.chat.getVecstoreResult(
+                        normalizedPrompt,
+                        vecstoreSearchParams.maxResults,
+                        vecstoreSearchParams.confidencePercentage,
+                    );
+                    selectedVecstoreResults = vecstoreResults.filter(
+                        (result) =>
+                            result.vecstoreId === activeDialogVecstoreId,
+                    );
+                }
+
+                if (normalizedPrompt.length > 0) {
+                    const injectablePrompt = getVecstoreSourcesInjectablePrompt(
+                        selectedDialogVecstore?.name ?? null,
+                        selectedVecstoreResults,
+                    );
+
+                    modelMessages = injectPromptIntoLastUserModelMessage(
+                        modelMessages,
+                        injectablePrompt,
+                    );
+                }
+
+                updateMessages((current) => {
+                    return current.map((message) =>
+                        message.id === assistantMessage.id
+                            ? {
+                                  ...message,
+                                  sources: selectedVecstoreResults,
+                              }
+                            : message,
+                    );
+                }, false);
+
                 const enabledToolNames = canUseToolsInMode(mode ?? "chat")
                     ? toJS(
                           profileStore.user?.generalData.enabledPromptTools ??
@@ -426,6 +561,7 @@ export const useChat = () => {
             buildModelMessages,
             ensureProviderConfigured,
             markAssistantAs,
+            updateMessages,
         ],
     );
 

@@ -23,6 +23,8 @@ export const defaultUser: CreateUserDto = {
         notifyOnJobCompleteToast: true,
         notifyOnJobCompleteOsNotification: false,
         notifyOnJobCompleteEmail: false,
+        maxEmbeddedSources: 5,
+        confidenceThreshold: 0.8,
     },
     secureData: {
         chatGenProviders: {

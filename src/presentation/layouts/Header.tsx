@@ -1,6 +1,6 @@
 import { Icon } from "@iconify/react";
 import { Button, Modal } from "@kiyotakkkka/zvs-uikit-lib/ui";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
     SettingsView,
     type SettingsViewHandle,
@@ -10,6 +10,12 @@ export const Header = () => {
     const settingsViewRef = useRef<SettingsViewHandle | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isSettingsSaveVisible, setIsSettingsSaveVisible] = useState(false);
+
+    const handleSaveVisibilityChange = useCallback((isVisible: boolean) => {
+        setIsSettingsSaveVisible((current) =>
+            current === isVisible ? current : isVisible,
+        );
+    }, []);
 
     const handleSaveSettings = async () => {
         await settingsViewRef.current?.save();
@@ -51,9 +57,7 @@ export const Header = () => {
             >
                 <SettingsView
                     ref={settingsViewRef}
-                    onSaveVisibilityChange={(isVisible: boolean) => {
-                        setIsSettingsSaveVisible(isVisible);
-                    }}
+                    onSaveVisibilityChange={handleSaveVisibilityChange}
                 />
             </Modal>
         </>

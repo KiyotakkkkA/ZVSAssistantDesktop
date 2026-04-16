@@ -1,4 +1,9 @@
-import { InputBig, InputSmall, PrettyBR } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import {
+    InputBig,
+    InputSmall,
+    PrettyBR,
+    Select,
+} from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { observer } from "mobx-react-lite";
 import { profileStore } from "../../../../stores/profileStore";
 
@@ -84,6 +89,65 @@ export const SettingsAssistantPanel = observer(() => {
                         }
                         placeholder="Введите инструкции для модели"
                         className="h-28 rounded-xl border border-main-700 bg-main-800 px-3 py-2 text-sm text-main-100 placeholder:text-main-500"
+                    />
+                </div>
+            </div>
+
+            <PrettyBR
+                icon="mdi:storage"
+                label="Встраивание данных хранилища"
+                size={20}
+            />
+
+            <div className="mt-4 space-y-4 animate-card-rise-in">
+                <div className="flex justify-between items-center">
+                    <p className="text-sm font-medium text-main-200">
+                        Макс. количество источников для встраивания в ответ
+                    </p>
+                    <InputSmall
+                        value={String(generalData.maxEmbeddedSources)}
+                        onChange={(event) => {
+                            const raw = Number(event.target.value);
+                            if (!Number.isFinite(raw)) {
+                                profileStore.updateGeneralData({
+                                    maxEmbeddedSources: 1,
+                                });
+                                return;
+                            }
+
+                            const nextValue = Math.max(1, Math.floor(raw));
+                            profileStore.updateGeneralData({
+                                maxEmbeddedSources: nextValue,
+                            });
+                        }}
+                        placeholder="4"
+                        type="number"
+                        min={1}
+                    />
+                </div>
+
+                <div className="flex justify-between items-center">
+                    <p className="text-sm font-medium text-main-200">
+                        Процент уверенности при отборе источников для
+                        встраивания
+                    </p>
+                    <Select
+                        value={String(generalData.confidenceThreshold)}
+                        onChange={(value) =>
+                            profileStore.updateGeneralData({
+                                confidenceThreshold: Number(value),
+                            })
+                        }
+                        options={[
+                            { label: "80%", value: "0.8" },
+                            { label: "60%", value: "0.6" },
+                            { label: "40%", value: "0.4" },
+                            { label: "20%", value: "0.2" },
+                        ]}
+                        classNames={{
+                            menu: "border border-main-700/70 shadow-lg bg-main-900/92 backdrop-blur-md",
+                            trigger: "bg-main-700/45",
+                        }}
                     />
                 </div>
             </div>

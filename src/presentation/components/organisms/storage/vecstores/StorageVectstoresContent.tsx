@@ -277,6 +277,21 @@ export const StorageVectstoresContent = ({
                     </tr>
                     <tr className="border-b border-main-700/50">
                         <td className="w-20 py-2 text-sm text-main-300">
+                            <Icon
+                                icon="mdi:text-box-outline"
+                                width={18}
+                                height={18}
+                            />
+                        </td>
+                        <td className="w-52 py-2 text-sm text-main-300">
+                            Описание
+                        </td>
+                        <td className="py-2 text-sm text-main-100 break-all">
+                            {selectedVecstore.description || "Без описания"}
+                        </td>
+                    </tr>
+                    <tr className="border-b border-main-700/50">
+                        <td className="w-20 py-2 text-sm text-main-300">
                             <Icon icon="mdi:weight" width={18} height={18} />
                         </td>
                         <td className="w-52 py-2 text-sm text-main-300">

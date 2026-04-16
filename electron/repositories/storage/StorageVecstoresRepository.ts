@@ -98,19 +98,25 @@ export class StorageVecstoresRepository {
             .run(payload);
     }
 
-    rename(id: string, name: string, updatedAt: string): void {
+    rename(
+        id: string,
+        name: string,
+        description: string,
+        updatedAt: string,
+    ): void {
         this.databaseService
             .getDatabase()
             .prepare(
                 `
 				UPDATE storage_vecstores
-				SET name = @name, updated_at = @updated_at
+				SET name = @name, description = @description, updated_at = @updated_at
 				WHERE id = @id
 				`,
             )
             .run({
                 id,
                 name,
+                description,
                 updated_at: updatedAt,
             });
     }

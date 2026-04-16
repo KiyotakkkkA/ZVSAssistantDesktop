@@ -7,6 +7,7 @@ import {
     ToolBubbleCard,
     ToolWebSearchBubbleCard,
 } from "../../molecules/chat/cards";
+import type { VecstoreSearchResult } from "../../../../../electron/models/chat";
 import type { AssistantMessageStage } from "../../../../../electron/models/dialog";
 import type { ToolTrace } from "../../../../../electron/models/tool";
 import type { QaToolState } from "../../../../utils/tools/qaTool";
@@ -16,6 +17,7 @@ type AssistantResponseProps = {
     timestamp?: string;
     content?: string;
     reasoning?: string;
+    sources?: VecstoreSearchResult[];
     isStreaming?: boolean;
     isError?: boolean;
     stages: AssistantMessageStage[];
@@ -63,6 +65,7 @@ export const AssistantResponse = ({
     timestamp,
     content = "",
     reasoning = "",
+    sources = [],
     isStreaming = false,
     isError = false,
     stages,
@@ -109,6 +112,7 @@ export const AssistantResponse = ({
                                 <StageRow icon="mdi:message-text-outline">
                                     <ChatAssistantBubbleCard
                                         content={content}
+                                        sources={sources}
                                         timestamp={timestamp}
                                         isStreaming={isStreaming}
                                         isError={isError}
@@ -140,6 +144,11 @@ export const AssistantResponse = ({
                                     >
                                         <ChatAssistantBubbleCard
                                             content={stage.content}
+                                            sources={
+                                                index === lastAnswerStageIndex
+                                                    ? sources
+                                                    : []
+                                            }
                                             timestamp={
                                                 index === lastAnswerStageIndex
                                                     ? timestamp

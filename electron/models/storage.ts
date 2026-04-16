@@ -58,4 +58,5 @@ export type CreateStorageVecstoreDto = {
 export type RenameStorageVecstoreDto = {
     id: string;
     name: string;
+    description?: string;
 };

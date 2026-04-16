@@ -20,6 +20,8 @@ export interface GeneralUserData {
     enabledPromptTools: string[];
     requiredPromptTools: string[];
     userPrompt: string;
+    maxEmbeddedSources: number;
+    confidenceThreshold: number;
     // Персонализация
     name: string;
     isExtendedInterfaceModeEnabled: boolean;

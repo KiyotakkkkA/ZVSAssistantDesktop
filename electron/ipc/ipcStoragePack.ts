@@ -55,8 +55,12 @@ export const registerIpcStoragePack = ({
         ],
         [
             "storage:rename-vecstore",
-            (id: string, name: string) => {
-                return storageRepository.renameStorageVecstore(id, name);
+            (id: string, name: string, description?: string) => {
+                return storageRepository.renameStorageVecstore(
+                    id,
+                    name,
+                    description,
+                );
             },
         ],
         [

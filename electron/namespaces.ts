@@ -1,4 +1,4 @@
-import type { ResponseGenParams } from "./models/chat";
+import type { ResponseGenParams, VecstoreSearchResult } from "./models/chat";
 import type {
     CreateDialogDto,
     DialogEntity,
@@ -54,6 +54,11 @@ export interface IpcCoreNamespace {
 }
 
 export interface IpcChatNamespace {
+    getVecstoreResult(
+        query: string,
+        maxResults: number,
+        confidencePercentage: number,
+    ): Promise<VecstoreSearchResult[]>;
     generateResponse(params: ResponseGenParams): Promise<{
         text: string;
         usage: unknown;
@@ -78,6 +83,10 @@ export interface IpcWorkspaceNamespace {
     renameDialog(id: DialogIdFormat, name: string): Promise<void>;
     deleteDialog(id: DialogIdFormat): Promise<void>;
     updateDialogState(payload: UpdateDialogStateDto): Promise<void>;
+    updateDialogVecstore(
+        id: DialogIdFormat,
+        vecstoreId: string | null,
+    ): Promise<void>;
 }
 
 export interface IpcJobsNamespace {
@@ -114,6 +123,7 @@ export interface IpcStorageNamespace {
     renameStorageVecstore(
         id: string,
         name: string,
+        description?: string,
     ): Promise<StorageVecstoreEntity | null>;
     deleteStorageVecstore(id: string): Promise<void>;
     renameStorageFolder(

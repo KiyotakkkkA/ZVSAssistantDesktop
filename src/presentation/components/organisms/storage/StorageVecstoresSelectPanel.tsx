@@ -29,6 +29,8 @@ export const StorageVecstoresSelectPanel = observer(() => {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isIndexingModalOpen, setIsIndexingModalOpen] = useState(false);
     const [renameVecstoreName, setRenameVecstoreName] = useState("");
+    const [renameVecstoreDescription, setRenameVecstoreDescription] =
+        useState("");
     const [selectedVecstoreId, setSelectedVecstoreId] = useState<string | null>(
         null,
     );
@@ -122,6 +124,7 @@ export const StorageVecstoresSelectPanel = observer(() => {
         }
 
         setRenameVecstoreName(selectedVecstore.name);
+        setRenameVecstoreDescription(selectedVecstore.description ?? "");
         setIsRenameModalOpen(true);
     };
 
@@ -133,6 +136,7 @@ export const StorageVecstoresSelectPanel = observer(() => {
         const updated = await storageStore.renameVecstore(
             selectedVecstore.id,
             renameVecstoreName,
+            renameVecstoreDescription,
         );
 
         if (!updated) {
@@ -267,8 +271,10 @@ export const StorageVecstoresSelectPanel = observer(() => {
                 open={isRenameModalOpen}
                 isSubmitting={storageStore.isSubmitting}
                 vecstoreName={renameVecstoreName}
+                vecstoreDescription={renameVecstoreDescription}
                 onClose={() => setIsRenameModalOpen(false)}
                 onVecstoreNameChange={setRenameVecstoreName}
+                onVecstoreDescriptionChange={setRenameVecstoreDescription}
                 onConfirm={() => {
                     void handleRenameVecstore();
                 }}

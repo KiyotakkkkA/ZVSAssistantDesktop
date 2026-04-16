@@ -34,5 +34,11 @@ export const registerIpcWorkspacePack = ({
                 dialogRepository.updateDialogState(payload);
             },
         ],
+        [
+            "workspace:update-dialog-vecstore",
+            (id: DialogIdFormat, vecstoreId: string | null) => {
+                dialogRepository.updateVecstoreId(id, vecstoreId);
+            },
+        ],
     ]);
 };

@@ -20,6 +20,7 @@ import {
 export type ChatDialog = {
     id: DialogIdFormat;
     name: string | null;
+    vecstoreId: string | null;
     messages: DialogUiMessage[];
     contextMessages: DialogContextMessage[];
     isForProject?: boolean;
@@ -53,6 +54,7 @@ class WorkspaceStore {
                 renameDialog: action.bound,
                 deleteDialog: action.bound,
                 updateDialogState: action.bound,
+                updateDialogVecstore: action.bound,
                 renameProject: action.bound,
                 openProject: action.bound,
                 deleteProject: action.bound,
@@ -96,6 +98,7 @@ class WorkspaceStore {
         const dialog: ChatDialog = {
             id: dialogId,
             name,
+            vecstoreId: createDialogDto.vecstore_id ?? null,
             messages: [],
             contextMessages: [],
             isForProject: false,
@@ -260,6 +263,34 @@ class WorkspaceStore {
         await this.persistDialogState(dialogId);
     }
 
+    async updateDialogVecstore(
+        dialogId: DialogIdFormat,
+        vecstoreId: string | null,
+    ) {
+        const dialog = this.dialogs.find((item) => item.id === dialogId);
+
+        if (!dialog) {
+            return;
+        }
+
+        runInAction(() => {
+            dialog.vecstoreId = vecstoreId;
+        });
+
+        await window.workspace.updateDialogVecstore(dialogId, vecstoreId);
+    }
+
+    get activeDialogVecstoreId(): string | null {
+        if (!this.activeDialogId) {
+            return null;
+        }
+
+        return (
+            this.dialogs.find((dialog) => dialog.id === this.activeDialogId)
+                ?.vecstoreId ?? null
+        );
+    }
+
     renameProject(projectId: ProjectIdFormat, title: string) {
         const project = this.projects.find((item) => item.id === projectId);
 
@@ -389,6 +420,7 @@ class WorkspaceStore {
         return {
             id: dialog.id,
             name: dialog.name,
+            vecstoreId: dialog.vecstore_id ?? null,
             isForProject: dialog.is_for_project,
             messages: dialog.ui_messages.map((message) => ({
                 ...message,

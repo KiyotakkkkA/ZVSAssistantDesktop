@@ -392,10 +392,16 @@ export class StorageRepository {
     renameStorageVecstore(
         id: string,
         name: string,
+        description?: string,
     ): StorageVecstoreEntity | null {
         const now = new Date().toISOString();
 
-        this.storageVecstoresRepository.rename(id, name.trim(), now);
+        this.storageVecstoresRepository.rename(
+            id,
+            name.trim(),
+            description?.trim() ?? "",
+            now,
+        );
 
         return this.findVecstoreById(id);
     }

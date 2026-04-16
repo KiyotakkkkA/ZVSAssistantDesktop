@@ -50,6 +50,14 @@ const coreNamespace: IpcCoreNamespace = {
 contextBridge.exposeInMainWorld("core", coreNamespace);
 
 const chatNamespace: IpcChatNamespace = {
+    getVecstoreResult(query, maxResults, confidencePercentage) {
+        return ipcRenderer.invoke(
+            "chat:get-vecstore-result",
+            query,
+            maxResults,
+            confidencePercentage,
+        );
+    },
     generateResponse(params) {
         return ipcRenderer.invoke("chat:generate", params);
     },
@@ -100,6 +108,13 @@ const workspaceNamespace: IpcWorkspaceNamespace = {
     },
     updateDialogState(payload) {
         return ipcRenderer.invoke("workspace:update-dialog-state", payload);
+    },
+    updateDialogVecstore(id, vecstoreId) {
+        return ipcRenderer.invoke(
+            "workspace:update-dialog-vecstore",
+            id,
+            vecstoreId,
+        );
     },
 };
 
@@ -177,8 +192,13 @@ const storageNamespace: IpcStorageNamespace = {
     createStorageVecstore(payload) {
         return ipcRenderer.invoke("storage:create-vecstore", payload);
     },
-    renameStorageVecstore(id, name) {
-        return ipcRenderer.invoke("storage:rename-vecstore", id, name);
+    renameStorageVecstore(id, name, description) {
+        return ipcRenderer.invoke(
+            "storage:rename-vecstore",
+            id,
+            name,
+            description,
+        );
     },
     deleteStorageVecstore(id) {
         return ipcRenderer.invoke("storage:delete-vecstore", id);

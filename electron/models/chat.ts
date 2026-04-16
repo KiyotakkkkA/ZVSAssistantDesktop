@@ -32,3 +32,13 @@ export type ResponseGenParams = {
     toolPackIds?: string[];
     enabledToolNames?: string[];
 };
+
+export type VecstoreSearchResult = {
+    vecstoreId: string;
+    vecstoreName: string;
+    fileId: string;
+    filePath: string;
+    chunkIndex: number;
+    content: string;
+    confidencePercentage: number;
+};

@@ -67,8 +67,9 @@ export const createStorageVecstore = async (
 export const renameStorageVecstore = async (
     id: string,
     name: string,
+    description?: string,
 ): Promise<StorageVecstoreEntity | null> => {
-    return window.storage.renameStorageVecstore(id, name);
+    return window.storage.renameStorageVecstore(id, name, description);
 };
 
 export const deleteStorageVecstore = async (id: string): Promise<void> => {

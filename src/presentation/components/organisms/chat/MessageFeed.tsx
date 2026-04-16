@@ -164,6 +164,7 @@ export const MessageFeed = ({
                                 timestamp={message.timestamp}
                                 content={message.content}
                                 reasoning={message.reasoning}
+                                sources={message.sources ?? []}
                                 isStreaming={isStreaming}
                                 isError={isError}
                                 stages={message.stages ?? []}

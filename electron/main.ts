@@ -158,19 +158,23 @@ app.whenReady().then(() => {
     const userRepository = new UserRepository(databaseService);
     const dialogRepository = new DialogRepository(databaseService);
     const jobRepository = new JobRepository(databaseService);
+    const storageVecstoresRepository = new StorageVecstoresRepository(
+        databaseService,
+    );
 
     // Инициализируем функциональные сервисы
     toolsRuntimeService = new ToolsRuntimeService();
     chatGenService = new ChatGenService({
         userRepository,
         toolsRuntimeService,
+        storageVecstoresRepository,
     });
 
     const storageRepository = new StorageRepository(
         appPaths.storagePath,
         new StorageFoldersRepository(databaseService),
         new StorageFilesRepository(databaseService),
-        new StorageVecstoresRepository(databaseService),
+        storageVecstoresRepository,
         new LanceStoreService(chatGenService),
     );
     const secretsRepository = new SecretsRepository(databaseService);

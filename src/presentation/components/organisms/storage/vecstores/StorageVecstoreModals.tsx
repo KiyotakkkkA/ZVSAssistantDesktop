@@ -4,8 +4,10 @@ type StorageRenameVecstoreModalProps = {
     open: boolean;
     isSubmitting: boolean;
     vecstoreName: string;
+    vecstoreDescription: string;
     onClose: () => void;
     onVecstoreNameChange: (name: string) => void;
+    onVecstoreDescriptionChange: (description: string) => void;
     onConfirm: () => void;
 };
 
@@ -13,8 +15,10 @@ export const StorageRenameVecstoreModal = ({
     open,
     isSubmitting,
     vecstoreName,
+    vecstoreDescription,
     onClose,
     onVecstoreNameChange,
+    onVecstoreDescriptionChange,
     onConfirm,
 }: StorageRenameVecstoreModalProps) => {
     return (
@@ -45,11 +49,23 @@ export const StorageRenameVecstoreModal = ({
                 </>
             }
         >
-            <InputSmall
-                placeholder="Новое название"
-                value={vecstoreName}
-                onChange={(event) => onVecstoreNameChange(event.target.value)}
-            />
+            <div className="space-y-3">
+                <InputSmall
+                    placeholder="Новое название"
+                    value={vecstoreName}
+                    onChange={(event) =>
+                        onVecstoreNameChange(event.target.value)
+                    }
+                />
+
+                <InputSmall
+                    placeholder="Описание"
+                    value={vecstoreDescription}
+                    onChange={(event) =>
+                        onVecstoreDescriptionChange(event.target.value)
+                    }
+                />
+            </div>
         </Modal>
     );
 };

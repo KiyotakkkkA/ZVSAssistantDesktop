@@ -12,6 +12,7 @@ interface RawDialogData {
     id: string;
     owner_id: string;
     name: string;
+    vecstore_id: string | null;
     is_for_project: number;
     ui_messages: string;
     context_messages: string;
@@ -22,6 +23,7 @@ const mapDialog = (raw: RawDialogData): DialogEntity => ({
     id: raw.id as DialogIdFormat,
     owner_id: raw.owner_id,
     name: raw.name,
+    vecstore_id: raw.vecstore_id,
     is_for_project: raw.is_for_project === 1,
     ui_messages: JSON.parse(raw.ui_messages) as DialogUiMessage[],
     context_messages: JSON.parse(
@@ -47,14 +49,15 @@ export class DialogRepository {
             .getDatabase()
             .prepare(
                 `
-                INSERT INTO dialogs (id, owner_id, name, is_for_project, ui_messages, context_messages, token_usage)
-                VALUES (@id, @owner_id, @name, @is_for_project, @ui_messages, @context_messages, @token_usage)
+                INSERT INTO dialogs (id, owner_id, name, vecstore_id, is_for_project, ui_messages, context_messages, token_usage)
+                VALUES (@id, @owner_id, @name, @vecstore_id, @is_for_project, @ui_messages, @context_messages, @token_usage)
             `,
             )
             .run({
                 id: dialog.id,
                 owner_id: dialog.owner_id,
                 name: dialog.name,
+                vecstore_id: dialog.vecstore_id ?? null,
                 is_for_project: dialog.is_for_project ? 1 : 0,
                 ui_messages: "[]",
                 context_messages: "[]",
@@ -82,6 +85,18 @@ export class DialogRepository {
             .getDatabase()
             .prepare("UPDATE dialogs SET name = @name WHERE id = @id")
             .run({ id, name });
+    }
+
+    updateVecstoreId(id: DialogIdFormat, vecstoreId: string | null) {
+        this.databaseService
+            .getDatabase()
+            .prepare(
+                "UPDATE dialogs SET vecstore_id = @vecstore_id WHERE id = @id",
+            )
+            .run({
+                id,
+                vecstore_id: vecstoreId,
+            });
     }
 
     updateDialogState(payload: UpdateDialogStateDto) {

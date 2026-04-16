@@ -1,5 +1,6 @@
 import { compact, joinBlocks, section, unique } from "../utils/prompting";
 import type { AssistantMode } from "../../electron/models/user";
+import type { VecstoreSearchResult } from "../../electron/models/chat";
 
 export const getMustToolsUsagePolicy = (
     enabledTools: string[] = [],
@@ -69,5 +70,31 @@ export const getUserPrompt = (
         modePolicy,
         toolsPolicy,
         `USER_MESSAGE:\n${userMessage.trim()}`,
+    ]);
+};
+
+export const getVecstoreSourcesInjectablePrompt = (
+    activeDialogTitle: string | null,
+    sources: VecstoreSearchResult[],
+) => {
+    console.log(sources);
+    const hasSources = sources.length > 0;
+    const sourceLines = hasSources
+        ? sources
+              .map((source, index) => {
+                  return [
+                      `${index + 1}. [${source.vecstoreName}] ${source.filePath}#${source.chunkIndex}`,
+                      `Confidence: ${source.confidencePercentage}%`,
+                      `Content: ${source.content}`,
+                  ].join("\n");
+              })
+              .join("\n\n")
+        : "Sources not found or no vector store selected.";
+
+    return joinBlocks([
+        "INJECTED_VECSTORE_CONTEXT:",
+        `ACTIVE_STORAGE: ${activeDialogTitle}`,
+        "SOURCE_USAGE_POLICY:\n- Use the retrieved sources to enhance the answer when they are relevant to the user's question.\n- If sources are not relevant, do not use them and do not mention them in the answer.\n- Do not fabricate or alter source information. Use the sources as they are provided.",
+        `RETRIEVED_SOURCES:\n${sourceLines}`,
     ]);
 };

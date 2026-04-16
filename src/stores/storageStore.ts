@@ -419,8 +419,9 @@ class StorageStore {
         }
     }
 
-    async renameVecstore(id: string, name: string) {
+    async renameVecstore(id: string, name: string, description?: string) {
         const normalizedName = name.trim();
+        const normalizedDescription = description?.trim() ?? "";
 
         if (!id.trim() || !normalizedName) {
             return null;
@@ -431,7 +432,11 @@ class StorageStore {
         });
 
         try {
-            const updated = await renameStorageVecstore(id, normalizedName);
+            const updated = await renameStorageVecstore(
+                id,
+                normalizedName,
+                normalizedDescription,
+            );
 
             if (!updated) {
                 return null;

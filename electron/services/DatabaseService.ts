@@ -29,6 +29,7 @@ export class DatabaseService {
                 id TEXT PRIMARY KEY,
                 owner_id TEXT NOT NULL DEFAULT '' REFERENCES profiles(id) ON DELETE CASCADE,
                 name TEXT,
+                vecstore_id TEXT REFERENCES storage_vecstores(id) ON DELETE SET NULL,
                 is_for_project INTEGER NOT NULL,
                 ui_messages TEXT NOT NULL,
                 context_messages TEXT NOT NULL,

@@ -8,14 +8,15 @@ import {
     Separator,
 } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { observer } from "mobx-react-lite";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChatImageAttachment } from "../../../../../electron/models/chat";
 import type { AssistantMode } from "../../../../../electron/models/user";
 import { useUpload } from "../../../../hooks";
 import { assistantModes } from "../../../../prompts/modes";
 import { profileStore } from "../../../../stores/profileStore";
+import { storageStore } from "../../../../stores/storageStore";
 import { workspaceStore } from "../../../../stores/workspaceStore";
-import { RequiredToolsPickForm } from "./forms";
+import { RequiredToolsPickForm, VecstoresPickForm } from "./forms";
 import { convertBytesToSize } from "../../../../utils/converters";
 
 type MessageComposerProps = {
@@ -32,6 +33,7 @@ export const MessageComposer = observer(
     ({ input, setInput, onSubmit, isGenerating }: MessageComposerProps) => {
         const areaRef = useRef<HTMLTextAreaElement>(null);
         const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
+        const [isVecstoresModalOpen, setIsVecstoresModalOpen] = useState(false);
         const [toolsQuery, setToolsQuery] = useState("");
         const {
             attachments,
@@ -75,6 +77,28 @@ export const MessageComposer = observer(
             if (isStarted) {
                 clearAttachments();
             }
+        };
+
+        useEffect(() => {
+            if (!isVecstoresModalOpen) {
+                return;
+            }
+
+            void storageStore.refreshStorageState();
+        }, [isVecstoresModalOpen]);
+
+        const handleVecstoreSelect = (vecstoreId: string | null) => {
+            const activeDialogId = workspaceStore.activeDialogId;
+
+            if (!activeDialogId) {
+                return;
+            }
+
+            void workspaceStore.updateDialogVecstore(
+                activeDialogId,
+                vecstoreId,
+            );
+            setIsVecstoresModalOpen(false);
         };
 
         return (
@@ -186,13 +210,25 @@ export const MessageComposer = observer(
 
                             <div className="mt-2 flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2">
+                                    <Button
+                                        label="Tools"
+                                        className="h-9 w-9 p-0"
+                                        shape="rounded-l-full"
+                                        variant="secondary"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setIsVecstoresModalOpen(true);
+                                        }}
+                                    >
+                                        <Icon icon="mdi:storage" />
+                                    </Button>
                                     {profileStore.user?.generalData
                                         .selectedAssistantMode === "agent" && (
                                         <Button
                                             label="Tools"
                                             className="h-9 w-9 p-0"
-                                            shape="rounded-l-full"
-                                            variant="secondary"
+                                            shape="rounded-md"
+                                            variant="primary"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 setIsToolsModalOpen(true);
@@ -218,14 +254,7 @@ export const MessageComposer = observer(
                                                 label="Attach"
                                                 variant="secondary"
                                                 className="h-9 w-9 p-0"
-                                                shape={
-                                                    profileStore.user
-                                                        ?.generalData
-                                                        .selectedAssistantMode ===
-                                                    "agent"
-                                                        ? "rounded-r-full"
-                                                        : "rounded-full"
-                                                }
+                                                shape={"rounded-r-full"}
                                                 ref={triggerRef}
                                                 disabled={disabled}
                                                 onClick={(e) => {
@@ -379,6 +408,32 @@ export const MessageComposer = observer(
                         </div>
                     </div>
                 </footer>
+
+                <Modal
+                    open={isVecstoresModalOpen}
+                    onClose={() => setIsVecstoresModalOpen(false)}
+                    title="Выбор векторного хранилища"
+                    className="max-w-3xl"
+                    footer={
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            shape="rounded-lg"
+                            className="h-9 px-4"
+                            onClick={() => handleVecstoreSelect(null)}
+                            disabled={!workspaceStore.activeDialogVecstoreId}
+                        >
+                            Сбросить
+                        </Button>
+                    }
+                >
+                    <VecstoresPickForm
+                        selectedVecstoreId={
+                            workspaceStore.activeDialogVecstoreId
+                        }
+                        onSelectVecstore={handleVecstoreSelect}
+                    />
+                </Modal>
 
                 <Modal
                     open={isToolsModalOpen}

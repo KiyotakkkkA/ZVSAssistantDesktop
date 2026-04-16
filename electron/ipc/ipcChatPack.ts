@@ -23,6 +23,21 @@ const sendStreamError = (
 };
 
 export const registerIpcChatPack = ({ chatGenService }: IpcChatPackDeps) => {
+    handleIpc(
+        "chat:get-vecstore-result",
+        async (
+            query: string,
+            maxResults: number,
+            confidencePercentage: number,
+        ) => {
+            return chatGenService.getVecstoreResult(
+                query,
+                maxResults,
+                confidencePercentage,
+            );
+        },
+    );
+
     handleIpc("chat:generate", async (payload: ResponseGenParams) => {
         const prompt = payload.prompt?.trim() ?? "";
         const messages = payload.messages;

@@ -23,6 +23,7 @@ export const StorageVecstoreCreateForm = ({
     onSubmit,
 }: StorageVecstoreCreateFormProps) => {
     const [name, setName] = useState("");
+    const [description, setDescription] = useState("");
     const [folderId, setFolderId] = useState("");
 
     useEffect(() => {
@@ -65,6 +66,7 @@ export const StorageVecstoreCreateForm = ({
         onSubmit({
             name: name.trim(),
             folder_id: folderId,
+            description: description.trim(),
         });
     };
 
@@ -78,6 +80,15 @@ export const StorageVecstoreCreateForm = ({
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                     placeholder="Например, docs-embeddings"
+                />
+            </div>
+
+            <div className="space-y-2">
+                <label className="block text-sm text-main-200">Описание</label>
+                <InputSmall
+                    value={description}
+                    onChange={(event) => setDescription(event.target.value)}
+                    placeholder="Краткое описание хранилища"
                 />
             </div>
 

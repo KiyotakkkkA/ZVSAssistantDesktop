@@ -5,6 +5,7 @@ import {
 } from "../../src/utils/creators";
 import type { ChatRole } from "./chat";
 import type { ChatImageAttachment } from "./chat";
+import type { VecstoreSearchResult } from "./chat";
 import type { ToolTrace } from "./tool";
 
 export type DialogContextMessage = {
@@ -36,6 +37,7 @@ export type DialogUiMessage = {
     answeringAt?: string;
     content: string;
     attachments?: ChatImageAttachment[];
+    sources?: VecstoreSearchResult[];
     reasoning?: string;
     toolTraces?: ToolTrace[];
     stages?: AssistantMessageStage[];
@@ -47,6 +49,7 @@ export interface DialogEntity {
     id: DialogIdFormat;
     owner_id: string;
     name: string | null;
+    vecstore_id: string | null;
     is_for_project: boolean;
     ui_messages: DialogUiMessage[];
     context_messages: DialogContextMessage[];
@@ -57,6 +60,7 @@ export type CreateDialogDto = {
     id: DialogIdFormat;
     owner_id: string;
     name: string | null;
+    vecstore_id?: string | null;
     is_for_project: boolean;
 };
 
