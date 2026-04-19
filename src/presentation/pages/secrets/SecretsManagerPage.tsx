@@ -3,8 +3,11 @@ import { Button, Modal } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { SecretsDataTable } from "../../components/organisms/secrets";
 import { Icon } from "@iconify/react";
 import { SecretsAddForm } from "../../components/organisms/secrets/forms";
+import { MsgToasts } from "../../../data/MsgToasts";
+import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 
 export const SecretsManagerPage = () => {
+    const toast = useToasts();
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     return (
@@ -33,7 +36,10 @@ export const SecretsManagerPage = () => {
             >
                 <SecretsAddForm
                     onCancel={() => setIsAddModalOpen(false)}
-                    onSuccess={() => setIsAddModalOpen(false)}
+                    onSuccess={() => {
+                        setIsAddModalOpen(false);
+                        toast.success(MsgToasts.SECRET_SUCCESSFULLY_CREATED());
+                    }}
                 />
             </Modal>
         </div>

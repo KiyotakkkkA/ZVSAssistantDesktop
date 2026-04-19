@@ -163,4 +163,18 @@ export class MsgToasts {
             description: `Задача ${jobName} была остановлена`,
         };
     };
+
+    static readonly SECRET_SUCCESSFULLY_CREATED = () => {
+        return {
+            title: MsgToasts.STATUS_SUCCESS,
+            description: "Секрет успешно создан",
+        };
+    };
+
+    static readonly SECRET_SUCCESSFULLY_REMOVED = () => {
+        return {
+            title: MsgToasts.STATUS_SUCCESS,
+            description: "Секрет успешно удалён",
+        };
+    };
 }

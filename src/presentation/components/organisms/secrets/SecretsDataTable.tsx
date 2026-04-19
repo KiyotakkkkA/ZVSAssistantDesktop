@@ -5,10 +5,12 @@ import {
     Table,
     type TableSchemaItem,
 } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { observer } from "mobx-react-lite";
 import { useState } from "react";
 import type { SecretEntity } from "../../../../stores/secretsStore";
 import { secretsStore } from "../../../../stores/secretsStore";
+import { MsgToasts } from "../../../../data/MsgToasts";
 
 type SecretRow = SecretEntity & {
     row_index: number;
@@ -52,6 +54,7 @@ const maskSecret = (value: string) => {
 };
 
 export const SecretsDataTable = observer(() => {
+    const toast = useToasts();
     const [deleteTarget, setDeleteTarget] = useState<{
         id: string;
         name: string;
@@ -73,6 +76,7 @@ export const SecretsDataTable = observer(() => {
 
         await secretsStore.removeSecret(deleteTarget.id);
         closeDeleteModal();
+        toast.success(MsgToasts.SECRET_SUCCESSFULLY_REMOVED());
     };
 
     return (
