@@ -3,6 +3,7 @@ import type { GeneralUserData } from "../../electron/models/user";
 import type { JobRecord } from "../types/ElectronApi";
 import { profileStore } from "../stores/profileStore";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
+import { MsgToasts } from "../data/MsgToasts";
 
 type NotificationFields = Pick<
     GeneralUserData,
@@ -10,30 +11,6 @@ type NotificationFields = Pick<
     | "notifyOnJobCompleteOsNotification"
     | "notifyOnJobCompleteEmail"
 >;
-
-const buildJobStatusText = (job: JobRecord) => {
-    if (job.errorMessage?.trim()) {
-        return {
-            statusLabel: "с ошибкой",
-            details: job.errorMessage.trim(),
-            isError: true,
-        };
-    }
-
-    if (job.isCompleted) {
-        return {
-            statusLabel: "успешно",
-            details: "Задача выполнена.",
-            isError: false,
-        };
-    }
-
-    return {
-        statusLabel: "с остановкой",
-        details: "Задача завершена без статуса успеха.",
-        isError: true,
-    };
-};
 
 export const useNotifications = (
     options: { listenJobCompletion?: boolean } = {},
@@ -71,15 +48,16 @@ export const useNotifications = (
                 return;
             }
 
-            const { statusLabel, details, isError } = buildJobStatusText(job);
-            const title = `Задача ${statusLabel}`;
-            const description = `${job.name}. ${details}`;
+            const title = `Задача ${job.name}`;
+            const description = `${job.description}`;
 
             if (profile.notifyOnJobCompleteToast) {
-                toasts[isError ? "danger" : "success"]({
-                    title,
-                    description,
-                });
+                if (job.errorMessage) {
+                    toasts.danger;
+                    MsgToasts.JOB_EXECUTION_ERROR(job.name, job.errorMessage);
+                    return;
+                }
+                toasts.success(MsgToasts.JOB_SUCCESSFULLY_COMPLETED(job.name));
             }
 
             if (profile.notifyOnJobCompleteOsNotification) {

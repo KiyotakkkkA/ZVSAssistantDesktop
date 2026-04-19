@@ -9,6 +9,7 @@ import {
     MAX_IMAGE_UPLOAD_SIZE_BYTES,
 } from "../utils/chat/imageUploadStrategies";
 import { convertBytesToSize } from "../utils/converters";
+import { MsgToasts } from "../data/MsgToasts";
 
 const IMAGE_ACCEPT_VALUE = buildImageUploadAcceptValue();
 
@@ -66,17 +67,22 @@ export const useUpload = (): UseUploadResult => {
                             error instanceof Error ? error.message : "unknown";
 
                         if (reason === "file-is-too-large") {
-                            toasts.warning({
-                                title: "Файл слишком большой",
-                                description: `${file.name} превышает лимит ${convertBytesToSize(MAX_IMAGE_UPLOAD_SIZE_BYTES)}.`,
-                            });
+                            toasts.warning(
+                                MsgToasts.FILE_TOO_LARGE_WARNING(
+                                    file.name,
+                                    convertBytesToSize(
+                                        MAX_IMAGE_UPLOAD_SIZE_BYTES,
+                                    ),
+                                ),
+                            );
                             continue;
                         }
 
-                        toasts.warning({
-                            title: "Формат не поддерживается",
-                            description: `Файл ${file.name} не является поддерживаемым изображением.`,
-                        });
+                        toasts.warning(
+                            MsgToasts.UNSUPPORTED_FILE_FORMAT_WARNING(
+                                file.name,
+                            ),
+                        );
                     }
                 }
 

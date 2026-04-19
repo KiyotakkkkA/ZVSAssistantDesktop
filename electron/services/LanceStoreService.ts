@@ -49,7 +49,6 @@ type BuildRowsForFileResult = {
 };
 
 type LanceDbConnection = {
-    dropTable: (name: string) => Promise<void>;
     createTable?: (
         name: string,
         data: LanceChunkRecord[],
@@ -121,8 +120,6 @@ export class LanceStoreService {
 
         const buildResult = await this.buildChunkRows(files, options);
         const db = await this.connect(vecstore.path);
-
-        await db.dropTable("chunks");
 
         if (buildResult.rows.length > 0) {
             await this.createTable(db, buildResult.rows, true);

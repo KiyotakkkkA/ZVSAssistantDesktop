@@ -22,6 +22,7 @@ import type { QaToolState } from "../utils/tools/qaTool";
 import { toolsStorage } from "../stores/toolsStorage";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { createId, createStageId } from "../utils/creators";
+import { MsgToasts } from "../data/MsgToasts";
 
 const appendAssistantStageDelta = (
     message: DialogUiMessage,
@@ -231,7 +232,7 @@ const injectPromptIntoLastUserModelMessage = (
 };
 
 export const useChat = () => {
-    const toasts = useToasts();
+    const toast = useToasts();
     const [messages, setMessages] = useState<DialogUiMessage[]>(
         workspaceStore.messages,
     );
@@ -249,10 +250,7 @@ export const useChat = () => {
         const currentUser = profileStore.user;
 
         if (!currentUser) {
-            toasts.danger({
-                title: "Профиль не найден",
-                description: "Не удалось получить настройки провайдера.",
-            });
+            toast.danger(MsgToasts.PROFILE_WAS_NOT_LOADED_ERROR());
             return false;
         }
 
@@ -262,16 +260,12 @@ export const useChat = () => {
             currentUser.secureData.chatGenProviders?.[activeProvider];
 
         if (!providerConfig?.baseUrl || !providerConfig?.modelName) {
-            toasts.danger({
-                title: "Провайдер не настроен",
-                description:
-                    "Заполните Base URL и модель в настройках провайдера.",
-            });
+            toast.danger(MsgToasts.PROVIDER_NOT_CONFIGURED_ERROR());
             return false;
         }
 
         return true;
-    }, [toasts]);
+    }, [toast]);
 
     const updateMessages = useCallback(
         (
@@ -690,20 +684,10 @@ export const useChat = () => {
 
     const copyMessage = useCallback(
         async (content: string) => {
-            try {
-                await navigator.clipboard.writeText(content);
-                toasts.success({
-                    title: "Скопировано",
-                    description: "Сообщение скопировано в буфер обмена.",
-                });
-            } catch {
-                toasts.danger({
-                    title: "Ошибка копирования",
-                    description: "Не удалось скопировать сообщение.",
-                });
-            }
+            await navigator.clipboard.writeText(content);
+            toast.success(MsgToasts.COPY_SUCCESS());
         },
-        [toasts],
+        [toast],
     );
 
     const refreshMessage = useCallback(

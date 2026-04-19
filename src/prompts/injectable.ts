@@ -1,4 +1,4 @@
-import { compact, joinBlocks, section, unique } from "../utils/prompting";
+import { joinBlocks, section, unique } from "../utils/prompting";
 import type { AssistantMode } from "../../electron/models/user";
 import type { VecstoreSearchResult } from "../../electron/models/chat";
 
@@ -30,10 +30,7 @@ export const getMustToolsUsagePolicy = (
 
 export const getUserPrompt = (
     userMessage: string,
-    userName: string,
-    userPrompt: string,
     mode: AssistantMode,
-    preferredLanguage: string = "Russian",
     enabledPromptTools: string[] = [],
     requiredPromptTools: string[] = [],
 ) => {
@@ -58,15 +55,12 @@ export const getUserPrompt = (
                     "Tools may be used according to enabled and mandatory policy.",
                 ]);
 
-    const preferences = section("INJECTED_USER_CONTEXT", [
-        `USER_NAME: ${compact(userName) || "Unknown user"}`,
-        `PREFERRED_LANGUAGE: ${compact(preferredLanguage) || "Russian"}`,
-        `USER_CUSTOM_INSTRUCTIONS: ${compact(userPrompt)}`,
-        "FOLLOW_USER_PREFERENCES: Respect the user's custom instructions when they do not conflict with system rules.",
+    const envData = section("ENVIRONMENT_DATA", [
+        "CURRENT_DATETIME: " + new Date().toLocaleString(),
     ]);
 
     return joinBlocks([
-        preferences,
+        envData,
         modePolicy,
         toolsPolicy,
         `USER_MESSAGE:\n${userMessage.trim()}`,

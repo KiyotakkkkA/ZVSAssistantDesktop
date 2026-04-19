@@ -50,7 +50,7 @@ export function ChatAssistantBubbleCard({
                     >
                         <Badge
                             variant="info"
-                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-main-500/60 bg-main-800/75 px-3.5 py-1 text-[11px] font-semibold text-main-50 transition hover:border-main-400/70"
+                            className="cursor-pointer border-transparent gap-2 px-3.5 py-1 text-[11px] bg-transparent hover:bg-main-700/50 text-purple-300 transition-colors"
                         >
                             <Icon
                                 icon="mdi:book-open-page-variant-outline"

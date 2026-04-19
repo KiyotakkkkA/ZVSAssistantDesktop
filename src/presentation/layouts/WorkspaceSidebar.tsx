@@ -15,6 +15,7 @@ import {
 import { workspaceStore } from "../../stores/workspaceStore";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { DialogIdFormat, ProjectIdFormat } from "../../utils/creators";
+import { MsgToasts } from "../../data/MsgToasts";
 
 type TargetType = "dialog" | "project";
 
@@ -50,10 +51,7 @@ export const WorkspaceSidebar = observer(() => {
             icon: <Icon icon="mdi:chat-plus-outline" width="16" height="16" />,
             onClick: () => {
                 workspaceStore.createDialog();
-                toast.success({
-                    title: "Успешно",
-                    description: "Новый диалог успешно создан.",
-                });
+                toast.success(MsgToasts.DIALOG_SUCCESSFULLY_CREATED());
             },
         },
         {
@@ -93,10 +91,7 @@ export const WorkspaceSidebar = observer(() => {
         }
 
         closeRenameModal();
-        toast.success({
-            title: "Успешно",
-            description: "Название успешно обновлено.",
-        });
+        toast.success(MsgToasts.DIALOG_SUCCESSFULLY_RENAMED());
     };
 
     const submitDelete = () => {
@@ -111,10 +106,7 @@ export const WorkspaceSidebar = observer(() => {
         }
 
         closeDeleteModal();
-        toast.success({
-            title: "Успешно",
-            description: "Элемент успешно удалён.",
-        });
+        toast.success(MsgToasts.DIALOG_SUCCESSFULLY_REMOVED());
     };
 
     const dialogs: PlaceholderItem[] = workspaceStore.dialogs

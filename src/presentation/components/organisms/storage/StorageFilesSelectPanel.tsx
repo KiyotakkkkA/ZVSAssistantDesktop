@@ -13,8 +13,11 @@ import { StorageVecstoreCreateForm } from "./forms";
 import { convertFileToBase64 } from "../../../../utils/converters";
 import { storageStore } from "../../../../stores/storageStore";
 import { createStorageFileId } from "../../../../utils/creators";
+import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
+import { MsgToasts } from "../../../../data/MsgToasts";
 
 export const StorageFilesSelectPanel = observer(() => {
+    const toast = useToasts();
     const [searchQuery, setSearchQuery] = useState("");
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
@@ -55,6 +58,7 @@ export const StorageFilesSelectPanel = observer(() => {
 
         setIsCreateModalOpen(false);
         setNewFolderName("");
+        toast.success(MsgToasts.FOLDER_SUCCESSFULLY_CREATED());
     };
 
     const handleAddFilesClick = () => {
@@ -118,11 +122,13 @@ export const StorageFilesSelectPanel = observer(() => {
         }
 
         setIsRenameModalOpen(false);
+        toast.success(MsgToasts.FOLDER_SUCCESSFULLY_RENAMED());
     };
 
     const handleDeleteFolder = async () => {
         await storageStore.deleteSelectedFolder();
         setIsDeleteModalOpen(false);
+        toast.success(MsgToasts.FOLDER_SUCCESSFULLY_REMOVED());
     };
 
     const handleOpenFolderPath = async () => {
@@ -150,6 +156,7 @@ export const StorageFilesSelectPanel = observer(() => {
 
         setIsCreateVecstoreModalOpen(false);
         setFixedVecstoreFolderId(null);
+        toast.success(MsgToasts.VSTORE_SUCCESSFULLY_CREATED());
     };
 
     return (

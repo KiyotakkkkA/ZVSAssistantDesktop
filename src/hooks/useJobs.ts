@@ -3,9 +3,10 @@ import { useObserver } from "mobx-react-lite";
 import type { CreateJobPayload } from "../types/ElectronApi";
 import { jobsStorage } from "../stores/jobsStorage";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
+import { MsgToasts } from "../data/MsgToasts";
 
 export const useJobs = () => {
-    const toasts = useToasts();
+    const toast = useToasts();
 
     useEffect(() => {
         void jobsStorage.initialize();
@@ -20,24 +21,18 @@ export const useJobs = () => {
             const createdJob = await jobsStorage.createJob(payload);
 
             if (!createdJob) {
-                toasts.warning({
-                    title: "Не удалось создать задачу",
-                    description: "Попробуйте еще раз.",
-                });
+                toast.danger(MsgToasts.JOB_CREATION_ERROR(payload.name));
                 return null;
             }
 
-            toasts.success({
-                title: "Фоновая задача создана",
-                description: `Задача ${createdJob.name} запущена.`,
-            });
+            toast.success(MsgToasts.JOB_SUCCESSFULLY_CREATED(createdJob.name));
 
             return {
                 job: createdJob,
                 cancelJob: () => jobsStorage.cancelJob(createdJob.id),
             };
         },
-        [toasts],
+        [toast],
     );
 
     const cancelJobById = useCallback(
@@ -45,21 +40,23 @@ export const useJobs = () => {
             const isCancelled = await jobsStorage.cancelJob(jobId);
 
             if (!isCancelled) {
-                toasts.warning({
-                    title: "Не удалось отменить задачу",
-                    description: "Возможно, задача уже завершилась.",
-                });
+                toast.danger(
+                    MsgToasts.JOB_CANCELLING_ERROR(
+                        jobsStorage.getJobById(jobId)?.name || "UNKNOWN",
+                    ),
+                );
                 return false;
             }
 
-            toasts.info({
-                title: "Задача отменена",
-                description: "Выполнение остановлено.",
-            });
+            toast.success(
+                MsgToasts.JOB_SUCCESSFULLY_STOPPED(
+                    jobsStorage.getJobById(jobId)?.name || "UNKNOWN",
+                ),
+            );
 
             return true;
         },
-        [toasts],
+        [toast],
     );
 
     const refreshJobs = useCallback(async () => {

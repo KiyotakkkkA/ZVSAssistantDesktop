@@ -13,6 +13,8 @@ import {
     StorageVecstoresSidebar,
     StorageVectstoresContent,
 } from "./vecstores";
+import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
+import { MsgToasts } from "../../../../data/MsgToasts";
 
 export const StorageVecstoresSelectPanel = observer(() => {
     const {
@@ -23,6 +25,7 @@ export const StorageVecstoresSelectPanel = observer(() => {
         selectedJobId,
         selectJob,
     } = useJobs();
+    const toast = useToasts();
 
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
@@ -144,6 +147,7 @@ export const StorageVecstoresSelectPanel = observer(() => {
         }
 
         setIsRenameModalOpen(false);
+        toast.success(MsgToasts.VSTORE_SUCCESSFULLY_CHANGED());
     };
 
     const handleDeleteVecstore = async () => {
@@ -153,6 +157,7 @@ export const StorageVecstoresSelectPanel = observer(() => {
 
         await storageStore.deleteVecstore(selectedVecstore.id);
         setIsDeleteModalOpen(false);
+        toast.success(MsgToasts.VSTORE_SUCCESSFULLY_REMOVED());
     };
 
     const handleAddToIndex = async (fileIds: string[]) => {

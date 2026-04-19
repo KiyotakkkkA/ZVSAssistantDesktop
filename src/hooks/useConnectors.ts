@@ -1,5 +1,6 @@
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { useCallback, useState } from "react";
+import { MsgToasts } from "../data/MsgToasts";
 
 type ConnectorProvider = "github" | "gitlab";
 
@@ -98,10 +99,7 @@ export const useConnectors = () => {
                     "Не удалось получить данные репозитория.";
                 setData(null);
                 setIsError(true);
-                toast.danger({
-                    title: "Ошибка подключения",
-                    description: errorMessage,
-                });
+                toast.danger(MsgToasts.CONNECTION_ERROR(errorMessage));
                 return null;
             } finally {
                 setIsLoading(false);

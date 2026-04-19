@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { createHighlighter } from "shiki";
 import { Button } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
+import { MsgToasts } from "../../../../data/MsgToasts";
 
 interface ShikiCodeBlockProps {
     code: string;
@@ -141,10 +142,7 @@ export function ShikiCodeBlock({ code, language }: ShikiCodeBlockProps) {
     const copyCode = async () => {
         try {
             await navigator.clipboard.writeText(code);
-            toast.success({
-                title: "Успешно",
-                description: "Код скопирован в буфер обмена",
-            });
+            toast.success(MsgToasts.COPY_SUCCESS());
         } catch {
             // noop
         }

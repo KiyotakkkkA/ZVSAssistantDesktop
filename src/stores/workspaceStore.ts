@@ -582,10 +582,7 @@ class WorkspaceStore {
 
         return getUserPrompt(
             userMessage,
-            userGeneralData?.name ?? "Пользователь",
-            userGeneralData?.userPrompt ?? "",
             this.getSelectedAssistantMode(),
-            userGeneralData?.preferredLanguage ?? "",
             userGeneralData?.enabledPromptTools ?? [],
             userGeneralData?.requiredPromptTools ?? [],
         );
@@ -602,9 +599,14 @@ class WorkspaceStore {
     }
 
     private getSystemPromptForMode(mode = this.getSelectedAssistantMode()) {
+        const userGeneralData = profileStore.user?.generalData;
+
         return getModeSystemPrompt(
             mode,
-            profileStore.user?.generalData?.assistantName ?? "Чарли",
+            userGeneralData?.assistantName ?? "Чарли",
+            userGeneralData?.name ?? "Пользователь",
+            userGeneralData?.userPrompt ?? "",
+            userGeneralData?.preferredLanguage ?? "",
         );
     }
 

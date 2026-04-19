@@ -1,5 +1,5 @@
 import { Icon } from "@iconify/react";
-import { Alert, Button, InputSmall } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import { Button, InputSmall } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { observer } from "mobx-react-lite";
 import { useMemo, useState } from "react";
 import { storageStore } from "../../../../../stores/storageStore";
@@ -32,16 +32,6 @@ export const VecstoresPickForm = observer(
 
         return (
             <div className="space-y-3">
-                <Alert variant="info">
-                    <p className="text-sm font-semibold text-main-100">
-                        Хранилище для ответа
-                    </p>
-                    <p className="mt-1 text-xs text-main-400">
-                        Выберите векторное хранилище для подмешивания контекста
-                        в ответ.
-                    </p>
-                </Alert>
-
                 <InputSmall
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
