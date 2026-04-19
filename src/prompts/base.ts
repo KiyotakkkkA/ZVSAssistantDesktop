@@ -92,6 +92,7 @@ export const getAgentSystemPrompt = (
             "Use planning_tool(type=getNextStep) when you need to continue execution and must retrieve the next pending step.",
             "Do not call markStep before createSteps. Do not invent stepId values that are absent in the current plan.",
             "Valid examples: {type:'createSteps',title:'Trip Plan',steps:['Collect constraints','Build route','Estimate budget']}, {type:'markStep',stepId:2}, {type:'getNextStep'}.",
+            "When using a plan, you must complete all of the stages before generating final answer. DON'T ANSWERING BEFOR COMPLETING ALL THE STAGES",
             "If the plan is completed, continue with final result synthesis instead of creating duplicate plans.",
         ]),
         section("RESPONSE_QUALITY", [

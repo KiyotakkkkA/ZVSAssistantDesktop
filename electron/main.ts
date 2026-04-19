@@ -33,6 +33,11 @@ import { JobService } from "./services/jobs/JobService";
 import { StorageVecstoresRepository } from "./repositories/storage/StorageVecstoresRepository";
 import { StorageFilesRepository } from "./repositories/storage/StorageFilesRepository";
 import { StorageFoldersRepository } from "./repositories/storage/StorageFoldersRepository";
+import { ChatEmbeddingsService } from "./services/chat/ChatEmbeddingsService";
+import { ChatVecstoreSearchService } from "./services/chat/ChatVecstoreSearchService";
+import { ChatProviderConfigService } from "./services/chat/ChatProviderConfigService";
+import { ChatResponseGenerationService } from "./services/chat/ChatResponseGenerationService";
+import { ChatModelMessagesService } from "./services/chat/ChatModelMessagesService";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -55,6 +60,9 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
 const APP_ID = "com.zvs.assistant";
 
 let chatGenService: ChatGenService;
+let chatEmbeddingService: ChatEmbeddingsService;
+let chatVecstoreSearchService: ChatVecstoreSearchService;
+let chatResponseGenerationService: ChatResponseGenerationService;
 let themesService: ThemesService;
 let jobService: JobService | null = null;
 let jobsStorage: JobsStorage;
@@ -164,11 +172,23 @@ app.whenReady().then(() => {
 
     // Инициализируем функциональные сервисы
     toolsRuntimeService = new ToolsRuntimeService();
-    chatGenService = new ChatGenService({
-        userRepository,
-        toolsRuntimeService,
+    chatEmbeddingService = new ChatEmbeddingsService(
+        new ChatProviderConfigService(userRepository),
+    );
+    chatVecstoreSearchService = new ChatVecstoreSearchService(
+        chatEmbeddingService,
         storageVecstoresRepository,
-    });
+    );
+    chatResponseGenerationService = new ChatResponseGenerationService(
+        new ChatProviderConfigService(userRepository),
+        toolsRuntimeService,
+        new ChatModelMessagesService(),
+    );
+    chatGenService = new ChatGenService(
+        chatEmbeddingService,
+        chatVecstoreSearchService,
+        chatResponseGenerationService,
+    );
 
     const storageRepository = new StorageRepository(
         appPaths.storagePath,
