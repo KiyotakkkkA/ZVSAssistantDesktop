@@ -21,7 +21,7 @@ export const router = createHashRouter([
             {
                 index: true,
                 element: createElement(Navigate, {
-                    to: "/workspace/chat",
+                    to: "/workspace",
                     replace: true,
                 }),
             },
@@ -36,7 +36,7 @@ export const router = createHashRouter([
                     {
                         index: true,
                         element: createElement(Navigate, {
-                            to: "chat/view",
+                            to: "/workspace/chat/view",
                             replace: true,
                         }),
                     },
