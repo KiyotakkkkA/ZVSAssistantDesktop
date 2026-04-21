@@ -3,11 +3,15 @@ import { createHashRouter, Navigate } from "react-router-dom";
 import { MainLayout } from "./presentation/layouts/MainLayout";
 import { WorkspaceSidebar } from "./presentation/layouts/WorkspaceSidebar";
 import { WelcomePage } from "./presentation/pages/WelcomePage";
-import { ChatViewPage } from "./presentation/pages/workspace/chat/ChatViewPage";
+import {
+    ChatJsonPage,
+    ChatViewPage,
+} from "./presentation/pages/workspace/chat";
 import { AgentsViewPage } from "./presentation/pages/agents/AgentsViewPage";
 import { ExtensionsViewPage } from "./presentation/pages/extensions/ExtensionsViewPage";
 import { StorageViewPage } from "./presentation/pages/storage/StorageViewPage";
 import { SecretsManagerPage } from "./presentation/pages/secrets/SecretsManagerPage";
+import { WorkspaceChatWindowContainer } from "./presentation/layouts/WorkspaceChatWindowContainer";
 
 export const router = createHashRouter([
     {
@@ -32,13 +36,23 @@ export const router = createHashRouter([
                     {
                         index: true,
                         element: createElement(Navigate, {
-                            to: "chat",
+                            to: "chat/view",
                             replace: true,
                         }),
                     },
                     {
                         path: "chat",
-                        element: createElement(ChatViewPage),
+                        element: createElement(WorkspaceChatWindowContainer),
+                        children: [
+                            {
+                                path: "view",
+                                element: createElement(ChatViewPage),
+                            },
+                            {
+                                path: "json",
+                                element: createElement(ChatJsonPage),
+                            },
+                        ],
                     },
                 ],
             },

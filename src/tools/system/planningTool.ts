@@ -29,7 +29,13 @@ const PLAN_NOT_FOUND_ERROR = {
 export const planningTool: ToolDefinition = {
     name: "planning_tool",
     description:
-        "Управляет планом выполнения: createSteps создает шаги, markStep отмечает шаг завершенным, getNextStep возвращает следующий шаг.",
+        "Manages a execution plan: createSteps creates steps, markStep marks a step as completed, getNextStep retrieves the next pending step." +
+        "planning_tool arguments contract: use a single field type with one of createSteps | markStep | getNextStep." +
+        "Use planning_tool(type=createSteps) at the beginning of a complex task with title and ordered steps array of 3-12 short actionable items." +
+        "Use planning_tool(type=markStep) immediately after finishing a concrete step and pass stepId as integer from the current plan." +
+        "Use planning_tool(type=getNextStep) when you need to continue execution and must retrieve the next pending step." +
+        "Do not call markStep before createSteps. Do not invent stepId values that are absent in the current plan." +
+        "Valid examples: {type:'createSteps',title:'Trip Plan',steps:['Collect constraints','Build route','Estimate budget']}, {type:'markStep',stepId:2}, {type:'getNextStep'}.",
     inputSchema: planningToolInputSchema,
     execute: (args, context) => {
         const input = planningToolInputSchema.parse(args);
