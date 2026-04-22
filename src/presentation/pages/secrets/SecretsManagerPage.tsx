@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Button, Modal } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import { Modal } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { SecretsDataTable } from "../../components/organisms/secrets";
-import { Icon } from "@iconify/react";
 import { SecretsAddForm } from "../../components/organisms/secrets/forms";
 import { MsgToasts } from "../../../data/MsgToasts";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
+import { ButtonCreate } from "../../components/atoms";
 
 export const SecretsManagerPage = () => {
     const toast = useToasts();
@@ -16,15 +16,11 @@ export const SecretsManagerPage = () => {
                 <h1 className="text-xl">Менеджер секретов</h1>
             </div>
             <div className="p-4">
-                <Button
-                    variant="primary"
-                    shape="rounded-lg"
-                    className="mb-4 p-1 gap-2"
-                    onClick={() => setIsAddModalOpen(true)}
-                >
-                    <Icon icon="mdi:plus-circle-outline" />
-                    Добавить секрет
-                </Button>
+                <ButtonCreate
+                    className="mb-4"
+                    createFn={() => setIsAddModalOpen(true)}
+                    label="Добавить секрет"
+                ></ButtonCreate>
                 <SecretsDataTable />
             </div>
 

@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import { Button, InputBig } from "@kiyotakkkka/zvs-uikit-lib/ui";
-import type { ToolTrace } from "../../../../../../electron/models/tool";
+import type { ToolTrace } from "../../../../../electron/models/tool";
 import {
     normalizeQaToolState,
     qaToolHasCompleteAnswers,
     type QaToolState,
-} from "../../../../../utils/tools/qaTool";
+} from "../../../../utils/tools/qaTool";
 
 type ToolQaBubbleCardProps = {
     toolTrace?: ToolTrace;

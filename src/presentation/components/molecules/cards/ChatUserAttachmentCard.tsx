@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Icon } from "@iconify/react";
 import { Button } from "@kiyotakkkka/zvs-uikit-lib/ui";
-import type { ChatImageAttachment } from "../../../../../../electron/models/chat";
-import { ImagePreviewBlock } from "../../render";
+import type { ChatImageAttachment } from "../../../../../electron/models/chat";
+import { ImagePreviewBlock } from "../render";
 
 type ChatUserAttachmentCardProps = {
     attachment: ChatImageAttachment;

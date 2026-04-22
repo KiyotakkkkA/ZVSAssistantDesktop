@@ -1,57 +1,45 @@
 import { Icon } from "@iconify/react";
 import { Button, InputSmall, PrettyBR } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { builtInAgents } from "../../../../../data/BaseModels";
+import { useState } from "react";
+import { AgentsListUnitCard } from "../../../agents/cards";
+import { ButtonCreate } from "../../../atoms";
 
-type AgentsListSidebarProps = {
-    isLoading: boolean;
-    isSubmitting: boolean;
-    searchQuery: string;
-    selectedAgentId: string | null;
-    onSearchQueryChange: (value: string) => void;
-    onCreateAgent: () => void;
-    onFullRefresh: () => void;
-    onSelectAgent: (agentId: string) => void;
-};
+type AgentsListSidebarProps = {};
 
-export const AgentsListSidebar = ({
-    isLoading,
-    isSubmitting,
-    searchQuery,
-    selectedAgentId,
-    onSearchQueryChange,
-    onCreateAgent,
-    onFullRefresh,
-    onSelectAgent,
-}: AgentsListSidebarProps) => {
+export const AgentsListSidebar = ({}: AgentsListSidebarProps) => {
+    const [searchQuery, setSearchQuery] = useState("");
+    const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const filteredAgents = Object.values(builtInAgents).filter((agent) => {
+        if (!normalizedQuery) {
+            return true;
+        }
+
+        return [agent.agentName, agent.chatLabel].some((field) =>
+            field.toLowerCase().includes(normalizedQuery),
+        );
+    });
+
     return (
         <aside className="min-h-0 border-b border-main-600/55 w-1/5 border-r p-4">
             <InputSmall
                 placeholder="Поиск агентов по имени или роли..."
                 value={searchQuery}
-                onChange={(event) => onSearchQueryChange(event.target.value)}
+                onChange={(event) => setSearchQuery(event.target.value)}
             />
 
             <div className="mt-4 flex items-center gap-2 animate-card-rise-in">
-                <Button
-                    variant="primary"
-                    className="w-full p-1 gap-2 flex-1"
-                    shape="rounded-lg"
-                    disabled={isSubmitting}
-                    onClick={onCreateAgent}
-                >
-                    <Icon
-                        icon="mdi:plus-circle-outline"
-                        width={22}
-                        height={22}
-                    />
-                    Создать агента
-                </Button>
+                <ButtonCreate
+                    label="Создать агента"
+                    className="flex-1"
+                    createFn={() => null}
+                ></ButtonCreate>
                 <Button
                     variant="secondary"
                     shape="rounded-lg"
                     className="h-10 w-10 p-0"
-                    disabled={isLoading || isSubmitting}
-                    onClick={onFullRefresh}
                 >
                     <Icon icon="mdi:refresh" width={18} height={18} />
                 </Button>
@@ -63,33 +51,36 @@ export const AgentsListSidebar = ({
                 className="mt-5 animate-card-rise-in"
             />
 
-            <div className="max-h-[calc(100%-16rem)] flex-1 rounded-2xl p-2 overflow-y-auto animate-card-rise-in">
-                {isLoading ? (
-                    <div className="flex h-full items-center justify-center text-sm text-main-300">
-                        Загрузка агентов...
-                    </div>
-                ) : (
+            <div className="max-h-[calc(100%-16rem)] flex-1 rounded-2xl p-2 overflow-y-auto animate-card-rise-in space-y-4">
+                {filteredAgents.length > 0 ? (
                     <div className="space-y-2">
-                        {Object.values(builtInAgents).map((agent) => {
+                        {filteredAgents.map((agent) => {
+                            const isSelected = selectedAgentId === agent.id;
+
                             return (
-                                <div
-                                    className="flex group items-center cursor-pointer"
-                                    onClick={() => onSelectAgent(agent.id)}
-                                >
-                                    <div>
-                                        <Icon
-                                            className="transition-colors bg-main-600 group-hover:bg-main-100 p-1 text-main-100 group-hover:text-main-900 rounded-l-md"
-                                            icon={agent.chatIcon}
-                                            width={28}
-                                            height={28}
-                                        />
-                                    </div>
-                                    <div className="transition-colors pl-2 group-hover:bg-main-600 flex-1 rounded-r-lg">
-                                        <span>{agent.agentName}</span>
-                                    </div>
-                                </div>
+                                <AgentsListUnitCard
+                                    key={agent.id}
+                                    agent={agent}
+                                    isSelected={isSelected}
+                                    setSelectedAgentId={setSelectedAgentId}
+                                />
                             );
                         })}
+                    </div>
+                ) : (
+                    <div className="flex h-full min-h-40 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-main-700/80 bg-main-900/40 p-4 text-center">
+                        <Icon
+                            icon="mdi:robot-confused-outline"
+                            width={36}
+                            height={36}
+                            className="text-main-500"
+                        />
+                        <p className="text-sm text-main-300">
+                            Агенты по запросу не найдены
+                        </p>
+                        <p className="text-xs text-main-500">
+                            Попробуйте изменить фильтр
+                        </p>
                     </div>
                 )}
             </div>

@@ -6,7 +6,7 @@ import {
     ToolQaBubbleCard,
     ToolBubbleCard,
     ToolWebSearchBubbleCard,
-} from "../../molecules/chat/cards";
+} from "../../molecules/cards";
 import type { VecstoreSearchResult } from "../../../../../electron/models/chat";
 import type { AssistantMessageStage } from "../../../../../electron/models/dialog";
 import type { ToolTrace } from "../../../../../electron/models/tool";

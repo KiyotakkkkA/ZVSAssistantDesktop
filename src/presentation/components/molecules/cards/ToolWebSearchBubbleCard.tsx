@@ -1,7 +1,7 @@
 import { Icon } from "@iconify/react";
 import { Accordeon, Loader } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { z } from "zod";
-import type { ToolTrace } from "../../../../../../electron/models/tool";
+import type { ToolTrace } from "../../../../../electron/models/tool";
 
 type ToolWebSearchBubbleCardProps = {
     toolTrace?: ToolTrace;

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Icon } from "@iconify/react";
 import { Badge, ScrollArea, SlidedPanel } from "@kiyotakkkka/zvs-uikit-lib/ui";
-import { resolveText } from "../../../../../utils/resolvers";
-import { MarkdownStaticContent } from "../../render";
-import type { VecstoreSearchResult } from "../../../../../../electron/models/chat";
+import { resolveText } from "../../../../utils/resolvers";
+import { MarkdownStaticContent } from "../render";
+import type { VecstoreSearchResult } from "../../../../../electron/models/chat";
 
 type ChatAssistantBubbleCardProps = {
     content: string;

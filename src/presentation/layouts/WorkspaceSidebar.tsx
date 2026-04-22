@@ -8,10 +8,7 @@ import {
 import { Outlet } from "react-router-dom";
 import { observer } from "mobx-react-lite";
 import { useState } from "react";
-import {
-    PlaceholderItem,
-    SidebarItem,
-} from "../components/molecules/chat/cards";
+import { PlaceholderItem, SidebarItem } from "../components/molecules/cards";
 import { workspaceStore } from "../../stores/workspaceStore";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { DialogIdFormat, ProjectIdFormat } from "../../utils/creators";
@@ -281,41 +278,6 @@ export const WorkspaceSidebar = observer(() => {
                         }}
                     />
                 </div>
-            </Modal>
-
-            <Modal
-                open={Boolean(deleteTarget)}
-                onClose={closeDeleteModal}
-                title={
-                    deleteTarget?.type === "project"
-                        ? "Удаление проекта"
-                        : "Удаление диалога"
-                }
-                className="max-w-md"
-                footer={
-                    <>
-                        <Button
-                            variant="secondary"
-                            shape="rounded-lg"
-                            className="h-9 px-4"
-                            onClick={closeDeleteModal}
-                        >
-                            Отмена
-                        </Button>
-                        <Button
-                            variant="danger"
-                            shape="rounded-lg"
-                            className="h-9 px-4"
-                            onClick={submitDelete}
-                        >
-                            Удалить
-                        </Button>
-                    </>
-                }
-            >
-                <p className="text-sm text-main-300">
-                    Подтвердите удаление выбранного элемента.
-                </p>
             </Modal>
         </div>
     );

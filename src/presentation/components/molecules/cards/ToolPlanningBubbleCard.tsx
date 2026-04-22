@@ -1,6 +1,6 @@
 import { Icon } from "@iconify/react";
 import { Accordeon, Loader } from "@kiyotakkkka/zvs-uikit-lib/ui";
-import type { ToolTrace } from "../../../../../../electron/models/tool";
+import type { ToolTrace } from "../../../../../electron/models/tool";
 
 type ToolPlanningBubbleCardProps = {
     traces: ToolTrace[];

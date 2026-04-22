@@ -1,6 +1,6 @@
 import { Icon } from "@iconify/react";
 import { Accordeon, Loader } from "@kiyotakkkka/zvs-uikit-lib/ui";
-import { resolveText } from "../../../../../utils/resolvers";
+import { resolveText } from "../../../../utils/resolvers";
 
 type ThinkingBubbleCardProps = {
     content: string;

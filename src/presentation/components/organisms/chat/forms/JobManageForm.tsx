@@ -8,6 +8,7 @@ import {
 } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useJobs } from "../../../../../hooks";
 import type { JobEventTag, JobRecord } from "../../../../../types/ElectronApi";
+import { ButtonCreate } from "../../../atoms";
 
 type JobStatusFilter = "all" | "pending" | "completed" | "stopped";
 type JobSort = "created_desc" | "created_asc";
@@ -268,17 +269,13 @@ export const JobManageForm = () => {
                     </div>
 
                     <div className="flex gap-2">
-                        <Button
-                            variant="primary"
-                            shape="rounded-lg"
-                            className="hover:-translate-y-0.5 p-1 transition-transform"
-                            onClick={() => {
+                        <ButtonCreate
+                            label="Тестовая задача"
+                            className="hover:-translate-y-0.5 transition-transform"
+                            createFn={() => {
                                 void handleCreateJob();
                             }}
-                        >
-                            <Icon icon="mdi:plus" width={16} />
-                            <span className="ml-1">Тестовая задача</span>
-                        </Button>
+                        ></ButtonCreate>
                         <Button
                             variant="secondary"
                             shape="rounded-lg"

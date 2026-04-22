@@ -7,7 +7,7 @@ export type AssistantModeConfig = Record<BuiltInAssistantMode | string, Agent>;
 export const builtInAgents: AssistantModeConfig = {
     chat: {
         id: "builtin-chat",
-        agentName: "", // Заполняется во время использования из поля profileStore.generalData.assistantName
+        agentName: "Стандартный режим 'Чат'",
         agentPrompt: (() => {
             return joinBlocks([
                 section("CHAT_MODE_POLICY", [
@@ -32,7 +32,7 @@ export const builtInAgents: AssistantModeConfig = {
     },
     planning: {
         id: "builtin-planning",
-        agentName: "", // Заполняется во время использования из поля profileStore.generalData.assistantName
+        agentName: "Стандартный режим 'Планирование'", // Заполняется во время использования из поля profileStore.generalData.assistantName
         agentPrompt: (() => {
             return joinBlocks([
                 section("PLANNING_MODE_POLICY", [
@@ -62,7 +62,7 @@ export const builtInAgents: AssistantModeConfig = {
     },
     agent: {
         id: "builtin-agent",
-        agentName: "", // Заполняется во время использования из поля profileStore.generalData.assistantName
+        agentName: "Стандартный режим 'Агент'", // Заполняется во время использования из поля profileStore.generalData.assistantName
         agentPrompt: (() => {
             return joinBlocks([
                 section("STYLE", [

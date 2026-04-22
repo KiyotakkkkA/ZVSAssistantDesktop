@@ -1,6 +1,6 @@
 import { Icon } from "@iconify/react";
 import { Button, InputBig } from "@kiyotakkkka/zvs-uikit-lib/ui";
-import type { ChatImageAttachment } from "../../../../../../electron/models/chat";
+import type { ChatImageAttachment } from "../../../../../electron/models/chat";
 import { ChatUserAttachmentCard } from "./ChatUserAttachmentCard";
 
 type ChatUserBubbleCardProps = {

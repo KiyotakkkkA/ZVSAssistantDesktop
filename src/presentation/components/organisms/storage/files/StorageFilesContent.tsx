@@ -6,6 +6,7 @@ import type {
 } from "../../../../../../electron/models/storage";
 import { convertBytesToSize } from "../../../../../utils/converters";
 import { StorageFolderIdFormat } from "../../../../../utils/creators";
+import { ButtonCreate } from "../../../atoms";
 
 type StorageFilesContentProps = {
     selectedFolder: StorageFolderEntity | null;
@@ -47,18 +48,13 @@ export const StorageFilesContent = ({
                 <div className="flex items-center gap-2">
                     {!selectedFolder?.vecstore_id && (
                         <>
-                            <Button
-                                label="Создать векторное хранилище"
-                                variant="success"
-                                shape="rounded-lg"
-                                className="p-1 gap-2 text-main-900"
-                                onClick={() =>
+                            <ButtonCreate
+                                label="Создать хранилище"
+                                className="p-1 gap-2"
+                                createFn={() =>
                                     onCreateVecstoreOnFolder(selectedFolder!.id)
                                 }
-                            >
-                                <Icon icon="mdi:database-plus-outline" />
-                                Создать хранилище
-                            </Button>
+                            ></ButtonCreate>
                             <Separator
                                 orientation="vertical"
                                 className="h-5 bg-main-400"

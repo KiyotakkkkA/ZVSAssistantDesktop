@@ -1,6 +1,7 @@
 import { Icon } from "@iconify/react";
 import { Button, InputSmall, PrettyBR } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import type { McpServerMock, McpServerStatus } from "../mockData";
+import { ButtonCreate } from "../../../atoms";
 
 type AgentsMcpSidebarProps = {
     isLoading: boolean;
@@ -46,20 +47,11 @@ export const AgentsMcpSidebar = ({
             />
 
             <div className="mt-4 flex items-center gap-2 animate-card-rise-in">
-                <Button
-                    variant="primary"
-                    className="w-full p-1 gap-2 flex-1"
-                    shape="rounded-lg"
-                    disabled={isSubmitting}
-                    onClick={onCreateServer}
-                >
-                    <Icon
-                        icon="mdi:plus-circle-outline"
-                        width={22}
-                        height={22}
-                    />
-                    Добавить MCP
-                </Button>
+                <ButtonCreate
+                    label="Добавить MCP"
+                    className="flex-1"
+                    createFn={onCreateServer}
+                ></ButtonCreate>
                 <Button
                     variant="secondary"
                     shape="rounded-lg"

@@ -2,6 +2,7 @@ import { Icon } from "@iconify/react";
 import { Button, InputSmall, PrettyBR } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useState } from "react";
 import type { StorageVecstoreEntity } from "../../../../../../electron/models/storage";
+import { ButtonCreate } from "../../../atoms";
 
 type StorageVecstoresSidebarProps = {
     isLoading: boolean;
@@ -36,20 +37,12 @@ export const StorageVecstoresSidebar = ({
                 onChange={(e) => setSearchQuery(e.target.value)}
             />
             <div className="mt-4 flex items-center gap-2 animate-card-rise-in">
-                <Button
-                    variant="primary"
-                    className="w-full p-1 gap-2 flex-1"
-                    shape="rounded-lg"
+                <ButtonCreate
+                    label="Создать хранилище"
+                    className="flex-1"
                     disabled={isSubmitting}
-                    onClick={onCreateVecstore}
-                >
-                    <Icon
-                        icon="mdi:plus-circle-outline "
-                        width={22}
-                        height={22}
-                    />
-                    Создать векторное хранилище
-                </Button>
+                    createFn={onCreateVecstore}
+                ></ButtonCreate>
                 <Button
                     variant="secondary"
                     shape="rounded-lg"

@@ -1,7 +1,7 @@
 import { Icon } from "@iconify/react";
 import { Accordeon, Loader } from "@kiyotakkkka/zvs-uikit-lib/ui";
-import { ShikiCodeBlock } from "../../render/ShikiCodeBlock";
-import type { ToolTrace } from "../../../../../../electron/models/tool";
+import { ShikiCodeBlock } from "../render/ShikiCodeBlock";
+import type { ToolTrace } from "../../../../../electron/models/tool";
 
 type ToolBubbleCardProps = {
     toolTrace?: ToolTrace;
