@@ -1,12 +1,11 @@
 import { Icon } from "@iconify/react";
 import { Button, InputSmall, PrettyBR } from "@kiyotakkkka/zvs-uikit-lib/ui";
-import type { AgentMock, AgentStatus } from "../mockData";
+import { builtInAgents } from "../../../../../data/BaseModels";
 
 type AgentsListSidebarProps = {
     isLoading: boolean;
     isSubmitting: boolean;
     searchQuery: string;
-    agents: AgentMock[];
     selectedAgentId: string | null;
     onSearchQueryChange: (value: string) => void;
     onCreateAgent: () => void;
@@ -14,23 +13,10 @@ type AgentsListSidebarProps = {
     onSelectAgent: (agentId: string) => void;
 };
 
-const statusStyles: Record<AgentStatus, string> = {
-    active: "bg-emerald-500/20 text-emerald-300",
-    paused: "bg-amber-500/20 text-amber-300",
-    draft: "bg-main-600/60 text-main-300",
-};
-
-const statusLabels: Record<AgentStatus, string> = {
-    active: "Активен",
-    paused: "Пауза",
-    draft: "Черновик",
-};
-
 export const AgentsListSidebar = ({
     isLoading,
     isSubmitting,
     searchQuery,
-    agents,
     selectedAgentId,
     onSearchQueryChange,
     onCreateAgent,
@@ -65,7 +51,6 @@ export const AgentsListSidebar = ({
                     shape="rounded-lg"
                     className="h-10 w-10 p-0"
                     disabled={isLoading || isSubmitting}
-                    label="Полный рефреш"
                     onClick={onFullRefresh}
                 >
                     <Icon icon="mdi:refresh" width={18} height={18} />
@@ -83,55 +68,28 @@ export const AgentsListSidebar = ({
                     <div className="flex h-full items-center justify-center text-sm text-main-300">
                         Загрузка агентов...
                     </div>
-                ) : agents.length > 0 ? (
-                    <div className="space-y-2">
-                        {agents.map((agent) => (
-                            <button
-                                key={agent.id}
-                                type="button"
-                                onClick={() => {
-                                    onSelectAgent(agent.id);
-                                }}
-                                className={`w-full rounded-xl px-3 py-2 text-left transition-colors cursor-pointer ${
-                                    agent.id === selectedAgentId
-                                        ? "bg-main-600/70"
-                                        : "bg-main-900/45 hover:bg-main-700/70"
-                                }`}
-                            >
-                                <div className="flex items-start justify-between gap-2">
-                                    <div className="min-w-0">
-                                        <p className="truncate text-sm text-main-100">
-                                            {agent.name}
-                                        </p>
-                                        <p className="truncate text-[11px] text-main-400">
-                                            {agent.role}
-                                        </p>
-                                    </div>
-                                    <span className="shrink-0 text-[11px] text-main-300">
-                                        {agent.toolsCount}
-                                    </span>
-                                </div>
-                                <div className="mt-2">
-                                    <span
-                                        className={`rounded-md px-2 py-0.5 text-[10px] ${statusStyles[agent.status]}`}
-                                    >
-                                        {statusLabels[agent.status]}
-                                    </span>
-                                </div>
-                            </button>
-                        ))}
-                    </div>
                 ) : (
-                    <div className="flex h-full flex-col items-center justify-center gap-3">
-                        <Icon
-                            icon="mdi:robot-confused-outline"
-                            width={48}
-                            height={48}
-                            className="text-main-500"
-                        />
-                        <p className="text-sm text-main-300">
-                            Агенты не найдены
-                        </p>
+                    <div className="space-y-2">
+                        {Object.values(builtInAgents).map((agent) => {
+                            return (
+                                <div
+                                    className="flex group items-center cursor-pointer"
+                                    onClick={() => onSelectAgent(agent.id)}
+                                >
+                                    <div>
+                                        <Icon
+                                            className="transition-colors bg-main-600 group-hover:bg-main-100 p-1 text-main-100 group-hover:text-main-900 rounded-l-md"
+                                            icon={agent.chatIcon}
+                                            width={28}
+                                            height={28}
+                                        />
+                                    </div>
+                                    <div className="transition-colors pl-2 group-hover:bg-main-600 flex-1 rounded-r-lg">
+                                        <span>{agent.agentName}</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>

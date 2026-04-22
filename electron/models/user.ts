@@ -1,7 +1,7 @@
 export type AllowedChatProviders = "ollama";
 export type AllowedWebToolsProviders = "ollama" | "searchapi";
 export type AllowedEmbeddingsProviders = "ollama";
-export type AssistantMode = "chat" | "planning" | "agent";
+export type BuiltInAssistantMode = "chat" | "planning" | "agent";
 
 export interface ProviderConfig {
     baseUrl?: string;
@@ -11,7 +11,7 @@ export interface ProviderConfig {
 
 export interface GeneralUserData {
     // Настройки ассистента
-    selectedAssistantMode: AssistantMode;
+    selectedAssistantMode: BuiltInAssistantMode | string;
     chatGenProvider: AllowedChatProviders;
     webToolsProvider: AllowedWebToolsProviders;
     embeddingsProvider: AllowedEmbeddingsProviders;

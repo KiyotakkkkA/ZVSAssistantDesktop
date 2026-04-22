@@ -1,7 +1,7 @@
-import type { AssistantMode } from "../../electron/models/user";
+import type { BuiltInAssistantMode } from "../../electron/models/user";
 
 export type AssistantModeConfig = {
-    key: AssistantMode;
+    key: BuiltInAssistantMode | string;
     label: string;
     icon: string;
     placeholder: string;
@@ -28,6 +28,6 @@ export const assistantModes: AssistantModeConfig[] = [
     },
 ];
 
-export const getAssistantModeByKey = (key: AssistantMode) => {
+export const getAssistantModeByKey = (key: BuiltInAssistantMode | string) => {
     return assistantModes.find((mode) => mode.key === key) ?? assistantModes[0];
 };

@@ -16,7 +16,7 @@ import type { DialogContextMessage } from "../../electron/models/dialog";
 import type { AskToolResult } from "../../electron/models/tool";
 import type {
     AllowedChatProviders,
-    AssistantMode,
+    BuiltInAssistantMode,
 } from "../../electron/models/user";
 import type { QaToolState } from "../utils/tools/qaTool";
 import { toolsStorage } from "../stores/toolsStorage";
@@ -134,15 +134,16 @@ type StartGenerationOptions = {
     skipUserUiMessage?: boolean;
     contextOnlyUserMessage?: string;
     attachments?: ChatImageAttachment[];
-    mode?: AssistantMode;
+    mode?: BuiltInAssistantMode | string;
 };
 
 type SendMessageOptions = {
     attachments?: ChatImageAttachment[];
-    mode?: AssistantMode;
+    mode?: BuiltInAssistantMode | string;
 };
 
-const canUseToolsInMode = (mode: AssistantMode) => mode === "agent";
+const canUseToolsInMode = (mode: BuiltInAssistantMode | string) =>
+    mode === "agent";
 
 const DEFAULT_VECSTORE_MAX_RESULTS = 5;
 const DEFAULT_VECSTORE_CONFIDENCE_PERCENTAGE = 80;

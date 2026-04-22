@@ -1,5 +1,5 @@
 import { joinBlocks, section, unique } from "../utils/prompting";
-import type { AssistantMode } from "../../electron/models/user";
+import type { BuiltInAssistantMode } from "../../electron/models/user";
 import type { VecstoreSearchResult } from "../../electron/models/chat";
 
 export const getMustToolsUsagePolicy = (
@@ -30,7 +30,7 @@ export const getMustToolsUsagePolicy = (
 
 export const getUserPrompt = (
     userMessage: string,
-    mode: AssistantMode,
+    mode: BuiltInAssistantMode | string,
     enabledPromptTools: string[] = [],
     requiredPromptTools: string[] = [],
 ) => {

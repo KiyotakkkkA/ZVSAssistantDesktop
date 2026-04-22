@@ -55,7 +55,6 @@ export const StorageVecstoresSidebar = ({
                     shape="rounded-lg"
                     className="h-10 w-10 p-0"
                     disabled={isLoading || isSubmitting}
-                    label="Полный рефреш"
                     onClick={onFullRefresh}
                 >
                     <Icon icon="mdi:refresh" width={18} height={18} />

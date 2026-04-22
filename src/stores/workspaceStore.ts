@@ -5,7 +5,7 @@ import type {
     DialogUiMessage,
     UpdateDialogStateDto,
 } from "../../electron/models/dialog";
-import type { AssistantMode } from "../../electron/models/user";
+import type { BuiltInAssistantMode } from "../../electron/models/user";
 import { globalStorage } from "./globalStorage";
 import type { PersistedDialog } from "../types/electron";
 import { getModeSystemPrompt } from "../prompts/base";
@@ -65,7 +65,7 @@ class WorkspaceStore {
         void this.bootstrap();
     }
 
-    setSelectedAssistantMode(mode: AssistantMode) {
+    setSelectedAssistantMode(mode: BuiltInAssistantMode | string) {
         for (const dialog of this.dialogs) {
             const firstMessage = dialog.contextMessages[0];
 
@@ -588,7 +588,7 @@ class WorkspaceStore {
         );
     }
 
-    private getSelectedAssistantMode(): AssistantMode {
+    private getSelectedAssistantMode(): BuiltInAssistantMode | string {
         const mode = profileStore.user?.generalData?.selectedAssistantMode;
 
         if (mode === "agent" || mode === "planning" || mode === "chat") {

@@ -10,7 +10,7 @@ import {
 import { observer } from "mobx-react-lite";
 import { useEffect, useRef, useState } from "react";
 import type { ChatImageAttachment } from "../../../../../electron/models/chat";
-import type { AssistantMode } from "../../../../../electron/models/user";
+import type { BuiltInAssistantMode } from "../../../../../electron/models/user";
 import { useUpload } from "../../../../hooks";
 import { assistantModes } from "../../../../prompts/modes";
 import { profileStore } from "../../../../stores/profileStore";
@@ -24,7 +24,7 @@ type MessageComposerProps = {
     setInput: (value: string) => void;
     onSubmit: (options?: {
         attachments?: ChatImageAttachment[];
-        mode?: AssistantMode;
+        mode?: BuiltInAssistantMode | string;
     }) => Promise<boolean>;
     isGenerating: boolean;
 };
@@ -63,7 +63,7 @@ export const MessageComposer = observer(
             assistantModes.find((mode) => mode.key === activeMode) ??
             assistantModes[0];
 
-        const handleModeChange = (mode: AssistantMode) => {
+        const handleModeChange = (mode: BuiltInAssistantMode | string) => {
             profileStore.updateGeneralData({ selectedAssistantMode: mode });
             workspaceStore.setSelectedAssistantMode(mode);
         };
