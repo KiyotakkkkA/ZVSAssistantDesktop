@@ -5,6 +5,7 @@ import { useState } from "react";
 interface ButtonDeleteProps {
     label?: string;
     size?: number;
+    ghost?: boolean;
     labelModal?: string;
     className?: string;
     disabled?: boolean;
@@ -14,8 +15,10 @@ interface ButtonDeleteProps {
 
 export const ButtonDelete = ({
     label,
+    labelModal,
     disabled,
     size = 22,
+    ghost = false,
     confirm = false,
     className,
     deleteFn,
@@ -25,7 +28,7 @@ export const ButtonDelete = ({
     return (
         <>
             <Button
-                variant="danger"
+                variant={ghost ? "ghost" : "danger"}
                 shape="rounded-md"
                 disabled={disabled}
                 onClick={() => {
@@ -60,7 +63,10 @@ export const ButtonDelete = ({
                             variant="danger"
                             shape="rounded-lg"
                             className="h-9 px-4"
-                            onClick={deleteFn}
+                            onClick={() => {
+                                deleteFn();
+                                setDelModalOpen(false);
+                            }}
                         >
                             Удалить
                         </Button>
@@ -68,7 +74,8 @@ export const ButtonDelete = ({
                 }
             >
                 <p className="text-sm text-main-300">
-                    Подтвердите удаление выбранного элемента.
+                    {labelModal ??
+                        "Вы уверены что хотите удалить этот элемент?"}
                 </p>
             </Modal>
         </>

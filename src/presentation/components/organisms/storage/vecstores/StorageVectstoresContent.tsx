@@ -16,6 +16,7 @@ import type { StorageFileEntity } from "../../../../../../electron/models/storag
 import type { StorageFolderEntity } from "../../../../../../electron/models/storage";
 import type { StorageVecstoreEntity } from "../../../../../../electron/models/storage";
 import { convertBytesToSize } from "../../../../../utils/converters";
+import { ButtonDelete } from "../../../atoms";
 
 type StorageVectstoresContentProps = {
     selectedVecstore: StorageVecstoreEntity | null;
@@ -26,7 +27,7 @@ type StorageVectstoresContentProps = {
     onOpenFolderPath: () => void;
     onRefreshVecstore: () => void;
     onOpenRenameModal: () => void;
-    onOpenDeleteModal: () => void;
+    onDeleteVecstore: () => void;
     onAddToIndex: (fileIds: StorageFileEntity["id"][]) => void;
     onRemoveFromIndex: (fileIds: StorageFileEntity["id"][]) => void;
 };
@@ -72,7 +73,7 @@ export const StorageVectstoresContent = ({
     onOpenFolderPath,
     onRefreshVecstore,
     onOpenRenameModal,
-    onOpenDeleteModal,
+    onDeleteVecstore,
     onAddToIndex,
     onRemoveFromIndex,
 }: StorageVectstoresContentProps) => {
@@ -247,16 +248,13 @@ export const StorageVectstoresContent = ({
                         orientation="vertical"
                         className="h-5 bg-main-400"
                     />
-                    <Button
-                        label="Удалить"
-                        variant="danger"
-                        shape="rounded-lg"
-                        className="h-9 w-9 p-0"
+                    <ButtonDelete
+                        size={22}
                         disabled={isSubmitting}
-                        onClick={onOpenDeleteModal}
-                    >
-                        <Icon icon="mdi:delete-outline" />
-                    </Button>
+                        confirm
+                        labelModal={`Вы уверены, что хотите удалить векторное хранилище '${selectedVecstore.name}'?`}
+                        deleteFn={onDeleteVecstore}
+                    ></ButtonDelete>
                 </div>
             </div>
 

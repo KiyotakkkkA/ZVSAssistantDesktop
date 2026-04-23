@@ -4,6 +4,7 @@ import type {
     StorageFileEntity,
     StorageFolderEntity,
 } from "../../../../../../electron/models/storage";
+import { ButtonCreate } from "../../../atoms";
 
 type StorageFilesSidebarProps = {
     isLoading: boolean;
@@ -41,20 +42,12 @@ export const StorageFilesSidebar = ({
                 onChange={(event) => onSearchQueryChange(event.target.value)}
             />
             <div className="mt-4 flex items-center gap-2 animate-card-rise-in">
-                <Button
-                    variant="primary"
-                    className="w-full p-1 gap-2 flex-1"
-                    shape="rounded-lg"
+                <ButtonCreate
+                    label="Создать папку"
+                    className="flex-1"
                     disabled={isSubmitting}
-                    onClick={onCreateFolder}
-                >
-                    <Icon
-                        icon="mdi:plus-circle-outline "
-                        width={22}
-                        height={22}
-                    />
-                    Создать папку
-                </Button>
+                    createFn={onCreateFolder}
+                ></ButtonCreate>
                 <Button
                     variant="secondary"
                     shape="rounded-lg"

@@ -8,7 +8,6 @@ import {
     StorageVecstoreCreateForm,
 } from "./forms";
 import {
-    StorageDeleteVecstoreModal,
     StorageRenameVecstoreModal,
     StorageVecstoresSidebar,
     StorageVectstoresContent,
@@ -29,7 +28,6 @@ export const StorageVecstoresSelectPanel = observer(() => {
 
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isIndexingModalOpen, setIsIndexingModalOpen] = useState(false);
     const [renameVecstoreName, setRenameVecstoreName] = useState("");
     const [renameVecstoreDescription, setRenameVecstoreDescription] =
@@ -96,6 +94,7 @@ export const StorageVecstoresSelectPanel = observer(() => {
         description?: string;
     }) => {
         const created = await storageStore.createVecstore(payload);
+        console.log(created);
 
         if (!created) {
             return;
@@ -156,7 +155,6 @@ export const StorageVecstoresSelectPanel = observer(() => {
         }
 
         await storageStore.deleteVecstore(selectedVecstore.id);
-        setIsDeleteModalOpen(false);
         toast.success(MsgToasts.VSTORE_SUCCESSFULLY_REMOVED());
     };
 
@@ -223,7 +221,9 @@ export const StorageVecstoresSelectPanel = observer(() => {
                         void handleRefreshVecstore();
                     }}
                     onOpenRenameModal={handleOpenRenameModal}
-                    onOpenDeleteModal={() => setIsDeleteModalOpen(true)}
+                    onDeleteVecstore={() => {
+                        void handleDeleteVecstore();
+                    }}
                     onAddToIndex={(fileIds) => {
                         void handleAddToIndex(fileIds);
                     }}
@@ -282,16 +282,6 @@ export const StorageVecstoresSelectPanel = observer(() => {
                 onVecstoreDescriptionChange={setRenameVecstoreDescription}
                 onConfirm={() => {
                     void handleRenameVecstore();
-                }}
-            />
-
-            <StorageDeleteVecstoreModal
-                open={isDeleteModalOpen}
-                isSubmitting={storageStore.isSubmitting}
-                vecstoreName={selectedVecstore?.name ?? ""}
-                onClose={() => setIsDeleteModalOpen(false)}
-                onConfirm={() => {
-                    void handleDeleteVecstore();
                 }}
             />
 
