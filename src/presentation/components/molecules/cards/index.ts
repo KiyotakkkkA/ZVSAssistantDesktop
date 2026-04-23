@@ -7,3 +7,4 @@ export * from "./ToolBubbleCard";
 export * from "./ToolWebSearchBubbleCard";
 export * from "./ToolQaBubbleCard";
 export * from "./ToolPlanningBubbleCard";
+export * from "./AgentsListUnitCard";

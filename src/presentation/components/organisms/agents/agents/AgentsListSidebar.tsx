@@ -2,12 +2,10 @@ import { Icon } from "@iconify/react";
 import { Button, InputSmall, PrettyBR } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { builtInAgents } from "../../../../../data/BaseModels";
 import { useState } from "react";
-import { AgentsListUnitCard } from "../../../agents/cards";
+import { AgentsListUnitCard } from "../../../molecules/cards";
 import { ButtonCreate } from "../../../atoms";
 
-type AgentsListSidebarProps = {};
-
-export const AgentsListSidebar = ({}: AgentsListSidebarProps) => {
+export const AgentsListSidebar = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
 
