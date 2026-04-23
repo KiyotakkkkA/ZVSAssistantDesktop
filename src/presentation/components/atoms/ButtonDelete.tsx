@@ -31,7 +31,9 @@ export const ButtonDelete = ({
                 variant={ghost ? "ghost" : "danger"}
                 shape="rounded-md"
                 disabled={disabled}
-                onClick={() => {
+                onClick={(event) => {
+                    event.stopPropagation();
+
                     if (confirm) {
                         setDelModalOpen(true);
                         return;
@@ -40,7 +42,7 @@ export const ButtonDelete = ({
                 }}
                 className={`gap-2 p-1 text-sm ${className}`}
             >
-                <Icon icon="mdi:delete" width={size} height={size} />
+                <Icon icon="mdi:trash-can-outline" width={size} height={size} />
                 {label && <span>{label}</span>}
             </Button>
 

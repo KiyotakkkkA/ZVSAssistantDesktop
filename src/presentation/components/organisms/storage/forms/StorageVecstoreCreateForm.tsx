@@ -11,7 +11,9 @@ type StorageVecstoreCreateFormProps = {
     fixedFolderId?: string | null;
     initialFolderId?: string | null;
     formId?: string;
-    onSubmit: (payload: CreateStorageVecstoreDto) => void;
+    onSubmit: (
+        payload: CreateStorageVecstoreDto,
+    ) => void | Promise<void | null>;
 };
 
 export const StorageVecstoreCreateForm = ({
@@ -56,14 +58,14 @@ export const StorageVecstoreCreateForm = ({
     const isSubmitDisabled =
         isSubmitting || !name.trim() || !folderId || folderOptions.length === 0;
 
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
         if (isSubmitDisabled) {
             return;
         }
 
-        onSubmit({
+        await onSubmit({
             name: name.trim(),
             folder_id: folderId,
             description: description.trim(),

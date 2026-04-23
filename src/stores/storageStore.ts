@@ -29,7 +29,6 @@ class StorageStore {
     folders: StorageFolderEntity[] = [];
     files: StorageFileEntity[] = [];
     vecstores: StorageVecstoreEntity[] = [];
-    selectedFolderId: string | null = null;
 
     isLoading = false;
     isSubmitting = false;
@@ -42,16 +41,15 @@ class StorageStore {
             {
                 bootstrap: action.bound,
                 refreshStorageState: action.bound,
-                selectFolder: action.bound,
                 createFolder: action.bound,
-                renameSelectedFolder: action.bound,
-                deleteSelectedFolder: action.bound,
+                renameFolderById: action.bound,
+                deleteFolderById: action.bound,
                 createVecstore: action.bound,
                 renameVecstore: action.bound,
                 deleteVecstore: action.bound,
-                addFilesToSelectedFolder: action.bound,
-                removeFilesFromSelectedFolder: action.bound,
-                refreshSelectedFolder: action.bound,
+                addFilesToFolderById: action.bound,
+                removeFilesFromFolderById: action.bound,
+                refreshFolderById: action.bound,
                 getVectorizedFilesByFolderId: action.bound,
                 getNonVectorizedFilesByFolderId: action.bound,
                 refreshVecstores: action.bound,
@@ -89,26 +87,6 @@ class StorageStore {
                     : folder,
             );
         });
-    }
-
-    get selectedFolder(): StorageFolderEntity | null {
-        return (
-            this.folders.find(
-                (folder) => folder.id === this.selectedFolderId,
-            ) ??
-            this.folders[0] ??
-            null
-        );
-    }
-
-    get selectedFolderFiles(): StorageFileEntity[] {
-        if (!this.selectedFolder) {
-            return [];
-        }
-
-        return this.files.filter(
-            (file) => file.folder_id === this.selectedFolder?.id,
-        );
     }
 
     getVectorizedFilesByFolderId(folderId: string): StorageFileEntity[] {
@@ -223,17 +201,6 @@ class StorageStore {
                 this.folders = allFolders;
                 this.files = allFiles;
                 this.vecstores = allVecstores;
-
-                if (
-                    this.selectedFolderId &&
-                    allFolders.some(
-                        (folder) => folder.id === this.selectedFolderId,
-                    )
-                ) {
-                    return;
-                }
-
-                this.selectedFolderId = allFolders[0]?.id ?? null;
             });
         } catch (error) {
             runInAction(() => {
@@ -261,20 +228,7 @@ class StorageStore {
             this.folders = allFolders;
             this.files = allFiles;
             this.vecstores = allVecstores;
-
-            if (
-                this.selectedFolderId &&
-                allFolders.some((folder) => folder.id === this.selectedFolderId)
-            ) {
-                return;
-            }
-
-            this.selectedFolderId = allFolders[0]?.id ?? null;
         });
-    }
-
-    selectFolder(folderId: string) {
-        this.selectedFolderId = folderId;
     }
 
     async createFolder(name: string) {
@@ -296,7 +250,6 @@ class StorageStore {
 
             runInAction(() => {
                 this.folders = [createdFolder, ...this.folders];
-                this.selectedFolderId = createdFolder.id;
             });
 
             return createdFolder;
@@ -307,11 +260,10 @@ class StorageStore {
         }
     }
 
-    async renameSelectedFolder(name: string) {
-        const folder = this.selectedFolder;
+    async renameFolderById(folderId: string, name: string) {
         const normalizedName = name.trim();
 
-        if (!folder || !normalizedName) {
+        if (!folderId.trim() || !normalizedName) {
             return null;
         }
 
@@ -321,7 +273,7 @@ class StorageStore {
 
         try {
             const updatedFolder = await renameStorageFolder(
-                folder.id,
+                folderId,
                 normalizedName,
             );
 
@@ -343,10 +295,8 @@ class StorageStore {
         }
     }
 
-    async deleteSelectedFolder() {
-        const folder = this.selectedFolder;
-
-        if (!folder) {
+    async deleteFolderById(folderId: string) {
+        if (!folderId.trim()) {
             return;
         }
 
@@ -355,24 +305,18 @@ class StorageStore {
         });
 
         try {
-            const deletedFolderId = folder.id;
-
-            await deleteStorageFolder(folder.id);
+            await deleteStorageFolder(folderId);
 
             runInAction(() => {
                 this.folders = this.folders.filter(
-                    (item) => item.id !== deletedFolderId,
+                    (item) => item.id !== folderId,
                 );
                 this.files = this.files.filter(
-                    (file) => file.folder_id !== deletedFolderId,
+                    (file) => file.folder_id !== folderId,
                 );
                 this.vecstores = this.vecstores.filter(
-                    (vecstore) => vecstore.folder_id !== deletedFolderId,
+                    (vecstore) => vecstore.folder_id !== folderId,
                 );
-
-                if (this.selectedFolderId === deletedFolderId) {
-                    this.selectedFolderId = this.folders[0]?.id ?? null;
-                }
             });
         } finally {
             runInAction(() => {
@@ -499,10 +443,8 @@ class StorageStore {
         }
     }
 
-    async addFilesToSelectedFolder(files: AddStorageFileDto[]) {
-        const folder = this.selectedFolder;
-
-        if (!folder || files.length === 0) {
+    async addFilesToFolderById(folderId: string, files: AddStorageFileDto[]) {
+        if (!folderId.trim() || files.length === 0) {
             return;
         }
 
@@ -511,8 +453,8 @@ class StorageStore {
         });
 
         try {
-            await addFilesToFolder(folder.id, files);
-            await this.refreshFolderState(folder.id);
+            await addFilesToFolder(folderId, files);
+            await this.refreshFolderState(folderId);
         } finally {
             runInAction(() => {
                 this.isSubmitting = false;
@@ -520,10 +462,8 @@ class StorageStore {
         }
     }
 
-    async removeFilesFromSelectedFolder(fileIds: string[]) {
-        const folder = this.selectedFolder;
-
-        if (!folder || fileIds.length === 0) {
+    async removeFilesFromFolderById(folderId: string, fileIds: string[]) {
+        if (!folderId.trim() || fileIds.length === 0) {
             return;
         }
 
@@ -532,8 +472,8 @@ class StorageStore {
         });
 
         try {
-            await removeFilesFromFolder(folder.id, fileIds);
-            await this.refreshFolderState(folder.id);
+            await removeFilesFromFolder(folderId, fileIds);
+            await this.refreshFolderState(folderId);
         } finally {
             runInAction(() => {
                 this.isSubmitting = false;
@@ -541,10 +481,8 @@ class StorageStore {
         }
     }
 
-    async refreshSelectedFolder() {
-        const folder = this.selectedFolder;
-
-        if (!folder) {
+    async refreshFolderById(folderId: string) {
+        if (!folderId.trim()) {
             return;
         }
 
@@ -553,7 +491,7 @@ class StorageStore {
         });
 
         try {
-            await this.refreshFolderState(folder.id);
+            await this.refreshFolderState(folderId);
         } finally {
             runInAction(() => {
                 this.isSubmitting = false;

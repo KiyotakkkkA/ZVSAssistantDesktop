@@ -35,10 +35,6 @@ export const WorkspaceSidebar = observer(() => {
         type: TargetType;
         id: string;
     } | null>(null);
-    const [deleteTarget, setDeleteTarget] = useState<{
-        type: TargetType;
-        id: string;
-    } | null>(null);
     const [newTitle, setNewTitle] = useState("");
 
     const createOptionsList = [
@@ -66,10 +62,6 @@ export const WorkspaceSidebar = observer(() => {
         setNewTitle("");
     };
 
-    const closeDeleteModal = () => {
-        setDeleteTarget(null);
-    };
-
     const submitRename = () => {
         if (!renameTarget) {
             return;
@@ -91,21 +83,6 @@ export const WorkspaceSidebar = observer(() => {
         toast.success(MsgToasts.DIALOG_SUCCESSFULLY_RENAMED());
     };
 
-    const submitDelete = () => {
-        if (!deleteTarget) {
-            return;
-        }
-
-        if (deleteTarget.type === "dialog") {
-            workspaceStore.deleteDialog(deleteTarget.id as DialogIdFormat);
-        } else {
-            workspaceStore.deleteProject(deleteTarget.id as ProjectIdFormat);
-        }
-
-        closeDeleteModal();
-        toast.success(MsgToasts.DIALOG_SUCCESSFULLY_REMOVED());
-    };
-
     const dialogs: PlaceholderItem[] = workspaceStore.dialogs
         .filter((dialog) => !dialog.isForProject)
         .map((dialog) => ({
@@ -122,8 +99,9 @@ export const WorkspaceSidebar = observer(() => {
                 setRenameTarget({ type: "dialog", id });
                 setNewTitle(dialog.name || "Новый диалог");
             },
-            onDelete: (id) => {
-                setDeleteTarget({ type: "dialog", id });
+            submitDelete: (id) => {
+                workspaceStore.deleteDialog(id as DialogIdFormat);
+                toast.success(MsgToasts.DIALOG_SUCCESSFULLY_REMOVED());
             },
         }));
 
@@ -145,8 +123,8 @@ export const WorkspaceSidebar = observer(() => {
                     setRenameTarget({ type: "project", id });
                     setNewTitle(project.title);
                 },
-                onDelete: (id) => {
-                    setDeleteTarget({ type: "project", id });
+                submitDelete: (id) => {
+                    workspaceStore.deleteProject(id as ProjectIdFormat);
                 },
             };
         },

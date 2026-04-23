@@ -1,10 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { observer } from "mobx-react-lite";
 import { Button, Modal } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import {
     StorageCreateFolderModal,
-    StorageDeleteFolderModal,
     StorageFilesContent,
     StorageFilesSidebar,
     StorageRenameFolderModal,
@@ -12,7 +11,10 @@ import {
 import { StorageVecstoreCreateForm } from "./forms";
 import { convertFileToBase64 } from "../../../../utils/converters";
 import { storageStore } from "../../../../stores/storageStore";
-import { createStorageFileId } from "../../../../utils/creators";
+import {
+    createStorageFileId,
+    type StorageFolderIdFormat,
+} from "../../../../utils/creators";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { MsgToasts } from "../../../../data/MsgToasts";
 
@@ -21,7 +23,6 @@ export const StorageFilesSelectPanel = observer(() => {
     const [searchQuery, setSearchQuery] = useState("");
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [newFolderName, setNewFolderName] = useState("");
     const [renameFolderName, setRenameFolderName] = useState("");
     const [isCreateVecstoreModalOpen, setIsCreateVecstoreModalOpen] =
@@ -29,13 +30,50 @@ export const StorageFilesSelectPanel = observer(() => {
     const [fixedVecstoreFolderId, setFixedVecstoreFolderId] = useState<
         string | null
     >(null);
+    const [selectedFolderId, setSelectedFolderId] =
+        useState<StorageFolderIdFormat | null>(null);
     const [fileInputKey, setFileInputKey] = useState(0);
     const createVecstoreFormId = "storage-files-create-vecstore-form";
+    const folders = storageStore.folders;
+    const files = storageStore.files;
 
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
-    const selectedFolder = storageStore.selectedFolder;
-    const selectedFolderFiles = storageStore.selectedFolderFiles;
+    const selectedFolder = useMemo(() => {
+        if (!selectedFolderId) {
+            return folders[0] ?? null;
+        }
+
+        return (
+            folders.find((folder) => folder.id === selectedFolderId) ??
+            folders[0] ??
+            null
+        );
+    }, [folders, selectedFolderId]);
+
+    const selectedFolderFiles = useMemo(() => {
+        if (!selectedFolder) {
+            return [];
+        }
+
+        return files.filter((file) => file.folder_id === selectedFolder.id);
+    }, [files, selectedFolder]);
+
+    useEffect(() => {
+        if (folders.length === 0) {
+            if (selectedFolderId !== null) {
+                setSelectedFolderId(null);
+            }
+            return;
+        }
+
+        if (
+            !selectedFolderId ||
+            !folders.some((folder) => folder.id === selectedFolderId)
+        ) {
+            setSelectedFolderId(folders[0].id);
+        }
+    }, [folders, selectedFolderId]);
 
     const filteredFiles = useMemo(() => {
         if (!normalizedQuery) {
@@ -56,6 +94,7 @@ export const StorageFilesSelectPanel = observer(() => {
             return;
         }
 
+        setSelectedFolderId(createdFolder.id);
         setIsCreateModalOpen(false);
         setNewFolderName("");
         toast.success(MsgToasts.FOLDER_SUCCESSFULLY_CREATED());
@@ -98,7 +137,7 @@ export const StorageFilesSelectPanel = observer(() => {
                 }),
             );
 
-            await storageStore.addFilesToSelectedFolder(payload);
+            await storageStore.addFilesToFolderById(selectedFolder.id, payload);
         } finally {
             setFileInputKey((prev) => prev + 1);
         }
@@ -114,8 +153,14 @@ export const StorageFilesSelectPanel = observer(() => {
     };
 
     const handleRenameFolder = async () => {
-        const updatedFolder =
-            await storageStore.renameSelectedFolder(renameFolderName);
+        if (!selectedFolder) {
+            return;
+        }
+
+        const updatedFolder = await storageStore.renameFolderById(
+            selectedFolder.id,
+            renameFolderName,
+        );
 
         if (!updatedFolder) {
             return;
@@ -126,8 +171,11 @@ export const StorageFilesSelectPanel = observer(() => {
     };
 
     const handleDeleteFolder = async () => {
-        await storageStore.deleteSelectedFolder();
-        setIsDeleteModalOpen(false);
+        if (!selectedFolder) {
+            return;
+        }
+
+        await storageStore.deleteFolderById(selectedFolder.id);
         toast.success(MsgToasts.FOLDER_SUCCESSFULLY_REMOVED());
     };
 
@@ -140,7 +188,11 @@ export const StorageFilesSelectPanel = observer(() => {
     };
 
     const handleRefreshFolder = async () => {
-        await storageStore.refreshSelectedFolder();
+        if (!selectedFolder) {
+            return;
+        }
+
+        await storageStore.refreshFolderById(selectedFolder.id);
     };
 
     const handleCreateVecstore = async (payload: {
@@ -177,8 +229,8 @@ export const StorageFilesSelectPanel = observer(() => {
                 isSubmitting={storageStore.isSubmitting}
                 searchQuery={searchQuery}
                 hasSelectedFolder={Boolean(selectedFolder)}
-                folders={storageStore.folders}
-                files={storageStore.files}
+                folders={folders}
+                files={files}
                 selectedFolderId={selectedFolder?.id ?? null}
                 onSearchQueryChange={setSearchQuery}
                 onCreateFolder={() => {
@@ -187,7 +239,9 @@ export const StorageFilesSelectPanel = observer(() => {
                 onFullRefresh={() => {
                     void storageStore.refreshStorageState();
                 }}
-                onSelectFolder={storageStore.selectFolder}
+                onSelectFolder={(folderId) => {
+                    setSelectedFolderId(folderId as StorageFolderIdFormat);
+                }}
             />
 
             <StorageFilesContent
@@ -207,8 +261,8 @@ export const StorageFilesSelectPanel = observer(() => {
                     setFixedVecstoreFolderId(folderId);
                     setIsCreateVecstoreModalOpen(true);
                 }}
-                onOpenDeleteModal={() => {
-                    setIsDeleteModalOpen(true);
+                onDeleteFolder={() => {
+                    void handleDeleteFolder();
                 }}
             />
 
@@ -252,9 +306,7 @@ export const StorageFilesSelectPanel = observer(() => {
                     formId={createVecstoreFormId}
                     fixedFolderId={fixedVecstoreFolderId}
                     isSubmitting={storageStore.isSubmitting}
-                    onSubmit={(payload) => {
-                        void handleCreateVecstore(payload);
-                    }}
+                    onSubmit={handleCreateVecstore}
                 />
             </Modal>
 
@@ -277,16 +329,6 @@ export const StorageFilesSelectPanel = observer(() => {
                 onFolderNameChange={setRenameFolderName}
                 onConfirm={() => {
                     void handleRenameFolder();
-                }}
-            />
-
-            <StorageDeleteFolderModal
-                open={isDeleteModalOpen}
-                isSubmitting={storageStore.isSubmitting}
-                folderName={selectedFolder?.name || ""}
-                onClose={() => setIsDeleteModalOpen(false)}
-                onConfirm={() => {
-                    void handleDeleteFolder();
                 }}
             />
         </section>

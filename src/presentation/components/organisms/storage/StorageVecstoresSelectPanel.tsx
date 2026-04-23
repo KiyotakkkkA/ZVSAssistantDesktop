@@ -94,7 +94,6 @@ export const StorageVecstoresSelectPanel = observer(() => {
         description?: string;
     }) => {
         const created = await storageStore.createVecstore(payload);
-        console.log(created);
 
         if (!created) {
             return;
@@ -102,6 +101,7 @@ export const StorageVecstoresSelectPanel = observer(() => {
 
         setSelectedVecstoreId(created.id);
         setIsCreateModalOpen(false);
+        toast.success(MsgToasts.VSTORE_SUCCESSFULLY_CREATED());
     };
 
     const handleOpenFolderPath = async () => {
@@ -266,9 +266,7 @@ export const StorageVecstoresSelectPanel = observer(() => {
                     folders={storageStore.folders}
                     formId={createVecstoreFormId}
                     isSubmitting={storageStore.isSubmitting}
-                    onSubmit={(payload) => {
-                        void handleCreateVecstore(payload);
-                    }}
+                    onSubmit={handleCreateVecstore}
                 />
             </Modal>
 

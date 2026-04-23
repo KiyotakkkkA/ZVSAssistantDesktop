@@ -6,7 +6,7 @@ import type {
 } from "../../../../../../electron/models/storage";
 import { convertBytesToSize } from "../../../../../utils/converters";
 import { StorageFolderIdFormat } from "../../../../../utils/creators";
-import { ButtonCreate } from "../../../atoms";
+import { ButtonCreate, ButtonDelete } from "../../../atoms";
 
 type StorageFilesContentProps = {
     selectedFolder: StorageFolderEntity | null;
@@ -15,10 +15,10 @@ type StorageFilesContentProps = {
     isSubmitting: boolean;
     onAddFiles: () => void;
     onOpenFolderPath: () => void;
+    onDeleteFolder: () => void;
     onRefreshFolder: () => void;
-    onOpenRenameModal: () => void;
-    onOpenDeleteModal: () => void;
     onCreateVecstoreOnFolder: (folderId: StorageFolderIdFormat) => void;
+    onOpenRenameModal: () => void;
 };
 
 export const StorageFilesContent = ({
@@ -28,10 +28,10 @@ export const StorageFilesContent = ({
     isSubmitting,
     onAddFiles,
     onOpenFolderPath,
+    onCreateVecstoreOnFolder,
     onRefreshFolder,
     onOpenRenameModal,
-    onOpenDeleteModal,
-    onCreateVecstoreOnFolder,
+    onDeleteFolder,
 }: StorageFilesContentProps) => {
     return (
         <div className="flex-1 p-4 animate-card-rise-in">
@@ -109,16 +109,14 @@ export const StorageFilesContent = ({
                         orientation="vertical"
                         className="h-5 bg-main-400"
                     />
-                    <Button
-                        label="Удалить"
-                        variant="danger"
-                        shape="rounded-lg"
+                    <ButtonDelete
+                        size={22}
                         className="h-9 w-9 p-0"
+                        confirm
+                        labelModal={`Вы уверены, что хотите удалить папку '${selectedFolder?.name}' и все её содержимое?`}
                         disabled={!selectedFolder}
-                        onClick={onOpenDeleteModal}
-                    >
-                        <Icon icon="mdi:delete-outline" />
-                    </Button>
+                        deleteFn={onDeleteFolder}
+                    />
                 </div>
             </div>
 

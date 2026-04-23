@@ -223,31 +223,7 @@ export class StorageRepository {
         }
 
         try {
-            const folderFiles = this.storageFilesRepository.findByFolderId(
-                folder.id,
-            );
-
-            const indexingResult =
-                await this.LanceStoreService.initializeVecstore(
-                    created,
-                    folderFiles,
-                );
-
-            if (indexingResult.indexedFileIds.length > 0) {
-                this.storageFilesRepository.linkFilesToVecstore(
-                    indexingResult.indexedFileIds,
-                    vecstoreId,
-                    now,
-                );
-            }
-
-            this.refreshVecstoreById(vecstoreId);
-
-            const refreshed = this.findVecstoreById(vecstoreId);
-
-            if (refreshed) {
-                return refreshed;
-            }
+            await this.LanceStoreService.initializeVecstore(created, []);
         } catch (error) {
             this.rollbackVecstoreCreation(vecstoreId, created.path);
 
@@ -259,7 +235,9 @@ export class StorageRepository {
             throw normalizedError;
         }
 
-        return created;
+        const refreshed = this.findVecstoreById(vecstoreId);
+
+        return refreshed ?? created;
     }
 
     async indexNonVectorizedFilesToVecstore(

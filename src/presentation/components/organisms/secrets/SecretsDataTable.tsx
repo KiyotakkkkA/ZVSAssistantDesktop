@@ -1,16 +1,10 @@
-import { Icon } from "@iconify/react";
-import {
-    Button,
-    Modal,
-    Table,
-    type TableSchemaItem,
-} from "@kiyotakkkka/zvs-uikit-lib/ui";
+import { Table, type TableSchemaItem } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { observer } from "mobx-react-lite";
-import { useState } from "react";
 import type { SecretEntity } from "../../../../stores/secretsStore";
 import { secretsStore } from "../../../../stores/secretsStore";
 import { MsgToasts } from "../../../../data/MsgToasts";
+import { ButtonDelete } from "../../atoms";
 
 type SecretRow = SecretEntity & {
     row_index: number;
@@ -55,27 +49,14 @@ const maskSecret = (value: string) => {
 
 export const SecretsDataTable = observer(() => {
     const toast = useToasts();
-    const [deleteTarget, setDeleteTarget] = useState<{
-        id: string;
-        name: string;
-    } | null>(null);
 
     const rows: SecretRow[] = secretsStore.secrets.map((item, index) => ({
         ...item,
         row_index: index + 1,
     }));
 
-    const closeDeleteModal = () => {
-        setDeleteTarget(null);
-    };
-
-    const confirmDelete = async () => {
-        if (!deleteTarget) {
-            return;
-        }
-
-        await secretsStore.removeSecret(deleteTarget.id);
-        closeDeleteModal();
+    const handleDeleteSecret = async (secretId: string) => {
+        await secretsStore.removeSecret(secretId);
         toast.success(MsgToasts.SECRET_SUCCESSFULLY_REMOVED());
     };
 
@@ -142,71 +123,27 @@ export const SecretsDataTable = observer(() => {
                         <Table.Column<SecretRow> field="actions" align="right">
                             {(context) => (
                                 <div>
-                                    <Button
-                                        variant="danger"
-                                        shape="rounded-lg"
-                                        className="p-2"
-                                        onClick={() => {
+                                    <ButtonDelete
+                                        size={22}
+                                        className="p-1"
+                                        confirm
+                                        labelModal={`Вы действительно хотите удалить секрет '${context.row?.name ?? "секрет"}'?`}
+                                        deleteFn={() => {
                                             const secretId = context.row?.id;
 
                                             if (!secretId) {
                                                 return;
                                             }
 
-                                            setDeleteTarget({
-                                                id: secretId,
-                                                name:
-                                                    context.row?.name ??
-                                                    "секрет",
-                                            });
+                                            void handleDeleteSecret(secretId);
                                         }}
-                                    >
-                                        <Icon icon="mdi:delete" />
-                                    </Button>
+                                    />
                                 </div>
                             )}
                         </Table.Column>
                     </Table.Row>
                 </Table.Body>
             </Table>
-
-            <Modal
-                open={Boolean(deleteTarget)}
-                onClose={closeDeleteModal}
-                title="Удалить секрет"
-                className="max-w-md"
-                footer={
-                    <>
-                        <Button
-                            variant="secondary"
-                            shape="rounded-lg"
-                            className="h-9 px-4"
-                            onClick={closeDeleteModal}
-                        >
-                            Отмена
-                        </Button>
-                        <Button
-                            variant="danger"
-                            shape="rounded-lg"
-                            className="h-9 px-4"
-                            onClick={() => {
-                                void confirmDelete();
-                            }}
-                        >
-                            Удалить
-                        </Button>
-                    </>
-                }
-            >
-                <div className="text-sm text-main-300">
-                    <span>Вы действительно хотите удалить секрет</span>
-                    <br />
-                    <span className="font-semibold text-main-100">
-                        {deleteTarget?.name}
-                        {"?"}
-                    </span>
-                </div>
-            </Modal>
         </>
     );
 });

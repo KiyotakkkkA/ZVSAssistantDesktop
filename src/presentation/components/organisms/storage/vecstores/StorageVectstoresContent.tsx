@@ -476,21 +476,18 @@ export const StorageVectstoresContent = ({
                             <h4 className="text-base font-semibold text-main-100">
                                 Индексированные документы
                             </h4>
-                            <Button
-                                variant="danger"
-                                shape="rounded-md"
-                                className="h-8 gap-2 px-3 text-xs"
+                            <ButtonDelete
+                                label="Убрать из индекса"
+                                size={18}
+                                className="h-8 px-3 text-xs"
                                 disabled={
                                     selectedVectorizedFiles.length === 0 ||
                                     isSubmitting
                                 }
-                                onClick={() =>
+                                deleteFn={() =>
                                     onRemoveFromIndex(checkedIndexedFileIds)
                                 }
-                            >
-                                <Icon icon="mdi:database-remove" />
-                                Убрать из индекса
-                            </Button>
+                            />
                         </div>
 
                         <div className="mb-3 flex items-center gap-3">

@@ -1,26 +1,25 @@
 import { Icon } from "@iconify/react";
 import { Button } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import { ButtonDelete } from "../../atoms";
 
 export type PlaceholderItem = {
     id: string;
     title: string;
     time: string;
-    tokens?: string;
     active?: boolean;
-    onSelect?: (id: string) => void;
-    onRename?: (id: string) => void;
-    onDelete?: (id: string) => void;
+    onSelect: (id: string) => void;
+    onRename: (id: string) => void;
+    submitDelete: (id: string) => void;
 };
 
 export const SidebarItem = ({
     id,
     title,
     time,
-    tokens,
     active,
     onSelect,
     onRename,
-    onDelete,
+    submitDelete,
 }: PlaceholderItem) => {
     return (
         <div
@@ -36,7 +35,6 @@ export const SidebarItem = ({
                     {title}
                 </p>
                 <div className="flex items-center gap-2 text-sm text-main-400">
-                    {tokens ? <span>{tokens}</span> : null}
                     <span>{time}</span>
                     <Button
                         variant=""
@@ -52,20 +50,12 @@ export const SidebarItem = ({
                             height={16}
                         />
                     </Button>
-                    <Button
-                        variant=""
-                        className="h-7 w-7 rounded-md hover:bg-red-400/15 border-transparent hover:text-red-400"
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            onDelete?.(id);
-                        }}
-                    >
-                        <Icon
-                            icon="mdi:delete-outline"
-                            width={16}
-                            height={16}
-                        />
-                    </Button>
+                    <ButtonDelete
+                        ghost
+                        confirm
+                        className="h-7 w-7 rounded-md hover:bg-red-400/15 border-transparent hover:text-red-400 text-main-400/75"
+                        deleteFn={() => submitDelete(id)}
+                    />
                 </div>
             </div>
         </div>
