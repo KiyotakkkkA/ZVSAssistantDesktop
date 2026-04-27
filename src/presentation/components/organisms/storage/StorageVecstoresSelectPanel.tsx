@@ -238,7 +238,9 @@ export const StorageVecstoresSelectPanel = observer(() => {
                 onClose={() => setIsCreateModalOpen(false)}
                 className="max-w-xl"
             >
-                <Modal.Header>Создать векторное хранилище</Modal.Header>
+                <Modal.Header className="text-main-100">
+                    Создать векторное хранилище
+                </Modal.Header>
 
                 <Modal.Content>
                     <StorageVecstoreCreateForm
@@ -292,7 +294,9 @@ export const StorageVecstoresSelectPanel = observer(() => {
                 onClose={() => setIsIndexingModalOpen(false)}
                 className="max-w-2xl"
             >
-                <Modal.Header>Индексация файлов</Modal.Header>
+                <Modal.Header className="text-main-100">
+                    Индексация файлов
+                </Modal.Header>
 
                 <Modal.Content>
                     <StorageIndexingProgressForm

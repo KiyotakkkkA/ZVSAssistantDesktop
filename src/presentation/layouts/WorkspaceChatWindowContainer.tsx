@@ -83,7 +83,7 @@ export const WorkspaceChatWindowContainer = observer(() => {
                 onClose={() => setIsSettingsOpen(false)}
                 className="h-[90vh] max-w-[min(1440px,98vw)]"
             >
-                <Modal.Header>Настройки</Modal.Header>
+                <Modal.Header className="text-main-100">Настройки</Modal.Header>
 
                 <Modal.Content>
                     <SettingsView

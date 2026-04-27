@@ -19,7 +19,7 @@ export const StorageCreateFolderModal = ({
 }: StorageCreateFolderModalProps) => {
     return (
         <Modal open={open} onClose={onClose} className="max-w-md">
-            <Modal.Header>Создать папку</Modal.Header>
+            <Modal.Header className="text-main-100">Создать папку</Modal.Header>
 
             <Modal.Content>
                 <div className="space-y-3">
@@ -75,7 +75,9 @@ export const StorageRenameFolderModal = ({
 }: StorageRenameFolderModalProps) => {
     return (
         <Modal open={open} onClose={onClose} className="max-w-md">
-            <Modal.Header>Переименовать папку</Modal.Header>
+            <Modal.Header className="text-main-100">
+                Переименовать папку
+            </Modal.Header>
 
             <Modal.Content>
                 <InputSmall

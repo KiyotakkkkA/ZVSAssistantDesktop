@@ -217,7 +217,7 @@ export const WorkspaceSidebar = observer(() => {
                 onClose={closeRenameModal}
                 className="max-w-md"
             >
-                <Modal.Header>
+                <Modal.Header className="text-main-100">
                     {renameTarget?.type === "project"
                         ? "Переименовать проект"
                         : "Переименовать диалог"}

@@ -120,7 +120,9 @@ export const MainLayout = observer(() => {
                 onClose={() => setIsJobsModalOpen(false)}
                 className="h-[90vh] max-w-[min(1400px,96vw)]"
             >
-                <Modal.Header>Управление фоновыми задачами</Modal.Header>
+                <Modal.Header className="text-main-100">
+                    Управление фоновыми задачами
+                </Modal.Header>
 
                 <Modal.Content>
                     <JobManageForm />

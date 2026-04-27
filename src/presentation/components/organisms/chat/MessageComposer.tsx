@@ -414,7 +414,9 @@ export const MessageComposer = observer(
                     onClose={() => setIsVecstoresModalOpen(false)}
                     className="max-w-3xl"
                 >
-                    <Modal.Header>Выбор векторного хранилища</Modal.Header>
+                    <Modal.Header className="text-main-100">
+                        Выбор векторного хранилища
+                    </Modal.Header>
 
                     <Modal.Content>
                         <VecstoresPickForm
@@ -444,7 +446,9 @@ export const MessageComposer = observer(
                     onClose={() => setIsToolsModalOpen(false)}
                     className="max-w-6xl min-h-144"
                 >
-                    <Modal.Header>Настройка инструментов</Modal.Header>
+                    <Modal.Header className="text-main-100">
+                        Настройка инструментов
+                    </Modal.Header>
 
                     <Modal.Content>
                         <RequiredToolsPickForm

@@ -23,7 +23,9 @@ export const StorageRenameVecstoreModal = ({
 }: StorageRenameVecstoreModalProps) => {
     return (
         <Modal open={open} onClose={onClose} className="max-w-md">
-            <Modal.Header>Переименовать векторное хранилище</Modal.Header>
+            <Modal.Header className="text-main-100">
+                Переименовать векторное хранилище
+            </Modal.Header>
 
             <Modal.Content>
                 <div className="space-y-3">

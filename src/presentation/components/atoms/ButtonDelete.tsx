@@ -51,7 +51,9 @@ export const ButtonDelete = ({
                 onClose={() => setDelModalOpen(false)}
                 className="max-w-md"
             >
-                <Modal.Header>Подтвердите удаление</Modal.Header>
+                <Modal.Header className="text-main-100">
+                    Подтвердите удаление
+                </Modal.Header>
 
                 <Modal.Content>
                     <p className="text-sm text-main-300">

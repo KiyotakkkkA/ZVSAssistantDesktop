@@ -86,7 +86,7 @@ export const SecretsSelectFilling = ({
 
     return (
         <Modal open={open} onClose={onClose} className="max-w-2xl">
-            <Modal.Header>
+            <Modal.Header className="text-main-100">
                 {title || "Заполнение из менеджера секретов"}
             </Modal.Header>
 

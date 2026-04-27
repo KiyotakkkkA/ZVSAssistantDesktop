@@ -215,7 +215,9 @@ export const StorageGitHubConnectorForm = () => {
                 onClose={() => setIsProgressModalOpen(false)}
                 className="max-w-2xl"
             >
-                <Modal.Header>Синхронизация репозитория</Modal.Header>
+                <Modal.Header className="text-main-100">
+                    Синхронизация репозитория
+                </Modal.Header>
 
                 <Modal.Content>
                     <StorageRepositorySyncProgressForm

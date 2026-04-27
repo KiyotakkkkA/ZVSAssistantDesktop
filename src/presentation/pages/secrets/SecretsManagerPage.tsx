@@ -29,7 +29,9 @@ export const SecretsManagerPage = () => {
                 onClose={() => setIsAddModalOpen(false)}
                 className="max-w-xl"
             >
-                <Modal.Header>Добавить секрет</Modal.Header>
+                <Modal.Header className="text-main-100">
+                    Добавить секрет
+                </Modal.Header>
 
                 <Modal.Content>
                     <SecretsAddForm

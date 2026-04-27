@@ -141,7 +141,9 @@ export function SettingsOllamaEmbeddingsProviderFields({
                 onClose={() => setIsModelsPickOpen(false)}
                 className="max-w-6xl min-h-144"
             >
-                <Modal.Header>Выбор Ollama-модели</Modal.Header>
+                <Modal.Header className="text-main-100">
+                    Выбор Ollama-модели
+                </Modal.Header>
 
                 <Modal.Content>
                     <SettingsChatOllamaModelsPickForm

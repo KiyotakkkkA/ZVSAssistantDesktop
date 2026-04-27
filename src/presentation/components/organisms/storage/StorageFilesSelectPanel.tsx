@@ -274,7 +274,9 @@ export const StorageFilesSelectPanel = observer(() => {
                 }}
                 className="max-w-xl"
             >
-                <Modal.Header>Создать векторное хранилище</Modal.Header>
+                <Modal.Header className="text-main-100">
+                    Создать векторное хранилище
+                </Modal.Header>
 
                 <Modal.Content>
                     <StorageVecstoreCreateForm
