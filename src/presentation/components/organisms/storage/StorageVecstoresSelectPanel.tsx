@@ -236,9 +236,20 @@ export const StorageVecstoresSelectPanel = observer(() => {
             <Modal
                 open={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
-                title="Создать векторное хранилище"
                 className="max-w-xl"
-                footer={
+            >
+                <Modal.Header>Создать векторное хранилище</Modal.Header>
+
+                <Modal.Content>
+                    <StorageVecstoreCreateForm
+                        folders={storageStore.folders}
+                        formId={createVecstoreFormId}
+                        isSubmitting={storageStore.isSubmitting}
+                        onSubmit={handleCreateVecstore}
+                    />
+                </Modal.Content>
+
+                <Modal.Footer>
                     <div className="flex justify-end gap-2">
                         <Button
                             type="button"
@@ -260,14 +271,7 @@ export const StorageVecstoresSelectPanel = observer(() => {
                             Создать
                         </Button>
                     </div>
-                }
-            >
-                <StorageVecstoreCreateForm
-                    folders={storageStore.folders}
-                    formId={createVecstoreFormId}
-                    isSubmitting={storageStore.isSubmitting}
-                    onSubmit={handleCreateVecstore}
-                />
+                </Modal.Footer>
             </Modal>
 
             <StorageRenameVecstoreModal
@@ -286,41 +290,43 @@ export const StorageVecstoresSelectPanel = observer(() => {
             <Modal
                 open={isIndexingModalOpen}
                 onClose={() => setIsIndexingModalOpen(false)}
-                title="Индексация файлов"
                 className="max-w-2xl"
-                footer={
-                    <>
-                        <Button
-                            variant="secondary"
-                            shape="rounded-lg"
-                            className="h-9 px-4"
-                            onClick={() => setIsIndexingModalOpen(false)}
-                        >
-                            Закрыть
-                        </Button>
-                        <Button
-                            variant="danger"
-                            shape="rounded-lg"
-                            className="h-9 px-4"
-                            disabled={!indexingJob?.isPending || !indexingJobId}
-                            onClick={() => {
-                                if (!indexingJobId) {
-                                    return;
-                                }
-
-                                void cancelJobById(indexingJobId);
-                            }}
-                        >
-                            Остановить
-                        </Button>
-                    </>
-                }
             >
-                <StorageIndexingProgressForm
-                    open={isIndexingModalOpen}
-                    job={indexingJob}
-                    events={indexingEvents}
-                />
+                <Modal.Header>Индексация файлов</Modal.Header>
+
+                <Modal.Content>
+                    <StorageIndexingProgressForm
+                        open={isIndexingModalOpen}
+                        job={indexingJob}
+                        events={indexingEvents}
+                    />
+                </Modal.Content>
+
+                <Modal.Footer>
+                    <Button
+                        variant="secondary"
+                        shape="rounded-lg"
+                        className="h-9 px-4"
+                        onClick={() => setIsIndexingModalOpen(false)}
+                    >
+                        Закрыть
+                    </Button>
+                    <Button
+                        variant="danger"
+                        shape="rounded-lg"
+                        className="h-9 px-4"
+                        disabled={!indexingJob?.isPending || !indexingJobId}
+                        onClick={() => {
+                            if (!indexingJobId) {
+                                return;
+                            }
+
+                            void cancelJobById(indexingJobId);
+                        }}
+                    >
+                        Остановить
+                    </Button>
+                </Modal.Footer>
             </Modal>
         </>
     );

@@ -85,63 +85,63 @@ export const SecretsSelectFilling = ({
     };
 
     return (
-        <Modal
-            open={open}
-            onClose={onClose}
-            title={title || "Заполнение из менеджера секретов"}
-            className="max-w-2xl"
-            footer={
-                <>
-                    <Button
-                        variant="secondary"
-                        shape="rounded-lg"
-                        className="h-9 px-4"
-                        onClick={onClose}
-                    >
-                        Отмена
-                    </Button>
-                    <Button
-                        variant="primary"
-                        shape="rounded-lg"
-                        className="h-9 px-4"
-                        disabled={isSubmitDisabled}
-                        onClick={handleSubmit}
-                    >
-                        Заполнить поля
-                    </Button>
-                </>
-            }
-        >
-            <div className="space-y-4">
-                {availableSecrets.length === 0 && !isLoading && (
-                    <div className="rounded-xl border border-main-700/70 bg-main-900/45 px-3 py-2 text-sm text-main-300">
-                        Для типа {secretType} пока нет сохраненных секретов.
-                    </div>
-                )}
+        <Modal open={open} onClose={onClose} className="max-w-2xl">
+            <Modal.Header>
+                {title || "Заполнение из менеджера секретов"}
+            </Modal.Header>
 
-                <div className="flex items-center justify-between">
-                    <div className="mb-2 flex items-center gap-2 text-main-100">
-                        <Icon
-                            icon={fieldIcon || "mdi:form-select"}
-                            width={14}
-                            height={14}
+            <Modal.Content>
+                <div className="space-y-4">
+                    {availableSecrets.length === 0 && !isLoading && (
+                        <div className="rounded-xl border border-main-700/70 bg-main-900/45 px-3 py-2 text-sm text-main-300">
+                            Для типа {secretType} пока нет сохраненных секретов.
+                        </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                        <div className="mb-2 flex items-center gap-2 text-main-100">
+                            <Icon
+                                icon={fieldIcon || "mdi:form-select"}
+                                width={14}
+                                height={14}
+                            />
+                            <p className="text-sm font-semibold">
+                                {fieldLabel || "Выберите значение"}
+                            </p>
+                        </div>
+
+                        <Select
+                            value={selectedSecretId}
+                            onChange={setSelectedSecretId}
+                            options={options}
+                            classNames={{
+                                menu: "border border-main-700/70 shadow-lg bg-main-900/92 backdrop-blur-md",
+                                trigger: "bg-main-700/45",
+                            }}
                         />
-                        <p className="text-sm font-semibold">
-                            {fieldLabel || "Выберите значение"}
-                        </p>
                     </div>
-
-                    <Select
-                        value={selectedSecretId}
-                        onChange={setSelectedSecretId}
-                        options={options}
-                        classNames={{
-                            menu: "border border-main-700/70 shadow-lg bg-main-900/92 backdrop-blur-md",
-                            trigger: "bg-main-700/45",
-                        }}
-                    />
                 </div>
-            </div>
+            </Modal.Content>
+
+            <Modal.Footer>
+                <Button
+                    variant="secondary"
+                    shape="rounded-lg"
+                    className="h-9 px-4"
+                    onClick={onClose}
+                >
+                    Отмена
+                </Button>
+                <Button
+                    variant="primary"
+                    shape="rounded-lg"
+                    className="h-9 px-4"
+                    disabled={isSubmitDisabled}
+                    onClick={handleSubmit}
+                >
+                    Заполнить поля
+                </Button>
+            </Modal.Footer>
         </Modal>
     );
 };

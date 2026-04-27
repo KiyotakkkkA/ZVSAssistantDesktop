@@ -213,41 +213,43 @@ export const StorageGitHubConnectorForm = () => {
             <Modal
                 open={isProgressModalOpen}
                 onClose={() => setIsProgressModalOpen(false)}
-                title="Синхронизация репозитория"
                 className="max-w-2xl"
-                footer={
-                    <>
-                        <Button
-                            variant="secondary"
-                            shape="rounded-lg"
-                            className="h-9 px-4"
-                            onClick={() => setIsProgressModalOpen(false)}
-                        >
-                            Закрыть
-                        </Button>
-                        <Button
-                            variant="danger"
-                            shape="rounded-lg"
-                            className="h-9 px-4"
-                            disabled={!progressJob?.isPending}
-                            onClick={() => {
-                                if (!progressJobId) {
-                                    return;
-                                }
-
-                                void cancelJobById(progressJobId);
-                            }}
-                        >
-                            Остановить
-                        </Button>
-                    </>
-                }
             >
-                <StorageRepositorySyncProgressForm
-                    open={isProgressModalOpen}
-                    job={progressJob}
-                    events={progressEvents}
-                />
+                <Modal.Header>Синхронизация репозитория</Modal.Header>
+
+                <Modal.Content>
+                    <StorageRepositorySyncProgressForm
+                        open={isProgressModalOpen}
+                        job={progressJob}
+                        events={progressEvents}
+                    />
+                </Modal.Content>
+
+                <Modal.Footer>
+                    <Button
+                        variant="secondary"
+                        shape="rounded-lg"
+                        className="h-9 px-4"
+                        onClick={() => setIsProgressModalOpen(false)}
+                    >
+                        Закрыть
+                    </Button>
+                    <Button
+                        variant="danger"
+                        shape="rounded-lg"
+                        className="h-9 px-4"
+                        disabled={!progressJob?.isPending}
+                        onClick={() => {
+                            if (!progressJobId) {
+                                return;
+                            }
+
+                            void cancelJobById(progressJobId);
+                        }}
+                    >
+                        Остановить
+                    </Button>
+                </Modal.Footer>
             </Modal>
 
             <SecretsSelectFilling

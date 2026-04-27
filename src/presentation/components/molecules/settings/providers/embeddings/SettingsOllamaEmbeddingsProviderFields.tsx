@@ -139,20 +139,23 @@ export function SettingsOllamaEmbeddingsProviderFields({
             <Modal
                 open={isModelsPickOpen}
                 onClose={() => setIsModelsPickOpen(false)}
-                title="Выбор Ollama-модели"
                 className="max-w-6xl min-h-144"
             >
-                <SettingsChatOllamaModelsPickForm
-                    baseUrl={baseUrl}
-                    currentModel={modelName}
-                    onSelectModel={(nextModelName) => {
-                        onChange({
-                            ...providerConfig,
-                            modelName: nextModelName,
-                        });
-                    }}
-                    onClose={() => setIsModelsPickOpen(false)}
-                />
+                <Modal.Header>Выбор Ollama-модели</Modal.Header>
+
+                <Modal.Content>
+                    <SettingsChatOllamaModelsPickForm
+                        baseUrl={baseUrl}
+                        currentModel={modelName}
+                        onSelectModel={(nextModelName) => {
+                            onChange({
+                                ...providerConfig,
+                                modelName: nextModelName,
+                            });
+                        }}
+                        onClose={() => setIsModelsPickOpen(false)}
+                    />
+                </Modal.Content>
             </Modal>
 
             <SecretsSelectFilling

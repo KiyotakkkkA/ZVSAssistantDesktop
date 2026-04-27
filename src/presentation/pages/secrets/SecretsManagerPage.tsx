@@ -27,16 +27,21 @@ export const SecretsManagerPage = () => {
             <Modal
                 open={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
-                title="Добавить секрет"
                 className="max-w-xl"
             >
-                <SecretsAddForm
-                    onCancel={() => setIsAddModalOpen(false)}
-                    onSuccess={() => {
-                        setIsAddModalOpen(false);
-                        toast.success(MsgToasts.SECRET_SUCCESSFULLY_CREATED());
-                    }}
-                />
+                <Modal.Header>Добавить секрет</Modal.Header>
+
+                <Modal.Content>
+                    <SecretsAddForm
+                        onCancel={() => setIsAddModalOpen(false)}
+                        onSuccess={() => {
+                            setIsAddModalOpen(false);
+                            toast.success(
+                                MsgToasts.SECRET_SUCCESSFULLY_CREATED(),
+                            );
+                        }}
+                    />
+                </Modal.Content>
             </Modal>
         </div>
     );

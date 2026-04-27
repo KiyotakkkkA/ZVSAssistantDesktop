@@ -412,9 +412,20 @@ export const MessageComposer = observer(
                 <Modal
                     open={isVecstoresModalOpen}
                     onClose={() => setIsVecstoresModalOpen(false)}
-                    title="Выбор векторного хранилища"
                     className="max-w-3xl"
-                    footer={
+                >
+                    <Modal.Header>Выбор векторного хранилища</Modal.Header>
+
+                    <Modal.Content>
+                        <VecstoresPickForm
+                            selectedVecstoreId={
+                                workspaceStore.activeDialogVecstoreId
+                            }
+                            onSelectVecstore={handleVecstoreSelect}
+                        />
+                    </Modal.Content>
+
+                    <Modal.Footer>
                         <Button
                             type="button"
                             variant="secondary"
@@ -425,26 +436,22 @@ export const MessageComposer = observer(
                         >
                             Сбросить
                         </Button>
-                    }
-                >
-                    <VecstoresPickForm
-                        selectedVecstoreId={
-                            workspaceStore.activeDialogVecstoreId
-                        }
-                        onSelectVecstore={handleVecstoreSelect}
-                    />
+                    </Modal.Footer>
                 </Modal>
 
                 <Modal
                     open={isToolsModalOpen}
                     onClose={() => setIsToolsModalOpen(false)}
-                    title="Настройка инструментов"
                     className="max-w-6xl min-h-144"
                 >
-                    <RequiredToolsPickForm
-                        toolsQuery={toolsQuery}
-                        onToolsQueryChange={setToolsQuery}
-                    />
+                    <Modal.Header>Настройка инструментов</Modal.Header>
+
+                    <Modal.Content>
+                        <RequiredToolsPickForm
+                            toolsQuery={toolsQuery}
+                            onToolsQueryChange={setToolsQuery}
+                        />
+                    </Modal.Content>
                 </Modal>
             </>
         );

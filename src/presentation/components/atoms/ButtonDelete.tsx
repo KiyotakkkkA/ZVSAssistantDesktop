@@ -49,36 +49,38 @@ export const ButtonDelete = ({
             <Modal
                 open={delModalOpen && confirm}
                 onClose={() => setDelModalOpen(false)}
-                title="Подтвердите удаление"
                 className="max-w-md"
-                footer={
-                    <>
-                        <Button
-                            variant="secondary"
-                            shape="rounded-lg"
-                            className="h-9 px-4"
-                            onClick={() => setDelModalOpen(false)}
-                        >
-                            Отмена
-                        </Button>
-                        <Button
-                            variant="danger"
-                            shape="rounded-lg"
-                            className="h-9 px-4"
-                            onClick={() => {
-                                deleteFn();
-                                setDelModalOpen(false);
-                            }}
-                        >
-                            Удалить
-                        </Button>
-                    </>
-                }
             >
-                <p className="text-sm text-main-300">
-                    {labelModal ??
-                        "Вы уверены что хотите удалить этот элемент?"}
-                </p>
+                <Modal.Header>Подтвердите удаление</Modal.Header>
+
+                <Modal.Content>
+                    <p className="text-sm text-main-300">
+                        {labelModal ??
+                            "Вы уверены что хотите удалить этот элемент?"}
+                    </p>
+                </Modal.Content>
+
+                <Modal.Footer>
+                    <Button
+                        variant="secondary"
+                        shape="rounded-lg"
+                        className="h-9 px-4"
+                        onClick={() => setDelModalOpen(false)}
+                    >
+                        Отмена
+                    </Button>
+                    <Button
+                        variant="danger"
+                        shape="rounded-lg"
+                        className="h-9 px-4"
+                        onClick={() => {
+                            deleteFn();
+                            setDelModalOpen(false);
+                        }}
+                    >
+                        Удалить
+                    </Button>
+                </Modal.Footer>
             </Modal>
         </>
     );

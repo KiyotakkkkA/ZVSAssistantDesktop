@@ -272,9 +272,21 @@ export const StorageFilesSelectPanel = observer(() => {
                     setIsCreateVecstoreModalOpen(false);
                     setFixedVecstoreFolderId(null);
                 }}
-                title="Создать векторное хранилище"
                 className="max-w-xl"
-                footer={
+            >
+                <Modal.Header>Создать векторное хранилище</Modal.Header>
+
+                <Modal.Content>
+                    <StorageVecstoreCreateForm
+                        folders={storageStore.folders}
+                        formId={createVecstoreFormId}
+                        fixedFolderId={fixedVecstoreFolderId}
+                        isSubmitting={storageStore.isSubmitting}
+                        onSubmit={handleCreateVecstore}
+                    />
+                </Modal.Content>
+
+                <Modal.Footer>
                     <div className="flex justify-end gap-2">
                         <Button
                             type="button"
@@ -299,15 +311,7 @@ export const StorageFilesSelectPanel = observer(() => {
                             Создать
                         </Button>
                     </div>
-                }
-            >
-                <StorageVecstoreCreateForm
-                    folders={storageStore.folders}
-                    formId={createVecstoreFormId}
-                    fixedFolderId={fixedVecstoreFolderId}
-                    isSubmitting={storageStore.isSubmitting}
-                    onSubmit={handleCreateVecstore}
-                />
+                </Modal.Footer>
             </Modal>
 
             <StorageCreateFolderModal

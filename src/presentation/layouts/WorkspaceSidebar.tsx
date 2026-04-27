@@ -215,47 +215,51 @@ export const WorkspaceSidebar = observer(() => {
                 closeOnOverlayClick={false}
                 open={Boolean(renameTarget)}
                 onClose={closeRenameModal}
-                title={
-                    renameTarget?.type === "project"
-                        ? "Переименовать проект"
-                        : "Переименовать диалог"
-                }
                 className="max-w-md"
-                footer={
-                    <>
-                        <Button
-                            variant="secondary"
-                            shape="rounded-lg"
-                            className="h-9 px-4"
-                            onClick={closeRenameModal}
-                        >
-                            Отмена
-                        </Button>
-                        <Button
-                            variant="primary"
-                            shape="rounded-lg"
-                            className="h-9 px-4"
-                            onClick={submitRename}
-                        >
-                            Сохранить
-                        </Button>
-                    </>
-                }
             >
-                <div className="space-y-2">
-                    <p className="text-sm text-main-300">Новое название</p>
-                    <InputSmall
-                        value={newTitle}
-                        onChange={(event) => setNewTitle(event.target.value)}
-                        placeholder="Введите название"
-                        onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                                event.preventDefault();
-                                submitRename();
+                <Modal.Header>
+                    {renameTarget?.type === "project"
+                        ? "Переименовать проект"
+                        : "Переименовать диалог"}
+                </Modal.Header>
+
+                <Modal.Content>
+                    <div className="space-y-2">
+                        <p className="text-sm text-main-300">Новое название</p>
+                        <InputSmall
+                            value={newTitle}
+                            onChange={(event) =>
+                                setNewTitle(event.target.value)
                             }
-                        }}
-                    />
-                </div>
+                            placeholder="Введите название"
+                            onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                    event.preventDefault();
+                                    submitRename();
+                                }
+                            }}
+                        />
+                    </div>
+                </Modal.Content>
+
+                <Modal.Footer>
+                    <Button
+                        variant="secondary"
+                        shape="rounded-lg"
+                        className="h-9 px-4"
+                        onClick={closeRenameModal}
+                    >
+                        Отмена
+                    </Button>
+                    <Button
+                        variant="primary"
+                        shape="rounded-lg"
+                        className="h-9 px-4"
+                        onClick={submitRename}
+                    >
+                        Сохранить
+                    </Button>
+                </Modal.Footer>
             </Modal>
         </div>
     );

@@ -81,10 +81,19 @@ export const WorkspaceChatWindowContainer = observer(() => {
                 closeOnOverlayClick={false}
                 open={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}
-                title="Настройки"
                 className="h-[90vh] max-w-[min(1440px,98vw)]"
-                footer={
-                    isSettingsSaveVisible ? (
+            >
+                <Modal.Header>Настройки</Modal.Header>
+
+                <Modal.Content>
+                    <SettingsView
+                        ref={settingsViewRef}
+                        onSaveVisibilityChange={handleSaveVisibilityChange}
+                    />
+                </Modal.Content>
+
+                {isSettingsSaveVisible && (
+                    <Modal.Footer>
                         <Button
                             variant="primary"
                             className="rounded-xl px-4 py-2"
@@ -94,13 +103,8 @@ export const WorkspaceChatWindowContainer = observer(() => {
                         >
                             Сохранить
                         </Button>
-                    ) : undefined
-                }
-            >
-                <SettingsView
-                    ref={settingsViewRef}
-                    onSaveVisibilityChange={handleSaveVisibilityChange}
-                />
+                    </Modal.Footer>
+                )}
             </Modal>
             <div className="max-h-full flex h-full min-h-0 flex-1 flex-col overflow-hidden ">
                 <Outlet />

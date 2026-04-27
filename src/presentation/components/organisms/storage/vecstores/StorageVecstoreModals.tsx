@@ -22,50 +22,48 @@ export const StorageRenameVecstoreModal = ({
     onConfirm,
 }: StorageRenameVecstoreModalProps) => {
     return (
-        <Modal
-            open={open}
-            onClose={onClose}
-            title="Переименовать векторное хранилище"
-            className="max-w-md"
-            footer={
-                <>
-                    <Button
-                        variant="secondary"
-                        shape="rounded-lg"
-                        className="h-9 px-4"
-                        onClick={onClose}
-                    >
-                        Отмена
-                    </Button>
-                    <Button
-                        variant="primary"
-                        shape="rounded-lg"
-                        className="h-9 px-4"
-                        disabled={isSubmitting}
-                        onClick={onConfirm}
-                    >
-                        Сохранить
-                    </Button>
-                </>
-            }
-        >
-            <div className="space-y-3">
-                <InputSmall
-                    placeholder="Новое название"
-                    value={vecstoreName}
-                    onChange={(event) =>
-                        onVecstoreNameChange(event.target.value)
-                    }
-                />
+        <Modal open={open} onClose={onClose} className="max-w-md">
+            <Modal.Header>Переименовать векторное хранилище</Modal.Header>
 
-                <InputSmall
-                    placeholder="Описание"
-                    value={vecstoreDescription}
-                    onChange={(event) =>
-                        onVecstoreDescriptionChange(event.target.value)
-                    }
-                />
-            </div>
+            <Modal.Content>
+                <div className="space-y-3">
+                    <InputSmall
+                        placeholder="Новое название"
+                        value={vecstoreName}
+                        onChange={(event) =>
+                            onVecstoreNameChange(event.target.value)
+                        }
+                    />
+
+                    <InputSmall
+                        placeholder="Описание"
+                        value={vecstoreDescription}
+                        onChange={(event) =>
+                            onVecstoreDescriptionChange(event.target.value)
+                        }
+                    />
+                </div>
+            </Modal.Content>
+
+            <Modal.Footer>
+                <Button
+                    variant="secondary"
+                    shape="rounded-lg"
+                    className="h-9 px-4"
+                    onClick={onClose}
+                >
+                    Отмена
+                </Button>
+                <Button
+                    variant="primary"
+                    shape="rounded-lg"
+                    className="h-9 px-4"
+                    disabled={isSubmitting}
+                    onClick={onConfirm}
+                >
+                    Сохранить
+                </Button>
+            </Modal.Footer>
         </Modal>
     );
 };
