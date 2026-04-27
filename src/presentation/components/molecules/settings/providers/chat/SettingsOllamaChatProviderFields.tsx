@@ -1,10 +1,12 @@
 import { useState, type MouseEvent } from "react";
 import { Button, InputSmall, Modal } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { Icon } from "@iconify/react";
-import { SettingsChatOllamaModelsPickForm } from "../../../../organisms/settings/forms/SettingsChatOllamaModelsPickForm";
 import type { ProviderConfig } from "../../../../../../../electron/models/user";
 import { Config } from "../../../../../../../electron/config";
-import { SecretsSelectFilling } from "../../../../organisms/secrets/forms";
+import {
+    SecretsSelectFilling,
+    SettingsChatOllamaModelsPickForm,
+} from "../../../../organisms/forms";
 
 type SettingsOllamaChatProviderFieldsProps = {
     providerConfig: ProviderConfig;

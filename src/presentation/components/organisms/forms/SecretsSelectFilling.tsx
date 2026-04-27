@@ -1,8 +1,8 @@
 import { Icon } from "@iconify/react";
 import { Button, Modal, Select } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useEffect, useMemo, useState } from "react";
-import type { SecretEntity } from "../../../../../stores/secretsStore";
-import { secretsStore } from "../../../../../stores/secretsStore";
+import type { SecretEntity } from "../../../../stores/secretsStore";
+import { secretsStore } from "../../../../stores/secretsStore";
 
 type SecretsSelectFillingProps = {
     open: boolean;

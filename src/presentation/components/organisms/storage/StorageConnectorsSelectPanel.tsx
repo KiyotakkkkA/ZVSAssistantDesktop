@@ -1,7 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useState } from "react";
-import { StorageGitHubConnectorForm } from "./forms/StorageGitHubConnectorForm";
-import { StorageGitLabConnectorForm } from "./forms/StorageGitLabConnectorForm";
+import { StorageGitHubConnectorForm } from "../forms/StorageGitHubConnectorForm";
+import { StorageGitLabConnectorForm } from "../forms/StorageGitLabConnectorForm";
 
 const connectors = [
     {

@@ -39,23 +39,11 @@ export const AgentsListUnitCard = ({
                         <p className="truncate text-sm text-main-100">
                             {agent.agentName}
                         </p>
-                        <span className="shrink-0 rounded-md bg-main-700/80 px-2 py-0.5 text-[10px] text-main-300">
-                            Встроенный
-                        </span>
                     </div>
-
-                    <p className="mt-1 truncate text-[11px] text-main-400">
-                        Режим: {agent.chatLabel}
-                    </p>
 
                     <div className="mt-2 flex items-center gap-2 text-[10px]">
                         <span className="rounded-md bg-main-700/65 px-2 py-0.5 text-main-200">
                             Инструментов: {agent.agentToolsSet.length}
-                        </span>
-                        <span className="rounded-md bg-main-700/65 px-2 py-0.5 text-main-300">
-                            {agent.isEditable
-                                ? "Редактируемый"
-                                : "Только чтение"}
                         </span>
                     </div>
                 </div>

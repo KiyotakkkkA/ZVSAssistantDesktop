@@ -2,7 +2,7 @@ import { Button, InputSmall, Separator } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { Icon } from "@iconify/react";
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { secretsStore } from "../../../../../stores/secretsStore";
+import { secretsStore } from "../../../../stores/secretsStore";
 
 type SecretsAddFormProps = {
     onCancel: () => void;

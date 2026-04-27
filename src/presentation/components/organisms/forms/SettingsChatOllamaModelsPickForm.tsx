@@ -9,8 +9,8 @@ import {
 import {
     getOllamaModelsCatalog,
     type OllamaCatalogModel,
-} from "../../../../../services/api";
-import { SettingsChatOllamaModelPickCard } from "../../../molecules/settings";
+} from "../../../../services/api";
+import { SettingsChatOllamaModelPickCard } from "../../molecules/settings";
 
 type SortKey =
     | "modified_desc"

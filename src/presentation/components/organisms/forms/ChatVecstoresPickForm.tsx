@@ -2,14 +2,14 @@ import { Icon } from "@iconify/react";
 import { Button, InputSmall } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { observer } from "mobx-react-lite";
 import { useMemo, useState } from "react";
-import { storageStore } from "../../../../../stores/storageStore";
+import { storageStore } from "../../../../stores/storageStore";
 
 type VecstoresPickFormProps = {
     selectedVecstoreId: string | null;
     onSelectVecstore: (vecstoreId: string | null) => void;
 };
 
-export const VecstoresPickForm = observer(
+export const ChatVecstoresPickForm = observer(
     ({ selectedVecstoreId, onSelectVecstore }: VecstoresPickFormProps) => {
         const [query, setQuery] = useState("");
 

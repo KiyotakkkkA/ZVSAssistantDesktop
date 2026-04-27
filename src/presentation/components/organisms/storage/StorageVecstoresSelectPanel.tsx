@@ -4,16 +4,16 @@ import { useEffect, useState } from "react";
 import { useJobs } from "../../../../hooks";
 import { storageStore } from "../../../../stores/storageStore";
 import {
-    StorageIndexingProgressForm,
-    StorageVecstoreCreateForm,
-} from "./forms";
-import {
     StorageRenameVecstoreModal,
     StorageVecstoresSidebar,
     StorageVectstoresContent,
 } from "./vecstores";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { MsgToasts } from "../../../../data/MsgToasts";
+import {
+    StorageIndexingProgressForm,
+    StorageVecstoreCreateForm,
+} from "../forms";
 
 export const StorageVecstoresSelectPanel = observer(() => {
     const {

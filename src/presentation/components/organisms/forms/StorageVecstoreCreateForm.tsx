@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import type {
     CreateStorageVecstoreDto,
     StorageFolderEntity,
-} from "../../../../../../electron/models/storage";
+} from "../../../../../electron/models/storage";
 
 type StorageVecstoreCreateFormProps = {
     folders: StorageFolderEntity[];

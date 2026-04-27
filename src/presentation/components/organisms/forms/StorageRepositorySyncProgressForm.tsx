@@ -1,11 +1,8 @@
 import { useMemo } from "react";
 import { Icon } from "@iconify/react";
-import type {
-    JobEventRecord,
-    JobRecord,
-} from "../../../../../types/ElectronApi";
+import type { JobEventRecord, JobRecord } from "../../../../types/ElectronApi";
 
-type StorageIndexingProgressFormProps = {
+type StorageRepositorySyncProgressFormProps = {
     open: boolean;
     job: JobRecord | null;
     events: JobEventRecord[];
@@ -52,10 +49,10 @@ const resolveStatusText = (job: JobRecord | null) => {
     return "Остановлено";
 };
 
-export const StorageIndexingProgressForm = ({
+export const StorageRepositorySyncProgressForm = ({
     job,
     events,
-}: StorageIndexingProgressFormProps) => {
+}: StorageRepositorySyncProgressFormProps) => {
     const progress = useMemo(
         () => resolveProgressValue(job, events),
         [events, job],

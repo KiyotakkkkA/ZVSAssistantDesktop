@@ -5,17 +5,14 @@ import {
     Select,
 } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useEffect, useMemo, useState } from "react";
-import { useConnectors, useJobs } from "../../../../../hooks";
-import {
-    parseIgnorePatterns,
-    resolveDefaultFolderName,
-    StorageRepositorySyncProgressForm,
-} from ".";
+import { useConnectors, useJobs } from "../../../../hooks";
+import { StorageRepositorySyncProgressForm } from "./StorageRepositorySyncProgressForm";
 import { Icon } from "@iconify/react";
-import { SecretsSelectFilling } from "../../secrets/forms";
+import { SecretsSelectFilling } from "./SecretsSelectFilling";
+import { parseIgnorePatterns, resolveDefaultFolderName } from "./utils";
 
-export const StorageGitLabConnectorForm = () => {
-    const { data, isLoading, isSuccess, gitlabRepoParse } = useConnectors();
+export const StorageGitHubConnectorForm = () => {
+    const { data, isLoading, isSuccess, githubRepoParse } = useConnectors();
     const {
         createJob,
         cancelJobById,
@@ -34,7 +31,7 @@ export const StorageGitLabConnectorForm = () => {
     const [progressJobId, setProgressJobId] = useState<string | null>(null);
 
     const parsedData =
-        data?.provider === "gitlab" && data.repoUrl === repoUrl.trim()
+        data?.provider === "github" && data.repoUrl === repoUrl.trim()
             ? data
             : null;
     const isParsed = isSuccess && Boolean(parsedData);
@@ -77,10 +74,10 @@ export const StorageGitLabConnectorForm = () => {
 
         const created = await createJob({
             name: `sync_${parsedData.repoPath}`,
-            description: `Синхронизация репозитория GitLab ${parsedData.repoPath}`,
+            description: `Синхронизация репозитория GitHub ${parsedData.repoPath}`,
             kind: "storage-repository-sync",
             storageRepositorySync: {
-                provider: "gitlab",
+                provider: "github",
                 repoUrl: parsedData.repoUrl,
                 branch: selectedBranch,
                 token: token.trim() || undefined,
@@ -102,10 +99,10 @@ export const StorageGitLabConnectorForm = () => {
             <form className="space-y-5">
                 <div className="space-y-2">
                     <label className="block text-base font-semibold text-main-100">
-                        URL репозитория GitLab
+                        URL репозитория GitHub
                     </label>
                     <InputSmall
-                        placeholder="https://gitlab.com/username/repo"
+                        placeholder="https://github.com/owner/repo"
                         value={repoUrl}
                         onChange={(event) => setRepoUrl(event.target.value)}
                     />
@@ -113,10 +110,10 @@ export const StorageGitLabConnectorForm = () => {
 
                 <div className="space-y-2">
                     <label className="block text-base font-semibold text-main-100">
-                        Токен доступа GitLab
+                        Токен доступа GitHub
                     </label>
                     <p className="text-sm text-main-300">
-                        Персональный токен доступа для приватных репозиториев.
+                        Токен доступа для предотвращения ограничения запросов.
                     </p>
                     <div className="flex items-center gap-2 w-full">
                         <div className="flex-1">
@@ -150,7 +147,7 @@ export const StorageGitLabConnectorForm = () => {
                         className="h-8 px-3 text-xs"
                         disabled={isLoading}
                         onClick={() => {
-                            void gitlabRepoParse(repoUrl, token);
+                            void githubRepoParse(repoUrl, token);
                         }}
                     >
                         {isLoading ? "Получение данных..." : "Получить данные"}
@@ -185,7 +182,8 @@ export const StorageGitLabConnectorForm = () => {
                                 после каждой записи.
                             </p>
                             <InputSmall
-                                placeholder="build/**"
+                                type="text"
+                                placeholder="dist/**"
                                 className="h-11 w-full"
                                 value={ignoreFiles}
                                 onChange={(event) =>
@@ -256,8 +254,8 @@ export const StorageGitLabConnectorForm = () => {
             <SecretsSelectFilling
                 open={isSecretsModalOpen}
                 onClose={() => setIsSecretsModalOpen(false)}
-                title="Заполнить поля GitLab"
-                secretType="gitlab"
+                title="Заполнить поля GitHub"
+                secretType="github"
                 fieldLabel="Токен доступа"
                 fieldIcon="mdi:key-chain-variant"
                 onSubmit={(value) => {

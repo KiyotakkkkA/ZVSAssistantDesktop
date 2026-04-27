@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button, InputSmall } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { Icon } from "@iconify/react";
 import type { ProviderConfig } from "../../../../../../../electron/models/user";
-import { SecretsSelectFilling } from "../../../../organisms/secrets/forms";
+import { SecretsSelectFilling } from "../../../../organisms/forms";
 
 type SettingsSearchapiWebProviderFieldProps = {
     providerConfig: ProviderConfig;

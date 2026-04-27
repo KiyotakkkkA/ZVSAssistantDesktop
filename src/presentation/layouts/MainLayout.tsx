@@ -2,10 +2,10 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Icon } from "@iconify/react";
 import { Button, Modal } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { useState } from "react";
-import { JobManageForm } from "../components/organisms/chat/forms";
 import { useNotifications } from "../../hooks";
 import { observer } from "mobx-react-lite";
 import { profileStore } from "../../stores/profileStore";
+import { ChatJobManageForm } from "../components/organisms/forms";
 
 type NavigationTab = {
     id: "workspace" | "storage" | "extensions" | "agents" | "secrets";
@@ -125,7 +125,7 @@ export const MainLayout = observer(() => {
                 </Modal.Header>
 
                 <Modal.Content>
-                    <JobManageForm />
+                    <ChatJobManageForm />
                 </Modal.Content>
             </Modal>
         </main>

@@ -8,7 +8,6 @@ import {
     StorageFilesSidebar,
     StorageRenameFolderModal,
 } from "./files";
-import { StorageVecstoreCreateForm } from "./forms";
 import { convertFileToBase64 } from "../../../../utils/converters";
 import { storageStore } from "../../../../stores/storageStore";
 import {
@@ -17,6 +16,7 @@ import {
 } from "../../../../utils/creators";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { MsgToasts } from "../../../../data/MsgToasts";
+import { StorageVecstoreCreateForm } from "../forms";
 
 export const StorageFilesSelectPanel = observer(() => {
     const toast = useToasts();

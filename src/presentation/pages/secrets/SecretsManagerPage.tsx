@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Modal } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { SecretsDataTable } from "../../components/organisms/secrets";
-import { SecretsAddForm } from "../../components/organisms/secrets/forms";
 import { MsgToasts } from "../../../data/MsgToasts";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { ButtonCreate } from "../../components/atoms";
+import { SecretsAddForm } from "../../components/organisms/forms";
 
 export const SecretsManagerPage = () => {
     const toast = useToasts();

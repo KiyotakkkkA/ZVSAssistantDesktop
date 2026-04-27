@@ -16,8 +16,8 @@ import { assistantModes } from "../../../../prompts/modes";
 import { profileStore } from "../../../../stores/profileStore";
 import { storageStore } from "../../../../stores/storageStore";
 import { workspaceStore } from "../../../../stores/workspaceStore";
-import { RequiredToolsPickForm, VecstoresPickForm } from "./forms";
 import { convertBytesToSize } from "../../../../utils/converters";
+import { ChatRequiredToolsPickForm, ChatVecstoresPickForm } from "../forms";
 
 type MessageComposerProps = {
     input: string;
@@ -419,7 +419,7 @@ export const MessageComposer = observer(
                     </Modal.Header>
 
                     <Modal.Content>
-                        <VecstoresPickForm
+                        <ChatVecstoresPickForm
                             selectedVecstoreId={
                                 workspaceStore.activeDialogVecstoreId
                             }
@@ -451,7 +451,7 @@ export const MessageComposer = observer(
                     </Modal.Header>
 
                     <Modal.Content>
-                        <RequiredToolsPickForm
+                        <ChatRequiredToolsPickForm
                             toolsQuery={toolsQuery}
                             onToolsQueryChange={setToolsQuery}
                         />

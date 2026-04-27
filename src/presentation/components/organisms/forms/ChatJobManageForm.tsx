@@ -6,9 +6,9 @@ import {
     PrettyBR,
     Select,
 } from "@kiyotakkkka/zvs-uikit-lib/ui";
-import { useJobs } from "../../../../../hooks";
-import type { JobEventTag, JobRecord } from "../../../../../types/ElectronApi";
-import { ButtonCreate } from "../../../atoms";
+import { useJobs } from "../../../../hooks";
+import type { JobEventTag, JobRecord } from "../../../../types/ElectronApi";
+import { ButtonCreate } from "../../atoms";
 
 type JobStatusFilter = "all" | "pending" | "completed" | "stopped";
 type JobSort = "created_desc" | "created_asc";
@@ -111,7 +111,7 @@ const resolveStageIcon = (tag: JobEventTag) => {
     return "mdi:information-outline";
 };
 
-export const JobManageForm = () => {
+export const ChatJobManageForm = () => {
     const {
         isLoading,
         jobs,
