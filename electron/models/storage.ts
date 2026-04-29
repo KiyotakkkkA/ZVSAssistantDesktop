@@ -55,7 +55,7 @@ export type CreateStorageVecstoreDto = {
     description?: string;
 };
 
-export type RenameStorageVecstoreDto = {
+export type UpdateStorageVecstoreDto = {
     id: string;
     name: string;
     description?: string;

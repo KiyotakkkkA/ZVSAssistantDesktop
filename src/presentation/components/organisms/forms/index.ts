@@ -8,4 +8,4 @@ export * from "./StorageGitHubConnectorForm";
 export * from "./StorageGitLabConnectorForm";
 export * from "./StorageIndexingProgressForm";
 export * from "./StorageRepositorySyncProgressForm";
-export * from "./StorageVecstoreCreateForm";
+export * from "./StorageVecstoreManagingForm";

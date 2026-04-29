@@ -5,6 +5,7 @@ import type {
     StorageFileEntity,
     StorageFolderEntity,
     StorageVecstoreEntity,
+    UpdateStorageVecstoreDto,
 } from "../../electron/models/storage";
 import {
     addFilesToFolder,
@@ -45,7 +46,7 @@ class StorageStore {
                 renameFolderById: action.bound,
                 deleteFolderById: action.bound,
                 createVecstore: action.bound,
-                renameVecstore: action.bound,
+                updateVecstore: action.bound,
                 deleteVecstore: action.bound,
                 addFilesToFolderById: action.bound,
                 removeFilesFromFolderById: action.bound,
@@ -363,11 +364,12 @@ class StorageStore {
         }
     }
 
-    async renameVecstore(id: string, name: string, description?: string) {
-        const normalizedName = name.trim();
-        const normalizedDescription = description?.trim() ?? "";
+    async updateVecstore(payload: UpdateStorageVecstoreDto) {
+        const normalizedId = payload.id.trim();
+        const normalizedName = payload.name.trim();
+        const normalizedDescription = payload.description?.trim() ?? "";
 
-        if (!id.trim() || !normalizedName) {
+        if (!normalizedId || !normalizedName) {
             return null;
         }
 
@@ -377,7 +379,7 @@ class StorageStore {
 
         try {
             const updated = await renameStorageVecstore(
-                id,
+                normalizedId,
                 normalizedName,
                 normalizedDescription,
             );

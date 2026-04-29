@@ -26,7 +26,7 @@ type StorageVectstoresContentProps = {
     isSubmitting: boolean;
     onOpenFolderPath: () => void;
     onRefreshVecstore: () => void;
-    onOpenRenameModal: () => void;
+    onOpenUpdateModal: () => void;
     onDeleteVecstore: () => void;
     onAddToIndex: (fileIds: StorageFileEntity["id"][]) => void;
     onRemoveFromIndex: (fileIds: StorageFileEntity["id"][]) => void;
@@ -72,7 +72,7 @@ export const StorageVectstoresContent = ({
     isSubmitting,
     onOpenFolderPath,
     onRefreshVecstore,
-    onOpenRenameModal,
+    onOpenUpdateModal,
     onDeleteVecstore,
     onAddToIndex,
     onRemoveFromIndex,
@@ -235,12 +235,12 @@ export const StorageVectstoresContent = ({
                         <Icon icon="mdi:refresh" />
                     </Button>
                     <Button
-                        label="Переименовать"
+                        label="Изменить"
                         variant="secondary"
                         shape="rounded-lg"
                         className="h-9 w-9 p-0"
                         disabled={isSubmitting}
-                        onClick={onOpenRenameModal}
+                        onClick={onOpenUpdateModal}
                     >
                         <Icon icon="mdi:pencil-outline" />
                     </Button>

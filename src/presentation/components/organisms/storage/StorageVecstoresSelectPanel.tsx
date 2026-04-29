@@ -3,17 +3,17 @@ import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
 import { useJobs } from "../../../../hooks";
 import { storageStore } from "../../../../stores/storageStore";
-import {
-    StorageRenameVecstoreModal,
-    StorageVecstoresSidebar,
-    StorageVectstoresContent,
-} from "./vecstores";
+import { StorageVecstoresSidebar, StorageVectstoresContent } from "./vecstores";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { MsgToasts } from "../../../../data/MsgToasts";
 import {
     StorageIndexingProgressForm,
-    StorageVecstoreCreateForm,
+    StorageVecstoreManagingForm,
 } from "../forms";
+import type {
+    CreateStorageVecstoreDto,
+    UpdateStorageVecstoreDto,
+} from "../../../../../electron/models/storage";
 
 export const StorageVecstoresSelectPanel = observer(() => {
     const {
@@ -27,11 +27,20 @@ export const StorageVecstoresSelectPanel = observer(() => {
     const toast = useToasts();
 
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+    const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [isIndexingModalOpen, setIsIndexingModalOpen] = useState(false);
-    const [renameVecstoreName, setRenameVecstoreName] = useState("");
-    const [renameVecstoreDescription, setRenameVecstoreDescription] =
-        useState("");
+    const [createVecstoreModel, setCreateVecstoreModel] =
+        useState<CreateStorageVecstoreDto>({
+            name: "",
+            folder_id: "",
+            description: "",
+        });
+    const [updateVecstoreModel, setUpdateVecstoreModel] =
+        useState<UpdateStorageVecstoreDto>({
+            id: "",
+            name: "",
+            description: "",
+        });
     const [selectedVecstoreId, setSelectedVecstoreId] = useState<string | null>(
         null,
     );
@@ -40,6 +49,15 @@ export const StorageVecstoresSelectPanel = observer(() => {
         string[]
     >([]);
     const createVecstoreFormId = "storage-vecstores-create-form";
+    const updateVecstoreFormId = "storage-vecstores-update-form";
+
+    const resolveCreateFolderId = () => {
+        return (
+            storageStore.folders.find((folder) => !folder.vecstore_id)?.id ??
+            storageStore.folders[0]?.id ??
+            ""
+        );
+    };
 
     const selectedVecstore =
         storageStore.linkedVecstores.find(
@@ -88,11 +106,7 @@ export const StorageVecstoresSelectPanel = observer(() => {
         void storageStore.refreshStorageState();
     }, [indexingJob, indexingJobId, syncedCompletedJobIds]);
 
-    const handleCreateVecstore = async (payload: {
-        name: string;
-        folder_id: string;
-        description?: string;
-    }) => {
+    const handleCreateVecstore = async (payload: CreateStorageVecstoreDto) => {
         const created = await storageStore.createVecstore(payload);
 
         if (!created) {
@@ -102,6 +116,18 @@ export const StorageVecstoresSelectPanel = observer(() => {
         setSelectedVecstoreId(created.id);
         setIsCreateModalOpen(false);
         toast.success(MsgToasts.VSTORE_SUCCESSFULLY_CREATED());
+    };
+
+    const handleUpdateVecstore = async (payload: UpdateStorageVecstoreDto) => {
+        const updated = await storageStore.updateVecstore(payload);
+
+        if (!updated) {
+            return;
+        }
+
+        setIsUpdateModalOpen(false);
+        toast.success(MsgToasts.VSTORE_SUCCESSFULLY_CHANGED());
+        return;
     };
 
     const handleOpenFolderPath = async () => {
@@ -120,33 +146,26 @@ export const StorageVecstoresSelectPanel = observer(() => {
         await storageStore.refreshVecstoreById(selectedVecstore.id);
     };
 
-    const handleOpenRenameModal = () => {
+    const handleOpenUpdateModal = () => {
         if (!selectedVecstore) {
             return;
         }
 
-        setRenameVecstoreName(selectedVecstore.name);
-        setRenameVecstoreDescription(selectedVecstore.description ?? "");
-        setIsRenameModalOpen(true);
+        setUpdateVecstoreModel({
+            id: selectedVecstore.id,
+            name: selectedVecstore.name,
+            description: selectedVecstore.description ?? "",
+        });
+        setIsUpdateModalOpen(true);
     };
 
-    const handleRenameVecstore = async () => {
-        if (!selectedVecstore) {
-            return;
-        }
-
-        const updated = await storageStore.renameVecstore(
-            selectedVecstore.id,
-            renameVecstoreName,
-            renameVecstoreDescription,
-        );
-
-        if (!updated) {
-            return;
-        }
-
-        setIsRenameModalOpen(false);
-        toast.success(MsgToasts.VSTORE_SUCCESSFULLY_CHANGED());
+    const handleOpenCreateModal = () => {
+        setCreateVecstoreModel({
+            name: "",
+            folder_id: resolveCreateFolderId(),
+            description: "",
+        });
+        setIsCreateModalOpen(true);
     };
 
     const handleDeleteVecstore = async () => {
@@ -200,7 +219,7 @@ export const StorageVecstoresSelectPanel = observer(() => {
                     isSubmitting={storageStore.isSubmitting}
                     vecstores={storageStore.linkedVecstores}
                     selectedVecstoreId={selectedVecstore?.id ?? null}
-                    onCreateVecstore={() => setIsCreateModalOpen(true)}
+                    onCreateVecstore={handleOpenCreateModal}
                     onFullRefresh={() => {
                         void storageStore.refreshVecstores();
                     }}
@@ -220,7 +239,7 @@ export const StorageVecstoresSelectPanel = observer(() => {
                     onRefreshVecstore={() => {
                         void handleRefreshVecstore();
                     }}
-                    onOpenRenameModal={handleOpenRenameModal}
+                    onOpenUpdateModal={handleOpenUpdateModal}
                     onDeleteVecstore={() => {
                         void handleDeleteVecstore();
                     }}
@@ -243,11 +262,12 @@ export const StorageVecstoresSelectPanel = observer(() => {
                 </Modal.Header>
 
                 <Modal.Content>
-                    <StorageVecstoreCreateForm
+                    <StorageVecstoreManagingForm
+                        model={createVecstoreModel}
                         folders={storageStore.folders}
                         formId={createVecstoreFormId}
                         isSubmitting={storageStore.isSubmitting}
-                        onSubmit={handleCreateVecstore}
+                        onSubmit={handleCreateVecstore as () => Promise<void>}
                     />
                 </Modal.Content>
 
@@ -276,18 +296,49 @@ export const StorageVecstoresSelectPanel = observer(() => {
                 </Modal.Footer>
             </Modal>
 
-            <StorageRenameVecstoreModal
-                open={isRenameModalOpen}
-                isSubmitting={storageStore.isSubmitting}
-                vecstoreName={renameVecstoreName}
-                vecstoreDescription={renameVecstoreDescription}
-                onClose={() => setIsRenameModalOpen(false)}
-                onVecstoreNameChange={setRenameVecstoreName}
-                onVecstoreDescriptionChange={setRenameVecstoreDescription}
-                onConfirm={() => {
-                    void handleRenameVecstore();
-                }}
-            />
+            <Modal
+                open={isUpdateModalOpen}
+                onClose={() => setIsUpdateModalOpen(false)}
+                className="max-w-xl"
+            >
+                <Modal.Header className="text-main-100">
+                    Изменить векторное хранилище
+                </Modal.Header>
+
+                <Modal.Content>
+                    <StorageVecstoreManagingForm
+                        model={updateVecstoreModel}
+                        folders={storageStore.folders}
+                        formId={updateVecstoreFormId}
+                        isSubmitting={storageStore.isSubmitting}
+                        onSubmit={handleUpdateVecstore as () => Promise<void>}
+                    />
+                </Modal.Content>
+
+                <Modal.Footer>
+                    <div className="flex justify-end gap-2">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            shape="rounded-lg"
+                            className="h-9 px-4"
+                            onClick={() => setIsUpdateModalOpen(false)}
+                        >
+                            Отмена
+                        </Button>
+                        <Button
+                            type="submit"
+                            form={updateVecstoreFormId}
+                            variant="primary"
+                            shape="rounded-lg"
+                            className="h-9 px-4"
+                            disabled={storageStore.isSubmitting}
+                        >
+                            Сохранить
+                        </Button>
+                    </div>
+                </Modal.Footer>
+            </Modal>
 
             <Modal
                 open={isIndexingModalOpen}

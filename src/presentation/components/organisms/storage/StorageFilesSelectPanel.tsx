@@ -16,7 +16,8 @@ import {
 } from "../../../../utils/creators";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { MsgToasts } from "../../../../data/MsgToasts";
-import { StorageVecstoreCreateForm } from "../forms";
+import { StorageVecstoreManagingForm } from "../forms";
+import type { CreateStorageVecstoreDto } from "../../../../../electron/models/storage";
 
 export const StorageFilesSelectPanel = observer(() => {
     const toast = useToasts();
@@ -27,6 +28,12 @@ export const StorageFilesSelectPanel = observer(() => {
     const [renameFolderName, setRenameFolderName] = useState("");
     const [isCreateVecstoreModalOpen, setIsCreateVecstoreModalOpen] =
         useState(false);
+    const [createVecstoreModel, setCreateVecstoreModel] =
+        useState<CreateStorageVecstoreDto>({
+            name: "",
+            folder_id: "",
+            description: "",
+        });
     const [fixedVecstoreFolderId, setFixedVecstoreFolderId] = useState<
         string | null
     >(null);
@@ -195,11 +202,7 @@ export const StorageFilesSelectPanel = observer(() => {
         await storageStore.refreshFolderById(selectedFolder.id);
     };
 
-    const handleCreateVecstore = async (payload: {
-        name: string;
-        folder_id: string;
-        description?: string;
-    }) => {
+    const handleCreateVecstore = async (payload: CreateStorageVecstoreDto) => {
         const created = await storageStore.createVecstore(payload);
 
         if (!created) {
@@ -258,6 +261,11 @@ export const StorageFilesSelectPanel = observer(() => {
                 }}
                 onOpenRenameModal={handleOpenRenameModal}
                 onCreateVecstoreOnFolder={(folderId) => {
+                    setCreateVecstoreModel({
+                        name: "",
+                        folder_id: folderId,
+                        description: "",
+                    });
                     setFixedVecstoreFolderId(folderId);
                     setIsCreateVecstoreModalOpen(true);
                 }}
@@ -279,12 +287,13 @@ export const StorageFilesSelectPanel = observer(() => {
                 </Modal.Header>
 
                 <Modal.Content>
-                    <StorageVecstoreCreateForm
+                    <StorageVecstoreManagingForm
+                        model={createVecstoreModel}
                         folders={storageStore.folders}
                         formId={createVecstoreFormId}
                         fixedFolderId={fixedVecstoreFolderId}
                         isSubmitting={storageStore.isSubmitting}
-                        onSubmit={handleCreateVecstore}
+                        onSubmit={handleCreateVecstore as () => Promise<void>}
                     />
                 </Modal.Content>
 
