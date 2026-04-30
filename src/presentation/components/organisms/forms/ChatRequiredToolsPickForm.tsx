@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { toJS } from "mobx";
 import {
     Button,
-    InputCheckbox,
+    InputCheckSlided,
     InputSmall,
 } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { profileStore } from "../../../../stores/profileStore";
@@ -369,7 +369,7 @@ export const ChatRequiredToolsPickForm = observer(
                                                             : "Выключен"}
                                                     </span>
                                                     <span className="flex items-center justify-end">
-                                                        <InputCheckbox
+                                                        <InputCheckSlided
                                                             checked={isEnabled}
                                                             onChange={(
                                                                 checked,
@@ -396,7 +396,7 @@ export const ChatRequiredToolsPickForm = observer(
                                                             : "Не обязателен"}
                                                     </span>
                                                     <span className="flex items-center justify-end">
-                                                        <InputCheckbox
+                                                        <InputCheckSlided
                                                             checked={isRequired}
                                                             disabled={
                                                                 !isEnabled

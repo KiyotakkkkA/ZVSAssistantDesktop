@@ -1,7 +1,7 @@
 import { Icon } from "@iconify/react";
-import { InputCheckbox } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import { InputCheckSlided } from "@kiyotakkkka/zvs-uikit-lib/ui";
 
-interface InputCheckboxProps {
+interface InputCheckSlidedProps {
     checked: boolean;
     icon: string;
     isize?: number;
@@ -17,7 +17,7 @@ export const SettingsColoredCheckboxRow = ({
     isize = 28,
     description,
     onChange,
-}: InputCheckboxProps) => {
+}: InputCheckSlidedProps) => {
     return (
         <div className="flex items-center justify-between gap-4">
             <div className="flex gap-2 items-center">
@@ -35,7 +35,7 @@ export const SettingsColoredCheckboxRow = ({
                 </div>
             </div>
 
-            <InputCheckbox checked={checked} onChange={onChange} />
+            <InputCheckSlided checked={checked} onChange={onChange} />
         </div>
     );
 };
