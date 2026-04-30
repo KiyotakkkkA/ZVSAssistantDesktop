@@ -1,5 +1,10 @@
 import { Icon } from "@iconify/react";
-import { Button, Separator, TreeView } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import {
+    Button,
+    EmptyState,
+    Separator,
+    TreeView,
+} from "@kiyotakkkka/zvs-uikit-lib/ui";
 import type {
     StorageFileEntity,
     StorageFolderEntity,
@@ -35,90 +40,91 @@ export const StorageFilesContent = ({
 }: StorageFilesContentProps) => {
     return (
         <div className="flex-1 p-4 animate-card-rise-in">
-            <div className="mb-3 flex items-center justify-between gap-2">
-                <div>
-                    <h3 className="text-base text-main-100">Контент</h3>
-                    <p className="text-xs text-main-400">
-                        {selectedFolder
-                            ? `${selectedFolder.name} • ${convertBytesToSize(selectedFolder.size, { inputUnit: "MB" })}`
-                            : "Выберите папку слева"}
-                    </p>
-                </div>
+            {selectedFolder && (
+                <div className="mb-3 flex items-center justify-between gap-2">
+                    <div>
+                        <h3 className="text-base text-main-100">Контент</h3>
+                        <p className="text-xs text-main-400">
+                            {selectedFolder
+                                ? `${selectedFolder.name} • ${convertBytesToSize(selectedFolder.size, { inputUnit: "MB" })}`
+                                : "Выберите папку слева"}
+                        </p>
+                    </div>
 
-                <div className="flex items-center gap-2">
-                    {!selectedFolder?.vecstore_id && (
-                        <>
-                            <ButtonCreate
-                                label="Создать хранилище"
-                                className="p-1 gap-2"
-                                createFn={() =>
-                                    onCreateVecstoreOnFolder(selectedFolder!.id)
-                                }
-                            ></ButtonCreate>
-                            <Separator
-                                orientation="vertical"
-                                className="h-5 bg-main-400"
-                            />
-                        </>
-                    )}
-                    <Button
-                        label="Добавить файл"
-                        variant="primary"
-                        shape="rounded-lg"
-                        className="h-9 w-9 p-0"
-                        disabled={!selectedFolder || isSubmitting}
-                        onClick={onAddFiles}
-                    >
-                        <Icon icon="mdi:file-plus-outline" />
-                    </Button>
-                    <Button
-                        label="Открыть директорию"
-                        variant="primary"
-                        shape="rounded-lg"
-                        className="h-9 w-9 p-0"
-                        disabled={!selectedFolder}
-                        onClick={onOpenFolderPath}
-                    >
-                        <Icon icon="mdi:folder-open-outline" />
-                    </Button>
-                    <Separator
-                        orientation="vertical"
-                        className="h-5 bg-main-400"
-                    />
-                    <Button
-                        label="Обновить содержимое"
-                        variant="secondary"
-                        shape="rounded-lg"
-                        className="h-9 w-9 p-0"
-                        disabled={!selectedFolder || isSubmitting}
-                        onClick={onRefreshFolder}
-                    >
-                        <Icon icon="mdi:refresh" />
-                    </Button>
-                    <Button
-                        label="Переименовать"
-                        variant="secondary"
-                        shape="rounded-lg"
-                        className="h-9 w-9 p-0"
-                        disabled={!selectedFolder}
-                        onClick={onOpenRenameModal}
-                    >
-                        <Icon icon="mdi:pencil-outline" />
-                    </Button>
-                    <Separator
-                        orientation="vertical"
-                        className="h-5 bg-main-400"
-                    />
-                    <ButtonDelete
-                        size={22}
-                        className="h-9 w-9 p-0"
-                        confirm
-                        labelModal={`Вы уверены, что хотите удалить папку '${selectedFolder?.name}' и все её содержимое?`}
-                        disabled={!selectedFolder}
-                        deleteFn={onDeleteFolder}
-                    />
+                    <div className="flex items-center gap-2">
+                        {!selectedFolder?.vecstore_id && (
+                            <>
+                                <ButtonCreate
+                                    label="Создать хранилище"
+                                    className="p-1 gap-2"
+                                    createFn={() =>
+                                        onCreateVecstoreOnFolder(
+                                            selectedFolder!.id,
+                                        )
+                                    }
+                                ></ButtonCreate>
+                                <Separator
+                                    orientation="vertical"
+                                    className="h-5 bg-main-400"
+                                />
+                            </>
+                        )}
+                        <Button
+                            label="Добавить файл"
+                            variant="primary"
+                            shape="rounded-lg"
+                            className="h-9 w-9 p-0"
+                            disabled={isSubmitting}
+                            onClick={onAddFiles}
+                        >
+                            <Icon icon="mdi:file-plus-outline" />
+                        </Button>
+                        <Button
+                            label="Открыть директорию"
+                            variant="primary"
+                            shape="rounded-lg"
+                            className="h-9 w-9 p-0"
+                            onClick={onOpenFolderPath}
+                        >
+                            <Icon icon="mdi:folder-open-outline" />
+                        </Button>
+                        <Separator
+                            orientation="vertical"
+                            className="h-5 bg-main-400"
+                        />
+                        <Button
+                            label="Обновить содержимое"
+                            variant="secondary"
+                            shape="rounded-lg"
+                            className="h-9 w-9 p-0"
+                            disabled={isSubmitting}
+                            onClick={onRefreshFolder}
+                        >
+                            <Icon icon="mdi:refresh" />
+                        </Button>
+                        <Button
+                            label="Переименовать"
+                            variant="secondary"
+                            shape="rounded-lg"
+                            className="h-9 w-9 p-0"
+                            onClick={onOpenRenameModal}
+                        >
+                            <Icon icon="mdi:pencil-outline" />
+                        </Button>
+                        <Separator
+                            orientation="vertical"
+                            className="h-5 bg-main-400"
+                        />
+                        <ButtonDelete
+                            size={22}
+                            className="h-9 w-9 p-0"
+                            confirm
+                            labelModal={`Вы уверены, что хотите удалить папку '${selectedFolder?.name}' и все её содержимое?`}
+                            deleteFn={onDeleteFolder}
+                        />
+                    </div>
                 </div>
-            </div>
+            )}
 
             <div className="rounded-2xl">
                 {selectedFolder && filteredFiles.length > 0 ? (
@@ -152,19 +158,23 @@ export const StorageFilesContent = ({
                     </TreeView>
                 ) : (
                     <div className="flex h-full flex-col items-center justify-center gap-3">
-                        <Icon
-                            icon="mdi:folder-search-outline"
-                            width={64}
-                            height={64}
-                            className="text-main-500"
+                        <EmptyState
+                            icon={
+                                <Icon
+                                    className="p-1.5"
+                                    icon="mdi:folder-off-outline"
+                                    width={48}
+                                    height={48}
+                                />
+                            }
+                            className="w-full"
+                            title={`${selectedFolder ? "Не было найдено ни одного файла" : "Папка не выбрана"}`}
+                            description={
+                                selectedFolder
+                                    ? "Попробуйте добавить файлы в эту папку."
+                                    : "Выберите папку слева, чтобы увидеть её содержимое."
+                            }
                         />
-                        <p className="text-sm text-main-300">
-                            {!selectedFolder
-                                ? "Папка не выбрана"
-                                : selectedFolderFiles.length === 0
-                                  ? "Папка пуста"
-                                  : "Файлы не найдены"}
-                        </p>
                     </div>
                 )}
             </div>
