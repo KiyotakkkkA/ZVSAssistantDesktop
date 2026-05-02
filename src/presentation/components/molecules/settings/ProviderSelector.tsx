@@ -52,52 +52,47 @@ export function ProviderSelector({
 
     return (
         <Dropdown
-            options={dropdownOptions}
             disabled={disabled}
             menuPlacement="bottom"
-            classNames={{
-                menu: "border border-main-700/80 bg-main-900 shadow-xl",
-            }}
-            renderTrigger={({
-                toggleOpen,
-                triggerRef,
-                disabled,
-                ariaProps,
-            }) => (
-                <button
-                    type="button"
-                    ref={triggerRef}
-                    disabled={disabled}
-                    onClick={toggleOpen}
-                    className={`relative flex w-full items-center justify-between gap-3 rounded-xl border border-main-700/80 bg-main-800/65 px-3 py-2.5 text-left transition-colors hover:bg-main-700/70 ${className ?? ""} cursor-pointer`}
-                    {...ariaProps}
-                >
-                    <span className="flex min-w-0 items-center gap-2">
-                        <span
-                            className={`inline-flex items-center justify-center rounded-md bg-main-700/75 p-1 ${selectedOption?.logoClassName ?? "text-main-100"}`}
-                        >
-                            <Icon
-                                icon={
-                                    selectedOption?.logoIcon ?? "mdi:connection"
-                                }
-                                width={16}
-                                height={16}
-                            />
-                        </span>
-
-                        <span className="truncate text-sm text-main-100">
-                            {selectedOption?.label ?? placeholder}
-                        </span>
+            menuWidth="max-content"
+            menuRole="listbox"
+            className={className}
+        >
+            <Dropdown.Trigger
+                className={`relative flex w-full items-center justify-between gap-3 rounded-xl border border-main-700/80 bg-main-800/65 px-3 py-2.5 text-left transition-colors hover:bg-main-700/70 ${className ?? ""} cursor-pointer`}
+            >
+                <span className="flex min-w-0 items-center gap-2">
+                    <span
+                        className={`inline-flex items-center justify-center rounded-md bg-main-700/75 p-1 ${selectedOption?.logoClassName ?? "text-main-100"}`}
+                    >
+                        <Icon
+                            icon={selectedOption?.logoIcon ?? "mdi:connection"}
+                            width={16}
+                            height={16}
+                        />
                     </span>
 
-                    <Icon
-                        icon="mdi:chevron-down"
-                        width={18}
-                        height={18}
-                        className="shrink-0 text-main-300"
-                    />
-                </button>
-            )}
-        />
+                    <span className="truncate text-sm text-main-100">
+                        {selectedOption?.label ?? placeholder}
+                    </span>
+                </span>
+            </Dropdown.Trigger>
+
+            <Dropdown.Menu className="border border-main-700/80 bg-main-900 shadow-xl space-y-2">
+                {dropdownOptions.map((option) => (
+                    <Dropdown.Item
+                        key={option.value}
+                        onClick={option.onClick}
+                        active={option.value === value}
+                        className="rounded-lg px-3 py-2 text-sm hover:bg-main-700/70"
+                    >
+                        <span className="flex items-center gap-2">
+                            {option.icon}
+                            {option.label}
+                        </span>
+                    </Dropdown.Item>
+                ))}
+            </Dropdown.Menu>
+        </Dropdown>
     );
 }

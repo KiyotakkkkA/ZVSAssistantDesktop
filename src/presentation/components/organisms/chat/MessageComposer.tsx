@@ -239,34 +239,40 @@ export const MessageComposer = observer(
                                     )}
 
                                     <Dropdown
-                                        options={attachOptions}
                                         menuPlacement="top"
-                                        classNames={{
-                                            menu: "border border-main-700/70 shadow-lg bg-main-900/92 backdrop-blur-md",
-                                        }}
-                                        renderTrigger={({
-                                            toggleOpen,
-                                            triggerRef,
-                                            disabled,
-                                            ariaProps,
-                                        }) => (
-                                            <Button
-                                                label="Attach"
-                                                variant="secondary"
-                                                className="h-9 w-9 p-0"
-                                                shape={"rounded-r-full"}
-                                                ref={triggerRef}
-                                                disabled={disabled}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleOpen();
-                                                }}
-                                                {...ariaProps}
-                                            >
-                                                <Icon icon={"mdi:paperclip"} />
-                                            </Button>
-                                        )}
-                                    />
+                                        menuWidth={250}
+                                    >
+                                        <Dropdown.Trigger
+                                            className="rounded-r-full bg-main-700 hover:bg-main-600 transition-color min-h-0 p-1.5"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                            }}
+                                            placeholder=""
+                                            icon={false}
+                                        >
+                                            <Icon
+                                                className="text-main-50"
+                                                icon="mdi:paperclip"
+                                                width={22}
+                                                height={22}
+                                            />
+                                        </Dropdown.Trigger>
+
+                                        <Dropdown.Menu className="border border-main-700/80 bg-main-900 shadow-xl space-y-2">
+                                            {attachOptions.map((option) => (
+                                                <Dropdown.Item
+                                                    key={option.value}
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        option.onClick();
+                                                    }}
+                                                    icon={option.icon}
+                                                >
+                                                    {option.label}
+                                                </Dropdown.Item>
+                                            ))}
+                                        </Dropdown.Menu>
+                                    </Dropdown>
                                 </div>
 
                                 <div className="flex items-center gap-2">

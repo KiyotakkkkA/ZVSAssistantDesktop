@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { Switcher } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { ImagePreviewBlock } from "./ImagePreviewBlock";
-import { ShikiCodeBlock } from "./ShikiCodeBlock";
+import { CodeBlock } from "./CodeBlock";
 
 type MermaidModule = {
     initialize: (config: {
@@ -168,7 +168,7 @@ export function MermaidDiagramBlock({ code }: MermaidDiagramBlockProps) {
             </div>
 
             {viewMode === "code" && (
-                <ShikiCodeBlock code={code} language="mermaid" />
+                <CodeBlock code={code} language="mermaid" />
             )}
 
             {viewMode === "image" && isRendering && (

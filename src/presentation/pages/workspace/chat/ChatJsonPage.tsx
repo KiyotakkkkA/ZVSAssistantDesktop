@@ -1,7 +1,7 @@
 import { observer } from "mobx-react-lite";
 import { workspaceStore } from "../../../../stores/workspaceStore";
-import { ShikiCodeBlock } from "../../../components/molecules/render";
 import { Separator } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import { CodeBlock } from "../../../components/molecules/render";
 
 const safeJson = (value: unknown) => {
     try {
@@ -22,7 +22,7 @@ export const ChatJsonPage = observer(() => {
     return (
         <div className="flex h-full min-h-0 animate-page-fade-in justify-center">
             <div className="min-h-0 overflow-auto rounded-xl max-w-3/4  ">
-                <ShikiCodeBlock code={dialogContextJson} language="json" />
+                <CodeBlock code={dialogContextJson} language="json" />
                 <Separator className="my-4" />
             </div>
         </div>

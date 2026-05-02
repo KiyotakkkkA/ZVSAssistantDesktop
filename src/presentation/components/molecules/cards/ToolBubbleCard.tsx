@@ -1,7 +1,7 @@
 import { Icon } from "@iconify/react";
 import { Accordeon, Loader } from "@kiyotakkkka/zvs-uikit-lib/ui";
-import { ShikiCodeBlock } from "../render/ShikiCodeBlock";
 import type { ToolTrace } from "../../../../../electron/models/tool";
+import { CodeBlock } from "../render";
 
 type ToolBubbleCardProps = {
     toolTrace?: ToolTrace;
@@ -85,7 +85,7 @@ export function ToolBubbleCard({
                                 ВЫЗОВ
                             </p>
                             <div className="max-h-72 overflow-y-auto rounded-xl">
-                                <ShikiCodeBlock
+                                <CodeBlock
                                     code={safeJson(toolTrace.args ?? {})}
                                     language="json"
                                 />
@@ -96,7 +96,7 @@ export function ToolBubbleCard({
                                 РЕЗУЛЬТАТ
                             </p>
                             <div className="max-h-72 overflow-y-auto rounded-xl">
-                                <ShikiCodeBlock
+                                <CodeBlock
                                     code={safeJson(
                                         toolTrace.error
                                             ? { error: toolTrace.error }

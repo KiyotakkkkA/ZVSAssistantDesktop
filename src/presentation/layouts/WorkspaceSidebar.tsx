@@ -138,30 +138,35 @@ export const WorkspaceSidebar = observer(() => {
                         Рабочая область
                     </p>
                     <Dropdown
-                        options={createOptionsList}
+                        menuRole="listbox"
+                        menuWidth={180}
                         menuPlacement="bottom"
-                        classNames={{
-                            menu: "border border-main-700/70 shadow-lg bg-main-900/92 backdrop-blur-md",
-                        }}
-                        renderTrigger={({
-                            toggleOpen,
-                            triggerRef,
-                            disabled,
-                            ariaProps,
-                        }) => (
-                            <Button
-                                label="Создать"
-                                className="p-2 text-sm"
-                                variant="primary"
-                                ref={triggerRef}
-                                disabled={disabled}
-                                onClick={toggleOpen}
-                                {...ariaProps}
-                            >
-                                <Icon icon="mdi:plus" width="14" height="14" />
-                            </Button>
-                        )}
-                    />
+                    >
+                        <Dropdown.Trigger
+                            className="bg-main-50 min-h-0 py-1 px-2 text-sm rounded-md"
+                            icon={""}
+                        >
+                            <span className="flex gap-2 items-center text-main-900">
+                                Создать
+                                <Icon icon="mdi:plus" width={20} height={20} />
+                            </span>
+                        </Dropdown.Trigger>
+                        <Dropdown.Menu>
+                            {createOptionsList.map((option) => (
+                                <Dropdown.Item
+                                    key={option.value}
+                                    onClick={option.onClick}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        {option.icon}
+                                        <span className="text-sm">
+                                            {option.label}
+                                        </span>
+                                    </div>
+                                </Dropdown.Item>
+                            ))}
+                        </Dropdown.Menu>
+                    </Dropdown>
                 </div>
 
                 <PrettyBR icon="mdi:chat" label="Диалоги" />

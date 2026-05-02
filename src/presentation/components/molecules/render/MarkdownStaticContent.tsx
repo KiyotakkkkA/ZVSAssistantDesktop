@@ -3,7 +3,7 @@ import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ImagePreviewBlock } from "./ImagePreviewBlock";
 import { MermaidDiagramBlock } from "./MermaidDiagramBlock";
-import { ShikiCodeBlock } from "./ShikiCodeBlock";
+import { CodeBlock } from "./CodeBlock";
 
 interface MarkdownStaticContentProps {
     content: string;
@@ -47,7 +47,7 @@ const MARKDOWN_COMPONENTS: Components = {
             return <MermaidDiagramBlock code={rawCode} />;
         }
 
-        return <ShikiCodeBlock code={rawCode} language={language} />;
+        return <CodeBlock code={rawCode} language={language} />;
     },
     pre: ({ children }) => children,
     a: ({ href, children }) => (
