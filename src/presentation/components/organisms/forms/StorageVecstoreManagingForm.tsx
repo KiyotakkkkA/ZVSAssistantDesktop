@@ -139,9 +139,8 @@ export const StorageVecstoreManagingForm = ({
                                 onChange={setFolderId}
                                 options={folderOptions}
                                 classNames={{
-                                    menu: "border border-main-700/70 shadow-xl bg-main-950/95 backdrop-blur-md",
-                                    trigger:
-                                        "min-w-44 border border-main-700/70 bg-main-900/75 px-3 text-main-100 shadow-inner shadow-black/20",
+                                    menu: "border border-main-700/70 shadow-lg bg-main-900/92 backdrop-blur-md",
+                                    trigger: "bg-main-700/45",
                                 }}
                             />
                         )}

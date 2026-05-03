@@ -1,6 +1,7 @@
 import { Icon } from "@iconify/react";
 import {
     Button,
+    EmptyState,
     InputSmall,
     Separator,
     TreeView,
@@ -182,17 +183,19 @@ export const StorageVectstoresContent = ({
     if (!selectedVecstore) {
         return (
             <div className="flex-1 p-4 animate-card-rise-in">
-                <div className="flex flex-col items-center justify-center gap-3">
-                    <Icon
-                        icon="mdi:database-off"
-                        width={48}
-                        height={48}
-                        className="text-main-500"
-                    />
-                    <p className="text-sm text-main-300">
-                        Хранилище не выбрано
-                    </p>
-                </div>
+                <EmptyState
+                    icon={
+                        <Icon
+                            className="p-1.5"
+                            icon="mdi:database-off-outline"
+                            width={48}
+                            height={48}
+                        />
+                    }
+                    className="w-full"
+                    title="Хранилища не найдены"
+                    description="Создайте новое векторное хранилище, используя панель слева."
+                />
             </div>
         );
     }
