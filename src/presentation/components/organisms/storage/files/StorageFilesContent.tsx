@@ -28,7 +28,6 @@ type StorageFilesContentProps = {
 
 export const StorageFilesContent = ({
     selectedFolder,
-    selectedFolderFiles,
     filteredFiles,
     isSubmitting,
     onAddFiles,

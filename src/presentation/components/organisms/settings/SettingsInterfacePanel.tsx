@@ -1,5 +1,5 @@
 import { Select } from "@kiyotakkkka/zvs-uikit-lib/ui";
-import { useTheme } from "../../../../hooks/useTheme";
+import { useStyle } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { SettingsColoredCheckboxRow } from "../../molecules/settings";
 import { observer } from "mobx-react-lite";
 import { profileStore } from "../../../../stores/profileStore";
@@ -7,7 +7,7 @@ import { profileStore } from "../../../../stores/profileStore";
 export const SettingsInterfacePanel = observer(() => {
     const currentUser = profileStore.user;
     const generalData = currentUser?.generalData;
-    const { themePreference, themeOptions, setTheme } = useTheme();
+    const { changeTheme } = useStyle();
 
     return (
         <div className="space-y-4">
@@ -18,11 +18,32 @@ export const SettingsInterfacePanel = observer(() => {
 
                 <Select
                     searchable
-                    value={themePreference}
-                    onChange={(nextValue: string) => {
-                        void setTheme(nextValue);
+                    value={generalData?.preferredTheme || "dark-main"}
+                    onChange={async (nextValue: string) => {
+                        const selectedTheme =
+                            await window.profile.getThemeData(nextValue);
+
+                        changeTheme({
+                            50: selectedTheme.palette["--color-main-50"],
+                            100: selectedTheme.palette["--color-main-100"],
+                            200: selectedTheme.palette["--color-main-200"],
+                            300: selectedTheme.palette["--color-main-300"],
+                            400: selectedTheme.palette["--color-main-400"],
+                            500: selectedTheme.palette["--color-main-500"],
+                            600: selectedTheme.palette["--color-main-600"],
+                            700: selectedTheme.palette["--color-main-700"],
+                            800: selectedTheme.palette["--color-main-800"],
+                            900: selectedTheme.palette["--color-main-900"],
+                        });
+
+                        profileStore.updateGeneralData({
+                            preferredTheme: nextValue,
+                        });
                     }}
-                    options={themeOptions}
+                    options={profileStore.themes.map((theme) => ({
+                        value: theme.id,
+                        label: theme.name,
+                    }))}
                     placeholder="Выберите тему"
                     classNames={{
                         menu: "border border-main-700/70 shadow-lg bg-main-900/92 backdrop-blur-md",
