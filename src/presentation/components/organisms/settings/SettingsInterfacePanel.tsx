@@ -12,9 +12,12 @@ export const SettingsInterfacePanel = observer(() => {
     return (
         <div className="space-y-4">
             <div className="py-3 flex items-center justify-between border-b border-main-700/80">
-                <span className="text-sm font-medium text-main-200">Тема</span>
+                <span className="text-sm font-medium text-main-200">
+                    Тема приложения
+                </span>
 
                 <Select
+                    searchable
                     value={themePreference}
                     onChange={(nextValue: string) => {
                         void setTheme(nextValue);

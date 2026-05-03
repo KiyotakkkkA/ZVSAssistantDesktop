@@ -18,7 +18,7 @@
     "dependencies": {
         "@ai-sdk/openai-compatible": "^2.0.35",
         "@iconify/react": "^6.0.2",
-        "@kiyotakkkka/zvs-uikit-lib": "^3.4.6",
+        "@kiyotakkkka/zvs-uikit-lib": "^3.4.8",
         "@lancedb/lancedb": "^0.27.2",
         "ai": "^6.0.116",
         "better-sqlite3": "^12.6.2",
@@ -31,7 +31,6 @@
         "react-markdown": "^10.1.0",
         "react-router-dom": "^7.13.0",
         "remark-gfm": "^4.0.1",
-        "shiki": "^3.22.0",
         "utf-8-validate": "^6.0.6",
         "zod": "^4.3.6",
         "zod-to-json-schema": "^3.25.1"

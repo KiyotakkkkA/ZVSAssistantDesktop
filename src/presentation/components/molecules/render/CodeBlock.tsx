@@ -1,6 +1,7 @@
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { MsgToasts } from "../../../../data/MsgToasts";
-import { CodeView } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import { Button, CodeView } from "@kiyotakkkka/zvs-uikit-lib/ui";
+import { Icon } from "@iconify/react";
 
 interface CodeBlockProps {
     code: string;
@@ -48,8 +49,34 @@ export const CodeBlock = ({ code, language }: CodeBlockProps) => {
         <CodeView
             code={code}
             language={normalizedLanguage}
-            onCopy={copyCode}
-            onDownload={handleDownload}
-        />
+            theme="monokai"
+            defaultActions={false}
+        >
+            <CodeView.Header
+                actions={
+                    <div className="flex gap-4">
+                        <Button
+                            variant="ghost"
+                            shape="rounded-md"
+                            className="text-xs gap-2 hover:bg-main-800 p-1 text-main-400/90 "
+                            onClick={handleDownload}
+                        >
+                            <Icon icon="mdi:download" width={18} height={18} />
+                            Скачать
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            shape="rounded-md"
+                            className="text-xs gap-2 hover:bg-main-800 p-1 text-main-400/90 "
+                            onClick={copyCode}
+                        >
+                            <Icon icon="mdi:files" width={18} height={18} />
+                            Скопировать
+                        </Button>
+                    </div>
+                }
+            />
+            <CodeView.Content />
+        </CodeView>
     );
 };
