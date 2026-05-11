@@ -5,3 +5,4 @@ export * from "./ipcProfilePack";
 export * from "./ipcSecretsPack";
 export * from "./ipcStoragePack";
 export * from "./ipcWorkspacePack";
+export * from "./ipcAgentsPack";

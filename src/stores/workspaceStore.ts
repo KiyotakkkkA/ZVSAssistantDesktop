@@ -11,6 +11,7 @@ import type { PersistedDialog } from "../types/electron";
 import { getModeSystemPrompt } from "../prompts/base";
 import { getUserPrompt } from "../prompts/injectable";
 import { profileStore } from "./profileStore";
+import { getAgentTools } from "../data/BaseModels";
 import {
     createDialogId,
     DialogIdFormat,
@@ -579,12 +580,19 @@ class WorkspaceStore {
 
     private buildUserContextContent(userMessage: string) {
         const userGeneralData = profileStore.user?.generalData;
+        const mode = this.getSelectedAssistantMode();
+        const enabledTools =
+            mode === "agent"
+                ? (userGeneralData?.enabledPromptTools ?? [])
+                : getAgentTools(mode);
+        const requiredTools =
+            mode === "agent" ? (userGeneralData?.requiredPromptTools ?? []) : [];
 
         return getUserPrompt(
             userMessage,
-            this.getSelectedAssistantMode(),
-            userGeneralData?.enabledPromptTools ?? [],
-            userGeneralData?.requiredPromptTools ?? [],
+            mode,
+            enabledTools,
+            requiredTools,
         );
     }
 

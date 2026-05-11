@@ -18,6 +18,7 @@ import {
     registerIpcWorkspacePack,
     registerIpcCorePack,
     registerIpcJobsPack,
+    registerIpcAgentsPack,
     broadcastJobsRealtimeEvent,
 } from "./ipc";
 
@@ -27,6 +28,7 @@ import { DialogRepository } from "./repositories/DialogRepository";
 import { JobRepository } from "./repositories/JobRepository";
 import { StorageRepository } from "./repositories/StorageRepository";
 import { SecretsRepository } from "./repositories/SecretsRepository";
+import { AgentsRepository } from "./repositories/AgentsRepository";
 import { defaultUser } from "./static/data/baseProfile";
 import { JobsStorage } from "./services/jobs/JobsStorage";
 import { JobService } from "./services/jobs/JobService";
@@ -198,6 +200,7 @@ app.whenReady().then(() => {
         new LanceStoreService(chatGenService),
     );
     const secretsRepository = new SecretsRepository(databaseService);
+    const agentsRepository = new AgentsRepository(databaseService);
 
     jobsStorage = new JobsStorage(jobRepository, userRepository);
     const appStorageService = new AppStorageService(storageRepository);
@@ -236,6 +239,10 @@ app.whenReady().then(() => {
 
     registerIpcJobsPack({
         jobService,
+    });
+
+    registerIpcAgentsPack({
+        agentsRepository,
     });
 
     registerIpcCorePack();

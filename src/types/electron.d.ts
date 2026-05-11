@@ -2,6 +2,7 @@ import type {
     IpcChatNamespace,
     IpcCoreNamespace,
     IpcJobsNamespace,
+    IpcAgentsNamespace,
     IpcProfileNamespace,
     IpcSecretsNamespace,
     IpcStorageNamespace,
@@ -22,5 +23,6 @@ declare global {
         jobs: IpcJobsNamespace;
         storage: IpcStorageNamespace;
         secrets: IpcSecretsNamespace;
+        agents: IpcAgentsNamespace;
     }
 }

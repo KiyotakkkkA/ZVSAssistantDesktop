@@ -4,6 +4,7 @@ import type {
     IpcChatNamespace,
     IpcCoreNamespace,
     IpcJobsNamespace,
+    IpcAgentsNamespace,
     IpcProfileNamespace,
     IpcSecretsNamespace,
     IpcStorageNamespace,
@@ -246,3 +247,14 @@ const secretsNamespace: IpcSecretsNamespace = {
 };
 
 contextBridge.exposeInMainWorld("secrets", secretsNamespace);
+
+const agentsNamespace: IpcAgentsNamespace = {
+    getAgents() {
+        return ipcRenderer.invoke("agents:get");
+    },
+    createAgent(payload) {
+        return ipcRenderer.invoke("agents:create", payload);
+    },
+};
+
+contextBridge.exposeInMainWorld("agents", agentsNamespace);

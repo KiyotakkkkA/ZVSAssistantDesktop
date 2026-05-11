@@ -8,6 +8,7 @@ import {
     ChatViewPage,
 } from "./presentation/pages/workspace/chat";
 import { AgentsViewPage } from "./presentation/pages/agents/AgentsViewPage";
+import { AgentsCreatePage } from "./presentation/pages/agents/AgentsCreatePage";
 import { ExtensionsViewPage } from "./presentation/pages/extensions/ExtensionsViewPage";
 import { StorageViewPage } from "./presentation/pages/storage/StorageViewPage";
 import { SecretsManagerPage } from "./presentation/pages/secrets/SecretsManagerPage";
@@ -59,6 +60,10 @@ export const router = createHashRouter([
             {
                 path: "agents",
                 element: createElement(AgentsViewPage),
+            },
+            {
+                path: "agents/create",
+                element: createElement(AgentsCreatePage),
             },
             {
                 path: "extensions",

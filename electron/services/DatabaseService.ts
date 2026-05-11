@@ -107,6 +107,23 @@ export class DatabaseService {
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS agents (
+                id TEXT PRIMARY KEY,
+                agent_name TEXT NOT NULL,
+                agent_prompt TEXT NOT NULL,
+                agent_tools_set TEXT NOT NULL,
+                chat_label TEXT NOT NULL,
+                chat_icon TEXT NOT NULL,
+                chat_placeholder TEXT NOT NULL,
+                is_editable INTEGER NOT NULL DEFAULT 1,
+                model_provider TEXT NOT NULL DEFAULT '',
+                model_base_url TEXT NOT NULL DEFAULT '',
+                model_name TEXT NOT NULL DEFAULT '',
+                model_api_key TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
         `);
     }
 }

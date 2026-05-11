@@ -85,27 +85,16 @@ export const AgentsListContent = observer(
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <Button
-                            label={isActive ? "Выбран" : "Выбрать в чат"}
-                            variant={isActive ? "success" : "primary"}
-                            shape="rounded-lg"
-                            className="h-9 px-3"
-                            disabled={isActive}
-                            onClick={handleUseInChat}
-                        >
-                            <Icon icon="mdi:check-circle-outline" />
-                        </Button>
-                        <Button
-                            label="Копия"
-                            variant="secondary"
-                            shape="rounded-lg"
-                            className="h-9 px-3"
-                            disabled={!selectedAgent.isEditable}
-                        >
-                            <Icon icon="mdi:content-copy" />
-                        </Button>
-                    </div>
+                    <Button
+                        label={isActive ? "Выбран" : "Выбрать в чат"}
+                        variant={isActive ? "success" : "primary"}
+                        shape="rounded-lg"
+                        className="h-9 px-3"
+                        disabled={isActive}
+                        onClick={handleUseInChat}
+                    >
+                        <Icon icon="mdi:check-circle-outline" />
+                    </Button>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">

@@ -1,9 +1,10 @@
 import { Icon } from "@iconify/react";
 import { Button, InputSmall, PrettyBR } from "@kiyotakkkka/zvs-uikit-lib/ui";
-import { baseModelList } from "../../../../../data/BaseModels";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AgentsListUnitCard } from "../../../molecules/cards";
 import { ButtonCreate } from "../../../atoms";
+import { agentsStore } from "../../../../../stores/agentsStore";
 
 type AgentsListSidebarProps = {
     selectedAgentId: string | null;
@@ -14,10 +15,11 @@ export const AgentsListSidebar = ({
     selectedAgentId,
     onSelectAgent,
 }: AgentsListSidebarProps) => {
+    const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState("");
 
     const normalizedQuery = searchQuery.trim().toLowerCase();
-    const filteredAgents = baseModelList.filter((agent) => {
+    const filteredAgents = agentsStore.agents.filter((agent) => {
         if (!normalizedQuery) {
             return true;
         }
@@ -39,7 +41,7 @@ export const AgentsListSidebar = ({
                 <ButtonCreate
                     label="Создать агента"
                     className="flex-1"
-                    createFn={() => null}
+                    createFn={() => navigate("/agents/create")}
                 ></ButtonCreate>
                 <Button
                     variant="secondary"

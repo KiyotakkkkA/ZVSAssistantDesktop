@@ -22,6 +22,7 @@ import type {
     JobRealtimeEvent,
     JobRecord,
 } from "./models/job";
+import type { AgentEntity, CreateAgentDto } from "./models/agent";
 import { DialogIdFormat } from "../src/utils/creators";
 
 export type ChatStreamEventPayload = {
@@ -144,4 +145,9 @@ export interface IpcSecretsNamespace {
     getSecretsByType(type: string): Promise<SecretEntity[]>;
     createSecret(payload: CreateSecretDto): Promise<SecretEntity>;
     deleteSecret(id: string): Promise<void>;
+}
+
+export interface IpcAgentsNamespace {
+    getAgents(): Promise<AgentEntity[]>;
+    createAgent(payload: CreateAgentDto): Promise<AgentEntity>;
 }

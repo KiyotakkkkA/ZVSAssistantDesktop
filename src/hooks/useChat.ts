@@ -23,7 +23,7 @@ import { toolsStorage } from "../stores/toolsStorage";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { createId, createStageId } from "../utils/creators";
 import { MsgToasts } from "../data/MsgToasts";
-import { canUseAgentTools } from "../data/BaseModels";
+import { canUseAgentTools, getAgentTools } from "../data/BaseModels";
 
 const appendAssistantStageDelta = (
     message: DialogUiMessage,
@@ -518,12 +518,15 @@ export const useChat = () => {
                     );
                 }, false);
 
-                const enabledToolNames = canUseAgentTools(mode ?? "chat")
-                    ? toJS(
-                          profileStore.user?.generalData.enabledPromptTools ??
-                              [],
-                      )
-                    : [];
+                const enabledToolNames =
+                    mode === "agent"
+                        ? toJS(
+                              profileStore.user?.generalData
+                                  .enabledPromptTools ?? [],
+                          )
+                        : canUseAgentTools(mode ?? "chat")
+                          ? getAgentTools(mode ?? "chat")
+                          : [];
 
                 window.chat.streamResponseGeneration({
                     requestId,
@@ -531,10 +534,10 @@ export const useChat = () => {
                         skipUserUiMessage || normalizedPrompt.length === 0
                             ? undefined
                             : normalizedPrompt,
-                    messages: modelMessages,
+                    messages: toJS(modelMessages),
                     dialogId: activeDialogId,
                     toolPackIds: ["systemTools"],
-                    enabledToolNames,
+                    enabledToolNames: [...enabledToolNames],
                 });
                 return true;
             } catch (error) {

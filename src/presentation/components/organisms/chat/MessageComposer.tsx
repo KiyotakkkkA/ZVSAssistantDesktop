@@ -9,17 +9,15 @@ import {
 } from "@kiyotakkkka/zvs-uikit-lib/ui";
 import { observer } from "mobx-react-lite";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { ChatImageAttachment } from "../../../../../electron/models/chat";
 import type { BuiltInAssistantMode } from "../../../../../electron/models/user";
-import {
-    baseModelEntries,
-    canUseAgentTools,
-    getBaseModel,
-} from "../../../../data/BaseModels";
+import { getBaseModel } from "../../../../data/BaseModels";
 import { useUpload } from "../../../../hooks";
 import { profileStore } from "../../../../stores/profileStore";
 import { storageStore } from "../../../../stores/storageStore";
 import { workspaceStore } from "../../../../stores/workspaceStore";
+import { agentsStore } from "../../../../stores/agentsStore";
 import { convertBytesToSize } from "../../../../utils/converters";
 import { ChatRequiredToolsPickForm, ChatVecstoresPickForm } from "../forms";
 
@@ -36,6 +34,7 @@ type MessageComposerProps = {
 export const MessageComposer = observer(
     ({ input, setInput, onSubmit, isGenerating }: MessageComposerProps) => {
         const areaRef = useRef<HTMLTextAreaElement>(null);
+        const navigate = useNavigate();
         const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
         const [isVecstoresModalOpen, setIsVecstoresModalOpen] = useState(false);
         const [toolsQuery, setToolsQuery] = useState("");
@@ -224,7 +223,7 @@ export const MessageComposer = observer(
                                     >
                                         <Icon icon="mdi:storage" />
                                     </Button>
-                                    {canUseAgentTools(activeMode) && (
+                                    {activeMode === "agent" && (
                                         <Button
                                             label="Tools"
                                             className="h-9 w-9 p-0"
@@ -287,12 +286,12 @@ export const MessageComposer = observer(
                                         }}
                                         content={
                                             <div
-                                                className="flex min-w-44 flex-col gap-1"
+                                                className="flex w-64 max-w-72 flex-col gap-1"
                                                 onClick={(event) => {
                                                     event.stopPropagation();
                                                 }}
                                             >
-                                                {baseModelEntries.map(([modeKey, model]) => {
+                                                {agentsStore.agentEntries.map(([modeKey, model]) => {
                                                     const isActive =
                                                         model.id === activeModel.id;
 
@@ -315,14 +314,15 @@ export const MessageComposer = observer(
                                                             }}
                                                             variant=""
                                                             shape="rounded-lg"
-                                                            className={`group/aimode inline-flex h-9 px-2.5 text-[12px] border-transparent w-full justify-start ${
+                                                            title={model.chatLabel}
+                                                            className={`group/aimode inline-flex h-9 min-w-0 px-2.5 text-[12px] border-transparent w-full justify-start ${
                                                                 isActive
                                                                     ? "bg-main-700/70 text-main-50"
                                                                     : "text-main-300 hover:bg-main-700/45 hover:text-main-100"
                                                             }`}
                                                         >
-                                                            <div className="flex justify-between w-full">
-                                                                <span className="inline-flex items-center gap-2">
+                                                            <div className="flex min-w-0 w-full items-center justify-between gap-2">
+                                                                <span className="inline-flex min-w-0 items-center gap-2">
                                                                     <Icon
                                                                         icon={
                                                                             model.chatIcon
@@ -333,10 +333,13 @@ export const MessageComposer = observer(
                                                                         height={
                                                                             14
                                                                         }
+                                                                        className="shrink-0"
                                                                     />
-                                                                    {
-                                                                        model.chatLabel
-                                                                    }
+                                                                    <span className="truncate">
+                                                                        {
+                                                                            model.chatLabel
+                                                                        }
+                                                                    </span>
                                                                 </span>
                                                                 {isActive ? (
                                                                     <Icon
@@ -347,6 +350,7 @@ export const MessageComposer = observer(
                                                                         height={
                                                                             18
                                                                         }
+                                                                        className="shrink-0"
                                                                     />
                                                                 ) : null}
                                                             </div>
@@ -358,6 +362,10 @@ export const MessageComposer = observer(
                                                     type="button"
                                                     variant=""
                                                     className="border-transparent"
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        navigate("/agents/create");
+                                                    }}
                                                 >
                                                     <span className="inline-flex items-center gap-2 text-[12px] text-main-300 hover:text-main-100 py-1">
                                                         <Icon

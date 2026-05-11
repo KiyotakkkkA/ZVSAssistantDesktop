@@ -106,24 +106,47 @@ export const builtInAgents: AssistantModeConfig = {
     },
 };
 
+let customAgents: AssistantModeConfig = {};
+
+const toPlainAgent = (agent: Agent): Agent => ({
+    ...agent,
+    agentToolsSet: [...agent.agentToolsSet],
+});
+
+export const setCustomAgents = (agents: Agent[]) => {
+    customAgents = Object.fromEntries(
+        agents.map((agent) => [agent.id, toPlainAgent(agent)]),
+    );
+};
+
+export const getBaseModels = () => ({
+    ...builtInAgents,
+    ...customAgents,
+});
+
 export const baseModels = builtInAgents;
 
-export const baseModelEntries = Object.entries(baseModels);
+export const getBaseModelEntries = () => Object.entries(getBaseModels());
 
-export const baseModelList = Object.values(baseModels);
+export const getBaseModelList = () => Object.values(getBaseModels());
+
+export const baseModelEntries = Object.entries(builtInAgents);
+
+export const baseModelList = Object.values(builtInAgents);
 
 export const getBaseModel = (mode: BuiltInAssistantMode | string) => {
-    return baseModels[mode] ?? baseModels.chat;
+    return getBaseModels()[mode] ?? builtInAgents.chat;
 };
 
 export const getBaseModelKeyById = (id: string) => {
     return (
-        baseModelEntries.find(([, agent]) => agent.id === id)?.[0] ?? "chat"
+        getBaseModelEntries().find(([, agent]) => agent.id === id)?.[0] ??
+        "chat"
     );
 };
 
 export const getAgentTools = (mode: BuiltInAssistantMode | string) => {
-    return getBaseModel(mode).agentToolsSet;
+    return [...getBaseModel(mode).agentToolsSet];
 };
 
 export const canUseAgentTools = (mode: BuiltInAssistantMode | string) => {

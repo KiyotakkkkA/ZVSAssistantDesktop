@@ -171,6 +171,13 @@ export class MsgToasts {
         };
     };
 
+    static readonly AGENT_SUCCESSFULLY_CREATED = () => {
+        return {
+            title: MsgToasts.STATUS_SUCCESS,
+            description: "Агент успешно создан",
+        };
+    };
+
     static readonly SECRET_SUCCESSFULLY_REMOVED = () => {
         return {
             title: MsgToasts.STATUS_SUCCESS,

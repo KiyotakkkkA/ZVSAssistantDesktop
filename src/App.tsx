@@ -4,12 +4,14 @@ import { router } from "./router";
 import { profileStore } from "./stores/profileStore";
 import { secretsStore } from "./stores/secretsStore";
 import { storageStore } from "./stores/storageStore";
+import { agentsStore } from "./stores/agentsStore";
 
 export default function App() {
     useEffect(() => {
         void profileStore.bootstrap();
         void secretsStore.bootstrap();
         void storageStore.bootstrap();
+        void agentsStore.bootstrap();
     }, []);
 
     return <RouterProvider router={router} />;
