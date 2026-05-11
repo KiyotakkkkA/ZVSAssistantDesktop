@@ -53,9 +53,7 @@ export function ProviderSelector({
     return (
         <Dropdown
             disabled={disabled}
-            menuPlacement="bottom"
             menuWidth="max-content"
-            menuRole="listbox"
             className={className}
         >
             <Dropdown.Trigger

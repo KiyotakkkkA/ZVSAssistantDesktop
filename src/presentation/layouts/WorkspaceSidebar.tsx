@@ -137,11 +137,7 @@ export const WorkspaceSidebar = observer(() => {
                     <p className="text-xs uppercase tracking-[0.18em] text-main-400">
                         Рабочая область
                     </p>
-                    <Dropdown
-                        menuRole="listbox"
-                        menuWidth={180}
-                        menuPlacement="bottom"
-                    >
+                    <Dropdown menuWidth={180} menuPlacement="bottom-left">
                         <Dropdown.Trigger
                             className="bg-main-50 min-h-0 py-1 px-2 text-sm rounded-md"
                             icon={""}

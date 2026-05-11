@@ -239,7 +239,7 @@ export const MessageComposer = observer(
                                     )}
 
                                     <Dropdown
-                                        menuPlacement="top"
+                                        menuPlacement="top-left"
                                         menuWidth={250}
                                     >
                                         <Dropdown.Trigger
