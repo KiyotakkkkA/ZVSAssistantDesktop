@@ -589,13 +589,7 @@ class WorkspaceStore {
     }
 
     private getSelectedAssistantMode(): BuiltInAssistantMode | string {
-        const mode = profileStore.user?.generalData?.selectedAssistantMode;
-
-        if (mode === "agent" || mode === "planning" || mode === "chat") {
-            return mode;
-        }
-
-        return "chat";
+        return profileStore.user?.generalData?.selectedAssistantMode ?? "chat";
     }
 
     private getSystemPromptForMode(mode = this.getSelectedAssistantMode()) {

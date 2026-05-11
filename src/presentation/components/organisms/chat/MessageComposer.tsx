@@ -11,8 +11,12 @@ import { observer } from "mobx-react-lite";
 import { useEffect, useRef, useState } from "react";
 import type { ChatImageAttachment } from "../../../../../electron/models/chat";
 import type { BuiltInAssistantMode } from "../../../../../electron/models/user";
+import {
+    baseModelEntries,
+    canUseAgentTools,
+    getBaseModel,
+} from "../../../../data/BaseModels";
 import { useUpload } from "../../../../hooks";
-import { assistantModes } from "../../../../prompts/modes";
 import { profileStore } from "../../../../stores/profileStore";
 import { storageStore } from "../../../../stores/storageStore";
 import { workspaceStore } from "../../../../stores/workspaceStore";
@@ -59,9 +63,7 @@ export const MessageComposer = observer(
         const canSubmit = input.trim().length > 0 || attachments.length > 0;
         const activeMode =
             profileStore.user?.generalData.selectedAssistantMode ?? "chat";
-        const activeModeConfig =
-            assistantModes.find((mode) => mode.key === activeMode) ??
-            assistantModes[0];
+        const activeModel = getBaseModel(activeMode);
 
         const handleModeChange = (mode: BuiltInAssistantMode | string) => {
             profileStore.updateGeneralData({ selectedAssistantMode: mode });
@@ -195,7 +197,7 @@ export const MessageComposer = observer(
                                 onChange={(value) =>
                                     setInput(value.target.value)
                                 }
-                                placeholder={activeModeConfig.placeholder}
+                                placeholder={activeModel.chatPlaceholder}
                                 className="h-auto! min-h-9 w-full rounded-lg border-0 bg-transparent p-2 text-main-100 placeholder:text-main-400 focus-visible:ring-0"
                                 onKeyDown={(event) => {
                                     if (
@@ -222,8 +224,7 @@ export const MessageComposer = observer(
                                     >
                                         <Icon icon="mdi:storage" />
                                     </Button>
-                                    {profileStore.user?.generalData
-                                        .selectedAssistantMode === "agent" && (
+                                    {canUseAgentTools(activeMode) && (
                                         <Button
                                             label="Tools"
                                             className="h-9 w-9 p-0"
@@ -291,13 +292,13 @@ export const MessageComposer = observer(
                                                     event.stopPropagation();
                                                 }}
                                             >
-                                                {assistantModes.map((mode) => {
+                                                {baseModelEntries.map(([modeKey, model]) => {
                                                     const isActive =
-                                                        mode.key === activeMode;
+                                                        model.id === activeModel.id;
 
                                                     return (
                                                         <Button
-                                                            key={mode.key}
+                                                            key={model.id}
                                                             type="button"
                                                             onMouseDown={(
                                                                 event,
@@ -309,7 +310,7 @@ export const MessageComposer = observer(
                                                             ) => {
                                                                 event.stopPropagation();
                                                                 handleModeChange(
-                                                                    mode.key,
+                                                                    modeKey,
                                                                 );
                                                             }}
                                                             variant=""
@@ -324,7 +325,7 @@ export const MessageComposer = observer(
                                                                 <span className="inline-flex items-center gap-2">
                                                                     <Icon
                                                                         icon={
-                                                                            mode.icon
+                                                                            model.chatIcon
                                                                         }
                                                                         width={
                                                                             14
@@ -333,7 +334,9 @@ export const MessageComposer = observer(
                                                                             14
                                                                         }
                                                                     />
-                                                                    {mode.label}
+                                                                    {
+                                                                        model.chatLabel
+                                                                    }
                                                                 </span>
                                                                 {isActive ? (
                                                                     <Icon
@@ -374,11 +377,11 @@ export const MessageComposer = observer(
                                             onClick={(event) => {
                                                 event.stopPropagation();
                                             }}
-                                            title={`Режим: ${activeModeConfig.label}`}
-                                            aria-label={`Режим: ${activeModeConfig.label}`}
+                                            title={`Агент: ${activeModel.chatLabel}`}
+                                            aria-label={`Агент: ${activeModel.chatLabel}`}
                                         >
                                             <Icon
-                                                icon={`${activeModeConfig.icon}`}
+                                                icon={`${activeModel.chatIcon}`}
                                             />
                                         </Button>
                                     </Floating>

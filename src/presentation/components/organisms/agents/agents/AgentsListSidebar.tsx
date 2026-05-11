@@ -1,16 +1,23 @@
 import { Icon } from "@iconify/react";
 import { Button, InputSmall, PrettyBR } from "@kiyotakkkka/zvs-uikit-lib/ui";
-import { builtInAgents } from "../../../../../data/BaseModels";
+import { baseModelList } from "../../../../../data/BaseModels";
 import { useState } from "react";
 import { AgentsListUnitCard } from "../../../molecules/cards";
 import { ButtonCreate } from "../../../atoms";
 
-export const AgentsListSidebar = () => {
+type AgentsListSidebarProps = {
+    selectedAgentId: string | null;
+    onSelectAgent: (id: string) => void;
+};
+
+export const AgentsListSidebar = ({
+    selectedAgentId,
+    onSelectAgent,
+}: AgentsListSidebarProps) => {
     const [searchQuery, setSearchQuery] = useState("");
-    const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
 
     const normalizedQuery = searchQuery.trim().toLowerCase();
-    const filteredAgents = Object.values(builtInAgents).filter((agent) => {
+    const filteredAgents = baseModelList.filter((agent) => {
         if (!normalizedQuery) {
             return true;
         }
@@ -60,7 +67,7 @@ export const AgentsListSidebar = () => {
                                     key={agent.id}
                                     agent={agent}
                                     isSelected={isSelected}
-                                    setSelectedAgentId={setSelectedAgentId}
+                                    onSelectAgent={onSelectAgent}
                                 />
                             );
                         })}

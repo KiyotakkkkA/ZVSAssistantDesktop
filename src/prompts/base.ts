@@ -1,5 +1,21 @@
 import type { BuiltInAssistantMode } from "../../electron/models/user";
+import { getBaseModel } from "../data/BaseModels";
 import { compact, joinBlocks, section } from "../utils/prompting";
+
+const defaultRoleLines: Record<string, string[]> = {
+    chat: [
+        "a polite and concise conversational assistant.",
+        "Answer with respect, clarity, and practical value.",
+    ],
+    planning: [
+        "a polite planning assistant.",
+        "Your main objective is to produce structured, actionable plans.",
+    ],
+    agent: [
+        "a precise, reliable, and practical assistant.",
+        "Your goal is to produce the most useful correct result for the user with minimal fluff.",
+    ],
+};
 
 const getInjectedUserContextSection = (
     userName: string,
@@ -13,48 +29,6 @@ const getInjectedUserContextSection = (
         "FOLLOW_USER_PREFERENCES: Respect the user's custom instructions when they do not conflict with system rules.",
     ]);
 
-export const getChatSystemPrompt = (
-    assistantName: string,
-    userName: string,
-    userPrompt: string,
-    preferredLanguage: string = "Russian",
-) =>
-    joinBlocks([
-        getInjectedUserContextSection(userName, preferredLanguage, userPrompt),
-        section("SYSTEM_ROLE", [
-            `You are ${assistantName}, a polite and concise conversational assistant.`,
-            "Answer with respect, clarity, and practical value.",
-        ]),
-    ]);
-
-export const getPlanningSystemPrompt = (
-    assistantName: string,
-    userName: string,
-    userPrompt: string,
-    preferredLanguage: string = "Russian",
-) =>
-    joinBlocks([
-        getInjectedUserContextSection(userName, preferredLanguage, userPrompt),
-        section("SYSTEM_ROLE", [
-            `You are ${assistantName}, a polite planning assistant.`,
-            "Your main objective is to produce structured, actionable plans.",
-        ]),
-    ]);
-
-export const getAgentSystemPrompt = (
-    assistantName: string,
-    userName: string,
-    userPrompt: string,
-    preferredLanguage: string = "Russian",
-) =>
-    joinBlocks([
-        getInjectedUserContextSection(userName, preferredLanguage, userPrompt),
-        section("SYSTEM_ROLE", [
-            `You are ${assistantName}, a precise, reliable, and practical assistant.`,
-            "Your goal is to produce the most useful correct result for the user with minimal fluff.",
-        ]),
-    ]);
-
 export const getModeSystemPrompt = (
     mode: BuiltInAssistantMode | string,
     assistantName: string,
@@ -62,28 +36,14 @@ export const getModeSystemPrompt = (
     userPrompt: string,
     preferredLanguage: string = "Russian",
 ) => {
-    if (mode === "planning") {
-        return getPlanningSystemPrompt(
-            assistantName,
-            userName,
-            userPrompt,
-            preferredLanguage,
-        );
-    }
+    const roleLines = defaultRoleLines[mode] ?? [
+        "a specialized custom agent.",
+        "Follow the selected agent configuration and produce useful, correct results.",
+    ];
 
-    if (mode === "agent") {
-        return getAgentSystemPrompt(
-            assistantName,
-            userName,
-            userPrompt,
-            preferredLanguage,
-        );
-    }
-
-    return getChatSystemPrompt(
-        assistantName,
-        userName,
-        userPrompt,
-        preferredLanguage,
-    );
+    return joinBlocks([
+        getInjectedUserContextSection(userName, preferredLanguage, userPrompt),
+        section("SYSTEM_ROLE", [`You are ${assistantName}, ${roleLines[0]}`, ...roleLines.slice(1)]),
+        getBaseModel(mode).agentPrompt,
+    ]);
 };

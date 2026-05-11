@@ -23,6 +23,7 @@ import { toolsStorage } from "../stores/toolsStorage";
 import { useToasts } from "@kiyotakkkka/zvs-uikit-lib/hooks";
 import { createId, createStageId } from "../utils/creators";
 import { MsgToasts } from "../data/MsgToasts";
+import { canUseAgentTools } from "../data/BaseModels";
 
 const appendAssistantStageDelta = (
     message: DialogUiMessage,
@@ -141,9 +142,6 @@ type SendMessageOptions = {
     attachments?: ChatImageAttachment[];
     mode?: BuiltInAssistantMode | string;
 };
-
-const canUseToolsInMode = (mode: BuiltInAssistantMode | string) =>
-    mode === "agent";
 
 const DEFAULT_VECSTORE_MAX_RESULTS = 5;
 const DEFAULT_VECSTORE_CONFIDENCE_PERCENTAGE = 80;
@@ -520,7 +518,7 @@ export const useChat = () => {
                     );
                 }, false);
 
-                const enabledToolNames = canUseToolsInMode(mode ?? "chat")
+                const enabledToolNames = canUseAgentTools(mode ?? "chat")
                     ? toJS(
                           profileStore.user?.generalData.enabledPromptTools ??
                               [],

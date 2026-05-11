@@ -4,18 +4,18 @@ import { Agent } from "../../../../../electron/models/agent";
 interface AgentsListUnitCardProps {
     agent: Agent;
     isSelected: boolean;
-    setSelectedAgentId: (id: string) => void;
+    onSelectAgent: (id: string) => void;
 }
 
 export const AgentsListUnitCard = ({
     agent,
     isSelected,
-    setSelectedAgentId,
+    onSelectAgent,
 }: AgentsListUnitCardProps) => {
     return (
         <div
             onClick={() => {
-                setSelectedAgentId(agent.id);
+                onSelectAgent(agent.id);
             }}
             className={`w-full rounded-xl border p-3 text-left transition-all cursor-pointer border-transparent ${
                 isSelected

@@ -4,6 +4,12 @@ import { joinBlocks, section } from "../utils/prompting";
 
 export type AssistantModeConfig = Record<BuiltInAssistantMode | string, Agent>;
 
+const stylePolicy = section("STYLE", [
+    "Be concise, calm, and professional.",
+    "Do not be overly verbose, repetitive, apologetic, or theatrical.",
+    "Prefer strong content over filler transitions.",
+]);
+
 export const builtInAgents: AssistantModeConfig = {
     chat: {
         id: "builtin-chat",
@@ -14,10 +20,7 @@ export const builtInAgents: AssistantModeConfig = {
                     "This is chat mode. Do not use tools and do not claim tool execution.",
                     "If the user asks for tool-based actions, politely explain that tools are unavailable in chat mode.",
                 ]),
-                section("STYLE", [
-                    "Be friendly and professional.",
-                    "Keep responses focused and easy to read.",
-                ]),
+                stylePolicy,
             ]);
         })(),
         agentToolsSet: [],
@@ -43,11 +46,7 @@ export const builtInAgents: AssistantModeConfig = {
                     "Each step should be short, concrete, and verifiable.",
                     "Include risks, dependencies, and fallback actions when relevant.",
                 ]),
-                section("STYLE", [
-                    "Be concise, calm, and professional.",
-                    "Do not be overly verbose, repetitive, apologetic, or theatrical.",
-                    "Prefer strong content over filler transitions.",
-                ]),
+                stylePolicy,
             ]);
         })(),
         agentToolsSet: [],
@@ -65,20 +64,11 @@ export const builtInAgents: AssistantModeConfig = {
         agentName: "Стандартный режим 'Агент'", // Заполняется во время использования из поля profileStore.generalData.assistantName
         agentPrompt: (() => {
             return joinBlocks([
-                section("STYLE", [
-                    "Be concise, calm, and professional.",
-                    "Do not be overly verbose, repetitive, apologetic, or theatrical.",
-                    "Prefer strong content over filler transitions.",
-                ]),
+                stylePolicy,
                 section("AGENT_MODE_POLICY", [
                     "This is agent mode. You have access to tools and can claim tool execution.",
                     "Use tools to answer user requests that require external information or actions.",
                     "When a user request can be answered with high confidence without tools, you may answer directly.",
-                ]),
-                section("STYLE", [
-                    "Be concise, calm, and professional.",
-                    "Do not be overly verbose, repetitive, apologetic, or theatrical.",
-                    "Prefer strong content over filler transitions.",
                 ]),
                 section("CORE_RULES", [
                     "Be truthful. Do not invent facts, results, files, tool outputs, or capabilities.",
@@ -114,4 +104,28 @@ export const builtInAgents: AssistantModeConfig = {
         modelName: "", // Заполняется во время использования из поля profileStore.secureData.chatGenProviders[profileStore.generalData.chatGenProvider].modelName
         modelApiKey: "", // Заполняется во время использования из поля profileStore.secureData.chatGenProviders[profileStore.generalData.chatGenProvider].apiKey
     },
+};
+
+export const baseModels = builtInAgents;
+
+export const baseModelEntries = Object.entries(baseModels);
+
+export const baseModelList = Object.values(baseModels);
+
+export const getBaseModel = (mode: BuiltInAssistantMode | string) => {
+    return baseModels[mode] ?? baseModels.chat;
+};
+
+export const getBaseModelKeyById = (id: string) => {
+    return (
+        baseModelEntries.find(([, agent]) => agent.id === id)?.[0] ?? "chat"
+    );
+};
+
+export const getAgentTools = (mode: BuiltInAssistantMode | string) => {
+    return getBaseModel(mode).agentToolsSet;
+};
+
+export const canUseAgentTools = (mode: BuiltInAssistantMode | string) => {
+    return getAgentTools(mode).length > 0;
 };

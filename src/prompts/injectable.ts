@@ -1,6 +1,7 @@
 import { joinBlocks, section, unique } from "../utils/prompting";
 import type { BuiltInAssistantMode } from "../../electron/models/user";
 import type { VecstoreSearchResult } from "../../electron/models/chat";
+import { canUseAgentTools, getBaseModel } from "../data/BaseModels";
 
 export const getMustToolsUsagePolicy = (
     enabledTools: string[] = [],
@@ -34,10 +35,10 @@ export const getUserPrompt = (
     enabledPromptTools: string[] = [],
     requiredPromptTools: string[] = [],
 ) => {
-    const toolsPolicy =
-        mode === "agent"
-            ? getMustToolsUsagePolicy(enabledPromptTools, requiredPromptTools)
-            : "";
+    const toolsPolicy = canUseAgentTools(mode)
+        ? getMustToolsUsagePolicy(enabledPromptTools, requiredPromptTools)
+        : "";
+    const selectedModel = getBaseModel(mode);
 
     const modePolicy =
         mode === "chat"
@@ -51,7 +52,7 @@ export const getUserPrompt = (
                     "Tools are disabled. If user asks for tool execution, reply politely that tools are unavailable in planning mode.",
                 ])
               : section("MODE_POLICY", [
-                    "Current mode: agent.",
+                    `Current mode: ${selectedModel.chatLabel}.`,
                     "Tools may be used according to enabled and mandatory policy.",
                 ]);
 
